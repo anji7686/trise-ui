@@ -1,0 +1,35 @@
+{
+  "name": "trise-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:customer": "vite --config apps/customer/vite.config.ts --host 127.0.0.1 --port 4173",
+    "dev:operations": "vite --config apps/operations/vite.config.ts --host 127.0.0.1 --port 4174",
+    "build": "npm run build:customer && npm run build:operations",
+    "build:customer": "vite build --config apps/customer/vite.config.ts",
+    "build:operations": "vite build --config apps/operations/vite.config.ts",
+    "typecheck": "tsc -b tsconfig.json",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "generate:api": "openapi-typescript ../trise-architecture/api/openapi.yaml -o packages/api-client/src/generated.d.ts",
+    "check:bundle": "node scripts/check-bundles.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "4.7.0",
+    "vite": "7.3.6",
+    "typescript": "5.9.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-router-dom": "7.18.4",
+    "zod": "4.1.5"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "eslint": "9.36.0",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "typescript-eslint": "8.44.0",
+    "openapi-typescript": "7.9.1",
+    "vitest": "3.2.7"
+  }
+}

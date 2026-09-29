@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/design-tokens/tsconfig.json" },
+    { "path": "packages/api-client/tsconfig.json" },
+    { "path": "packages/auth/tsconfig.json" },
+    { "path": "packages/i18n/tsconfig.json" },
+    { "path": "packages/ui-primitives/tsconfig.json" },
+    { "path": "apps/customer/tsconfig.json" },
+    { "path": "apps/operations/tsconfig.json" }
+  ]
+}

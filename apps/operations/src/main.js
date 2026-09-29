@@ -1,0 +1,17 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { StrictMode, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { AuthProvider, googleAuthStatus, useAuth } from '@trise/auth';
+import { supportedLocales, translate } from '@trise/i18n';
+import { Button, Icon, Status } from '@trise/ui';
+import '@trise/tokens/theme.css';
+import './styles.css';
+function Shell() {
+    const { session, signOut } = useAuth();
+    const [theme, setTheme] = useState(localStorage.getItem('trise-theme') || 'system');
+    const [locale, setLocale] = useState(localStorage.getItem('trise-locale') || 'en');
+    useEffect(() => { document.documentElement.dataset.theme = theme === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme; localStorage.setItem('trise-theme', theme); }, [theme]);
+    useEffect(() => { localStorage.setItem('trise-locale', locale); document.documentElement.lang = locale; document.documentElement.dir = 'ltr'; }, [locale]);
+    return _jsxs("main", { className: "workspace", children: [_jsxs("header", { className: "topbar", children: [_jsxs("div", { className: "wordmark", children: ["TRISE ", _jsx("small", { children: "INDIA \u00B7 temporary wordmark" })] }), _jsxs("div", { className: "controls", children: [_jsxs("label", { children: ["Language ", _jsx("select", { value: locale, onChange: (e) => setLocale(e.target.value), children: supportedLocales.map((item) => _jsx("option", { children: item }, item)) })] }), _jsxs("label", { children: ["Theme ", _jsxs("select", { value: theme, onChange: (e) => setTheme(e.target.value), children: [_jsx("option", { children: "system" }), _jsx("option", { children: "light" }), _jsx("option", { children: "dark" })] })] }), session && _jsx(Button, { onClick: signOut, children: "Sign out" })] })] }), _jsxs("div", { className: "heading", children: [_jsxs("div", { children: [_jsx(Status, { children: translate(locale, 'preview') }), _jsx("h1", { children: "Operations overview" }), _jsx("p", { children: "Provider administration, dispatch, agents, configuration, and shared-asset work\u2014synthetic preview only." })] }), _jsxs("div", { className: "context", children: [_jsx("span", { children: "Provider context" }), _jsx("strong", { children: "Choose after sign-in" }), _jsx("small", { children: "Customer data is never loaded in this preview." })] })] }), _jsx("section", { className: "grid", children: [['⌁', 'Dispatch', '8 open requests'], ['◌', 'Agents', '12 available'], ['◈', 'Configuration', '20 managed roots'], ['✓', 'Approvals', '3 awaiting review']].map(([glyph, title, detail]) => _jsxs("article", { className: "tile", children: [_jsx(Icon, { label: title, glyph: glyph }), _jsx("strong", { children: title }), _jsx("span", { children: detail })] }, title)) }), _jsxs("section", { className: "notice", children: [_jsx("strong", { children: "Protected operations workspace" }), _jsxs("p", { children: [googleAuthStatus, ". Provider authority, role permissions, and RLS must be established by the real authentication flow before operational routes render."] }), _jsx(Button, { onClick: () => alert('Google authentication requires configured local credentials.'), children: translate(locale, 'signIn') })] })] });
+}
+createRoot(document.getElementById('root')).render(_jsx(StrictMode, { children: _jsx(AuthProvider, { children: _jsx(Shell, {}) }) }));

@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"declaration":true,"outDir":"dist","rootDir":"src","strict":true,"module":"ESNext","moduleResolution":"Bundler","target":"ES2022"},"include":["src"]}
