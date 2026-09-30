@@ -46,6 +46,7 @@ flow does not use `GOOGLE_CLIENT_SECRET`; never expose a client secret through a
 be revoked and rotated in Google Cloud Console. The preview screens render no
 private records until the real exchange succeeds.
 
-The TRISE INDIA logo asset is not present in the approved repositories; the
-temporary text wordmark is intentionally labelled until the approved asset is
-provided. No credentials, production URLs, or private data are committed.
+The approved TRISE INDIA logo is copied from
+`../trise-architecture/logos/trise-logo.png` into each app's public assets and
+used by both local shells. No credentials, production URLs, or private data are
+committed.

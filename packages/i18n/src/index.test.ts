@@ -4,6 +4,7 @@ import { translate } from './index';
 describe('localization foundation', () => {
   it('uses Kannada resources when selected and English fallback for unknown keys', () => {
     expect(translate('kn', 'assets')).toBe('ಸ್ವತ್ತುಗಳು');
+    expect(translate('hi', 'assets')).toBe('संपत्तियाँ');
     expect(translate('kn', 'missing')).toBe('missing');
   });
 });
