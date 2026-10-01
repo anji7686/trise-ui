@@ -31,6 +31,17 @@ describe('operations execution contracts', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/timeline?page[limit]=25');
   });
 
+  it('keeps direct audit detail reads provider-scoped', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response(JSON.stringify({ data: { id: 'event-1', attributes: { event_type: 'JOB_COMPLETED' } } }), { status: 200 })
+    );
+
+    await operationsData.timelineEntry('provider-2', 'event-1');
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/timeline/event-1');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBe('provider-2');
+  });
+
   it('uses the reviewed configuration lifecycle endpoints with revision and idempotency', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({ data: { id: 'configuration-1', attributes: { revision: 2 } } }), { status: 200 })

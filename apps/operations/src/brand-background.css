@@ -1,0 +1,26 @@
+/* The tricolor mark is the single foreground wordmark. The sidebar keeps a
+   restrained theme-aware surface and never overlays the logo with controls. */
+.topbar,
+.workspace-sidebar {
+  background: var(--brand-surface);
+}
+
+.topbar .wordmark {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.topbar .wordmark img {
+  display: block;
+  width: clamp(9rem, 22vw, 14rem);
+  height: auto;
+  aspect-ratio: 2695 / 899;
+  object-fit: contain;
+  object-position: left center;
+}
+
+@media (max-width: 700px) {
+  .topbar .wordmark img {
+    width: min(70vw, 13rem);
+  }
+}

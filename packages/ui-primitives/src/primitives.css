@@ -1,0 +1,12 @@
+.button { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; min-height:2.5rem; white-space:nowrap; }
+.button-secondary { background:var(--surface); color:var(--primary); }
+.button-danger { background:#a33b3b; border-color:#a33b3b; }
+.button-quiet { border-color:transparent; background:transparent; color:var(--primary); }
+.button:disabled { opacity:.58; cursor:not-allowed; }
+.state-panel { display:grid; gap:.5rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:1rem; }
+.state-panel p { margin:0; color:var(--secondary); }
+.field-hint { color:var(--secondary); font-size:.85rem; font-weight:400; }
+.required-mark { color:#a33b3b; }
+.technical-detail { color:var(--secondary); font-size:.75rem; }
+.configuration-commands { display:grid; gap:.6rem; }
+.configuration-commands input[aria-label="Review reference"] { display:none; }

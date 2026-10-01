@@ -1,0 +1,29 @@
+/* The tricolor mark is the single foreground wordmark. Containment keeps it
+   readable without competing with header controls at any viewport width. */
+.customer-header,
+.topbar {
+  background: var(--brand-surface);
+}
+
+.customer-header .wordmark,
+.topbar .wordmark {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.customer-header .wordmark img,
+.topbar .wordmark img {
+  display: block;
+  width: clamp(9rem, 24vw, 14rem);
+  height: auto;
+  aspect-ratio: 2695 / 899;
+  object-fit: contain;
+  object-position: left center;
+}
+
+@media (max-width: 700px) {
+  .customer-header .wordmark img,
+  .topbar .wordmark img {
+    width: min(72vw, 13rem);
+  }
+}
