@@ -170,6 +170,1198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Platform Administration Overview
+         * @description Platform administrator only. Returns authoritative provider status summaries.
+         */
+        get: operations["GetPlatformAdministrationOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/india/pincodes/{pincode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Look up an Indian PIN code
+         * @description Authenticated provider/onboarding reference-data lookup. Returns bounded matching post offices and only fills state/district when unambiguous.
+         */
+        get: operations["GetIndiaPincodeReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List SaaS plans */
+        get: operations["ListPlatformPlans"];
+        put?: never;
+        /** Create plan and first draft */
+        post: operations["CreatePlatformPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get plan and version history */
+        get: operations["GetPlatformPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{planId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create successor draft */
+        post: operations["CreatePlatformPlanDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{planId}/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get plan version */
+        get: operations["GetPlatformPlanVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update mutable draft */
+        patch: operations["UpdatePlatformPlanDraft"];
+        trace?: never;
+    };
+    "/platform/plans/{planId}/versions/{versionId}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Validate publication readiness */
+        get: operations["ValidatePlatformPlanVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{planId}/versions/{versionId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish immutable ready version */
+        post: operations["PublishPlatformPlanVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{planId}/versions/{versionId}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retire from new selection */
+        post: operations["RetirePlatformPlanVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider SaaS subscriptions */
+        get: operations["ListPlatformSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscriptions/{subscriptionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get provider subscription and current usage */
+        get: operations["GetPlatformSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscriptions/{subscriptionId}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request an upgrade, downgrade, renewal or cancellation */
+        post: operations["CreatePlatformSubscriptionChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List subscription lifecycle changes */
+        get: operations["ListPlatformSubscriptionChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get lifecycle change and commercial evidence */
+        get: operations["GetPlatformSubscriptionChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes/{changeId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject a subscription lifecycle change */
+        post: operations["DecidePlatformSubscriptionChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes/{changeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append payment evidence for a lifecycle change */
+        post: operations["SubmitPlatformSubscriptionChangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes/{changeId}/evidence/{evidenceId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently review lifecycle payment evidence */
+        post: operations["ReviewPlatformSubscriptionChangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-changes/{changeId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply or schedule an approved lifecycle change */
+        post: operations["ApplyPlatformSubscriptionChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-addons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List versioned subscription add-ons */
+        get: operations["ListPlatformSubscriptionAddons"];
+        put?: never;
+        /** Create an add-on and initial draft price version */
+        post: operations["CreatePlatformSubscriptionAddon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-addons/{addonId}/versions/{versionId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addonId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Freeze and publish an add-on price version */
+        post: operations["PublishPlatformSubscriptionAddon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-tax-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List approved effective tax configuration */
+        get: operations["ListPlatformSubscriptionTaxRates"];
+        put?: never;
+        /** Activate an approved effective tax rate */
+        post: operations["CreatePlatformSubscriptionTaxRate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List manual subscription invoices */
+        get: operations["ListPlatformSubscriptionInvoices"];
+        put?: never;
+        /** Issue a server-calculated manual subscription invoice */
+        post: operations["CreatePlatformSubscriptionInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-invoices/{invoiceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get invoice snapshots and evidence */
+        get: operations["GetPlatformSubscriptionInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-invoices/{invoiceId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append manual payment evidence to an invoice */
+        post: operations["SubmitPlatformSubscriptionInvoiceEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-invoices/{invoiceId}/evidence/{evidenceId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently review invoice payment evidence */
+        post: operations["ReviewPlatformSubscriptionInvoiceEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-invoices/{invoiceId}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark an invoice paid after verified evidence */
+        post: operations["MarkPlatformSubscriptionInvoicePaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider subscription requests */
+        get: operations["ListPlatformSubscriptionRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get request, review history and commercial evidence */
+        get: operations["GetPlatformSubscriptionRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/subscription-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create provider-targeted subscription request */
+        post: operations["CreatePlatformSubscriptionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests/{requestId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject a subscription request */
+        post: operations["DecidePlatformSubscriptionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests/{requestId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append transaction, screenshot or PDF payment evidence */
+        post: operations["SubmitPlatformSubscriptionEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests/{requestId}/evidence/{evidenceId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review payment evidence independently */
+        post: operations["ReviewPlatformSubscriptionEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/subscription-requests/{requestId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate after approval and verified payment evidence */
+        post: operations["ActivatePlatformSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/subscription-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Calculate deduplicated managed-Asset and active-agent usage */
+        get: operations["GetPlatformSubscriptionUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/subscription-usage/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Persist append-only authoritative usage observations */
+        post: operations["ObservePlatformSubscriptionUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/subscription-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published plans visible to the selected provider */
+        get: operations["ListProviderSubscriptionPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the selected provider's subscription, usage, requests and invoices */
+        get: operations["GetProviderSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/subscription-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a provider-scoped subscription request for platform review */
+        post: operations["CreateProviderSubscriptionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/subscriptions/{subscriptionId}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a provider-scoped lifecycle change for platform review */
+        post: operations["CreateProviderSubscriptionChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Platform Providers
+         * @description Bounded provider directory for an authenticated platform administrator.
+         */
+        get: operations["ListPlatformProviders"];
+        put?: never;
+        /**
+         * Create Pending Platform Provider
+         * @description Create an allowlisted pending provider profile. This does not establish membership, identity, verification, activation or subscription state.
+         */
+        post: operations["CreatePlatformProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get Platform Provider
+         * @description Platform administrator only; returns lifecycle metadata and bounded audit history, not provider business data.
+         */
+        get: operations["GetPlatformProvider"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Platform Provider Profile
+         * @description Update allowlisted provider profile fields with an expected revision. Lifecycle, membership, identity, verification and subscription fields are not writable here.
+         */
+        patch: operations["UpdatePlatformProvider"];
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/lifecycle/{lifecycleAction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                lifecycleAction: "activate" | "hold" | "suspend" | "reactivate" | "close";
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transition Provider Operational Lifecycle
+         * @description Explicitly activates or restricts an operational provider. Verification remains a separate prerequisite and this command never disables the global User identity.
+         */
+        post: operations["TransitionPlatformProviderLifecycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/business-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get Provider Business Profile Review Subject */
+        get: operations["GetPlatformProviderBusinessProfile"];
+        put?: never;
+        /** Submit Provider Business Profile as Platform Administrator */
+        post: operations["SubmitPlatformProviderBusinessProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider Business Profile as Platform Administrator */
+        patch: operations["UpdatePlatformProviderBusinessProfile"];
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/business-profile/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List Provider Verification Reviews */
+        get: operations["ListPlatformProviderVerificationReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List Provider Documents */
+        get: operations["ListPlatformProviderDocuments"];
+        put?: never;
+        /**
+         * Initiate Provider Document Upload
+         * @description Platform administrators initiate a private document upload for the explicit target provider. The target provider is taken from the route; provider membership and a provider-context header are not required.
+         */
+        post: operations["CreatePlatformProviderDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/documents/{documentId}/upload-finalization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finalize Provider Document Upload */
+        post: operations["FinalizePlatformProviderDocumentUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/documents/{documentId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorize Platform Provider Document Download
+         * @description Freshly authorizes the exact target-provider document version. Attachment is the default; inline preview is allowed only for PDF, PNG, JPEG, or WebP after the same capability and lifecycle checks. HTML, SVG, and other active content are never rendered inline.
+         */
+        post: operations["AuthorizePlatformProviderDocumentDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get Active Provider Logo */
+        get: operations["GetPlatformProviderLogo"];
+        put?: never;
+        /** Activate Exact Finalized Unscanned Provider Logo Version */
+        post: operations["ActivatePlatformProviderLogo"];
+        /** Remove Active Provider Logo */
+        delete: operations["RemovePlatformProviderLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List Provider Onboarding Contacts
+         * @description List bounded provider-level business and customer-support contacts. Contacts do not create identities or memberships.
+         */
+        get: operations["ListPlatformProviderOnboardingContacts"];
+        put?: never;
+        /** Create Provider Onboarding Contact */
+        post: operations["CreatePlatformProviderOnboardingContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/contacts/{contactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider Onboarding Contact */
+        patch: operations["UpdatePlatformProviderOnboardingContact"];
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/contacts/{contactId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Provider Onboarding Contact */
+        post: operations["EndPlatformProviderOnboardingContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List Provider Office Locations
+         * @description List bounded provider registered and operating offices. These are not asset service locations or coverage grants.
+         */
+        get: operations["ListPlatformProviderOnboardingLocations"];
+        put?: never;
+        /** Create Provider Office Location */
+        post: operations["CreatePlatformProviderOnboardingLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/locations/{locationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                locationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider Office Location */
+        patch: operations["UpdatePlatformProviderOnboardingLocation"];
+        trace?: never;
+    };
+    "/platform/provider-manager-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delegate Provider Onboarding Scope
+         * @description Grant a named active user the bounded provider-onboarding capability for one target provider. This does not grant review, subscription, security or provider membership authority.
+         */
+        post: operations["CreatePlatformProviderManagerAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-manager-assignments/{assignmentId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Provider Onboarding Delegation */
+        post: operations["EndPlatformProviderManagerAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/verification-reviews/{reviewId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Provider Verification Review */
+        post: operations["DecideProviderVerificationReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/business-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current Provider Business Profile */
+        get: operations["GetProviderBusinessProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider Business Profile */
+        patch: operations["UpdateProviderBusinessProfile"];
+        trace?: never;
+    };
+    "/providers/business-profile/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Provider Business Profile for Review */
+        post: operations["SubmitProviderBusinessProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/business-profile/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Business Profile Reviews */
+        get: operations["ListProviderBusinessProfileReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Active Provider Logo */
+        get: operations["GetProviderLogo"];
+        put?: never;
+        /** Activate Exact Finalized Unscanned Provider Logo Version */
+        post: operations["ActivateProviderLogo"];
+        /** Remove Active Provider Logo */
+        delete: operations["RemoveProviderLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/documents/{documentId}/versions/{versionId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Exact Document Version for Review */
+        post: operations["SubmitProviderDocumentReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customers": {
         parameters: {
             query?: never;
@@ -1769,6 +2961,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agentId}/work-sessions/{workSessionId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Work Session
+         * @description Ends the current active interval without ending the work session.
+         */
+        post: operations["PauseWorkSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agentId}/work-sessions/{workSessionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Work Session
+         * @description Starts a new active interval after a paused interval.
+         */
+        post: operations["ResumeWorkSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agentId}/work-sessions/{workSessionId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct Work Session
+         * @description Records an authorized append-only correction to an ended interval.
+         */
+        post: operations["CorrectWorkSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/work-session-effort": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Work Session Effort
+         * @description Returns bounded server-computed active effort grouped by agent, job, or visit.
+         */
+        get: operations["GetWorkSessionEffort"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agentId}/work-sessions/{workSessionId}/location-observations": {
         parameters: {
             query?: never;
@@ -2937,7 +4218,7 @@ export interface paths {
         put?: never;
         /**
          * Finalize Document Upload
-         * @description Scan request is conditional on non-exempt classification; policy alone can exempt, never a client flag. Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
+         * @description Malware scanning is disabled by platform policy. Finalization records NOT_SCANNED with a server timestamp and reason, never a client flag. Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
          */
         post: operations["FinalizeDocumentUpload"];
         delete?: never;
@@ -2959,7 +4240,7 @@ export interface paths {
         put?: never;
         /**
          * Authorize Document Download
-         * @description Fresh source and version authorization, scan/visibility/retention checks. Audit DocumentAccessAuthorized. Signed GET expiry at most 300 seconds; authorization is not proof of completed download. Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
+         * @description Fresh source and version authorization, visibility/retention checks. All user-uploaded files are authorized only as private attachments, including untrusted HTML/SVG. Audit DocumentAccessAuthorized. Signed GET expiry at most 300 seconds; authorization is not proof of completed download. Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
          */
         post: operations["AuthorizeDocumentDownload"];
         delete?: never;
@@ -4958,6 +6239,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/service-locations/roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Authorized Service Location Roots
+         * @description Lists authorized top-level ServiceLocations only. Results are bounded and keyset paginated; child navigation is explicit and no complete recursive tree is implied.
+         */
+        get: operations["ListServiceLocationRoots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-locations/{serviceLocationId}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceLocationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List Immediate Service Location Children
+         * @description Lists only immediate authorized children of a selected ServiceLocation. It does not return descendants or infer authorization from the selected parent.
+         */
+        get: operations["ListServiceLocationChildren"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-locations/{serviceLocationId}/ancestors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceLocationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get Authorized Service Location Ancestors
+         * @description Returns the bounded authorized ancestor chain for one ServiceLocation, nearest first. The maximum depth is 12 and unauthorized ancestors are omitted.
+         */
+        get: operations["GetServiceLocationAncestors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/service-locations/{serviceLocationId}": {
         parameters: {
             query?: never;
@@ -5266,6 +6611,311 @@ export interface paths {
         put?: never;
         /** Hand over resource membership */
         post: operations["HandoverResourceMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List authorized contact points */
+        get: operations["ListContactPoint"];
+        put?: never;
+        /** Create a normalized contact point */
+        post: operations["CreateContactPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{contactId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get an authorized contact point */
+        get: operations["GetContactPoint"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a contact point */
+        patch: operations["UpdateContactPoint"];
+        trace?: never;
+    };
+    "/contacts/{contactId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate a contact point */
+        post: operations["DeactivateContactPoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/responsibilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List authorized scoped responsibilities */
+        get: operations["ListResponsibilityAssignment"];
+        put?: never;
+        /** Assign a contact to a service-location responsibility */
+        post: operations["CreateResponsibilityAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/responsibilities/{responsibilityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                responsibilityId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get an authorized responsibility assignment */
+        get: operations["GetResponsibilityAssignment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/responsibilities/{responsibilityId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a responsibility assignment */
+        post: operations["EndResponsibilityAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/responsibilities/{responsibilityId}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace a responsibility assignment atomically */
+        post: operations["ReplaceResponsibilityAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contact-routing/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List saved contact-routing resolutions */
+        get: operations["ListContactRoutingResolution"];
+        put?: never;
+        /** Resolve and save an authorized contact for a purpose */
+        post: operations["CreateContactRoutingResolution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contact-routing/resolutions/{resolutionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a saved contact-routing resolution */
+        get: operations["GetContactRoutingResolution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-representations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List authorized property representations */
+        get: operations["ListPropertyRepresentation"];
+        put?: never;
+        /** Create a property representation relationship */
+        post: operations["CreatePropertyRepresentation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-representations/{representationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                representationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get an authorized property representation */
+        get: operations["GetPropertyRepresentation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update permitted property representation fields */
+        patch: operations["UpdatePropertyRepresentation"];
+        trace?: never;
+    };
+    "/property-representations/{representationId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a property representation */
+        post: operations["EndPropertyRepresentation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-representations/{representationId}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically replace a property representation */
+        post: operations["ReplacePropertyRepresentation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-management-engagements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List authorized property management engagements */
+        get: operations["ListPropertyManagementEngagement"];
+        put?: never;
+        /** Create a property management engagement */
+        post: operations["CreatePropertyManagementEngagement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-management-engagements/{engagementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagementId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get an authorized property management engagement */
+        get: operations["GetPropertyManagementEngagement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update permitted property management fields */
+        patch: operations["UpdatePropertyManagementEngagement"];
+        trace?: never;
+    };
+    "/property-management-engagements/{engagementId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End a property management engagement */
+        post: operations["EndPropertyManagementEngagement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/property-management-engagements/{engagementId}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically replace a property management engagement */
+        post: operations["ReplacePropertyManagementEngagement"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6013,6 +7663,241 @@ export interface components {
             data: components["schemas"]["ResourceMembership"][];
             page: components["schemas"]["Page"];
         };
+        ContactPointCreate: {
+            party_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            contact_kind: "PERSON" | "ORGANIZATION";
+            display_name: string;
+            contact_methods?: {
+                [key: string]: unknown;
+            };
+        };
+        ContactPointPatch: {
+            display_name?: string;
+            contact_methods?: {
+                [key: string]: unknown;
+            };
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ContactPointDeactivate: {
+            expected_revision: components["schemas"]["Revision"];
+            reason?: string;
+        };
+        ContactPoint: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "contact-points";
+            attributes: {
+                provider_id?: components["schemas"]["Id"];
+                party_id: components["schemas"]["Id"];
+                contact_kind: string;
+                display_name: string;
+                contact_methods: Record<string, never>;
+                status: string;
+                deactivated_at?: string | null;
+                deactivation_reason?: string | null;
+                revision: components["schemas"]["Revision"];
+            };
+        };
+        ContactPointCollection: {
+            data: components["schemas"]["ContactPoint"][];
+            page: components["schemas"]["Page"];
+        };
+        ResponsibilityAssignmentCreate: {
+            contact_point_id: components["schemas"]["Id"];
+            service_location_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            responsibility_type: "COMMUNITY_MANAGER" | "BUILDING_IN_CHARGE" | "MAINTENANCE_COORDINATOR" | "SITE_ACCESS" | "SECURITY_DESK" | "EMERGENCY_ESCALATION" | "ALTERNATE_CONTACT";
+            /**
+             * @default PRIMARY
+             * @enum {string}
+             */
+            designation: "PRIMARY" | "ALTERNATE";
+            /** Format: date-time */
+            effective_from: string;
+            effective_to?: string | null;
+            availability?: Record<string, never>;
+            communication_preferences?: Record<string, never>;
+        };
+        ResponsibilityAssignmentEnd: {
+            expected_revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            effective_at: string;
+        };
+        ResponsibilityAssignmentReplace: {
+            successor_contact_point_id: components["schemas"]["Id"];
+            expected_revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            effective_at: string;
+        };
+        ResponsibilityAssignment: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "responsibility-assignments";
+            attributes: {
+                provider_id: components["schemas"]["Id"];
+                contact_point_id: components["schemas"]["Id"];
+                service_location_id: components["schemas"]["Id"];
+                responsibility_type: string;
+                designation: string;
+                status: string;
+                /** Format: date-time */
+                effective_from: string;
+                effective_to?: string | null;
+                availability?: Record<string, never>;
+                communication_preferences?: Record<string, never>;
+                revision: components["schemas"]["Revision"];
+            };
+        };
+        ResponsibilityAssignmentCollection: {
+            data: components["schemas"]["ResponsibilityAssignment"][];
+            page: components["schemas"]["Page"];
+        };
+        ContactRoutingResolutionCreate: {
+            /** @enum {string} */
+            purpose: "APPOINTMENT_COORDINATION" | "SITE_ACCESS" | "MAINTENANCE_COORDINATION" | "EMERGENCY_ESCALATION";
+            /** Format: date-time */
+            effective_at: string;
+            service_location_id?: components["schemas"]["Id"];
+            asset_id?: components["schemas"]["Id"];
+            request_id?: components["schemas"]["Id"];
+            booking_id?: components["schemas"]["Id"];
+            job_id?: components["schemas"]["Id"];
+            contact_point_id?: components["schemas"]["Id"];
+        };
+        ContactRoutingResolution: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "contact-routing-resolutions";
+            attributes: {
+                provider_id?: components["schemas"]["Id"];
+                purpose: string;
+                source_type: string;
+                source_id: components["schemas"]["Id"];
+                service_location_id: components["schemas"]["Id"];
+                /** @enum {string} */
+                outcome: "RESOLVED" | "NO_ELIGIBLE_CONTACT" | "AMBIGUOUS_CANDIDATES" | "UNSUPPORTED_POLICY";
+                /** Format: date-time */
+                effective_at?: string;
+                policy_code: string;
+                policy_revision?: number;
+                candidates: Record<string, never>[];
+                selected_contact?: Record<string, never> | null;
+                reason?: string;
+                /** @constant */
+                selection_does_not_confirm_appointment: true;
+                revision?: components["schemas"]["Revision"];
+            };
+        };
+        ContactRoutingResolutionCollection: {
+            data: components["schemas"]["ContactRoutingResolution"][];
+            page: components["schemas"]["Page"];
+        };
+        PropertyRelationshipEnd: {
+            expected_revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            effective_at: string;
+        };
+        PropertyRepresentationCreate: {
+            representing_party_id: components["schemas"]["Id"];
+            service_location_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            scope_mode: "EXACT" | "DESCENDANTS";
+            /** Format: date-time */
+            effective_from: string;
+            effective_to?: string | null;
+            authority_basis: string;
+            delegated_capabilities?: string[];
+        };
+        PropertyRepresentationPatch: {
+            authority_basis?: string;
+            effective_to?: string | null;
+            delegated_capabilities?: string[];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        PropertyRepresentationReplace: {
+            successor_party_id: components["schemas"]["Id"];
+            /** Format: date-time */
+            effective_at: string;
+            authority_basis?: string;
+            delegated_capabilities?: string[];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        PropertyRepresentation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "property-representations";
+            attributes: {
+                provider_id: components["schemas"]["Id"];
+                representing_party_id: components["schemas"]["Id"];
+                service_location_id: components["schemas"]["Id"];
+                /** @enum {string} */
+                scope_mode: "EXACT" | "DESCENDANTS";
+                /** @enum {string} */
+                status: "ACTIVE" | "ENDED";
+                /** Format: date-time */
+                effective_from: string;
+                effective_to?: string | null;
+                authority_basis: string;
+                delegated_capabilities?: string[];
+                supersedes_property_representation_id?: components["schemas"]["Id"] | null;
+                revision: components["schemas"]["Revision"];
+            };
+        };
+        PropertyRepresentationCollection: {
+            data: components["schemas"]["PropertyRepresentation"][];
+            page: components["schemas"]["Page"];
+        };
+        PropertyManagementEngagementCreate: {
+            managing_party_id: components["schemas"]["Id"];
+            service_location_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            scope_mode: "EXACT" | "DESCENDANTS";
+            /** Format: date-time */
+            effective_from: string;
+            effective_to?: string | null;
+            authority_basis: string;
+            delegated_capabilities?: string[];
+        };
+        PropertyManagementEngagementPatch: {
+            authority_basis?: string;
+            effective_to?: string | null;
+            delegated_capabilities?: string[];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        PropertyManagementEngagementReplace: {
+            successor_party_id: components["schemas"]["Id"];
+            /** Format: date-time */
+            effective_at: string;
+            authority_basis?: string;
+            delegated_capabilities?: string[];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        PropertyManagementEngagement: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "property-management-engagements";
+            attributes: {
+                provider_id: components["schemas"]["Id"];
+                managing_party_id: components["schemas"]["Id"];
+                service_location_id: components["schemas"]["Id"];
+                /** @enum {string} */
+                scope_mode: "EXACT" | "DESCENDANTS";
+                /** @enum {string} */
+                status: "ACTIVE" | "ENDED";
+                /** Format: date-time */
+                effective_from: string;
+                effective_to?: string | null;
+                authority_basis: string;
+                delegated_capabilities?: string[];
+                supersedes_property_management_engagement_id?: components["schemas"]["Id"] | null;
+                revision: components["schemas"]["Revision"];
+            };
+        };
+        PropertyManagementEngagementCollection: {
+            data: components["schemas"]["PropertyManagementEngagement"][];
+            page: components["schemas"]["Page"];
+        };
         AssetSharingGrantCreate: {
             party_id: components["schemas"]["Id"];
             grant_kind: string;
@@ -6156,12 +8041,21 @@ export interface components {
             eligible_at?: string | null;
             hold: boolean;
         };
+        /** @description Effective capabilities for the authenticated user within one active provider membership. This is derived server-side from the membership and existing authorization policies; it is not a role grant. */
+        ProviderCapabilityContext: {
+            provider_id: components["schemas"]["Id"];
+            display_name: string;
+            capabilities: ("customers" | "onboarding" | "configuration" | "business_profile" | "requests" | "bookings" | "jobs" | "my_work" | "workforce" | "audit")[];
+        };
         UserAttributes: {
             /** Format: date-time */
             created_at: string;
             display_name: string;
             locale?: string;
+            platform_admin?: boolean;
+            platform_capabilities?: string[];
             revision: components["schemas"]["Revision"];
+            provider_capabilities: components["schemas"]["ProviderCapabilityContext"][];
         };
         /** @description Authorized canonical User representation; fields and linked resources require independent authorization. */
         User: {
@@ -6194,6 +8088,285 @@ export interface components {
                 party?: components["schemas"]["ResourceLink"];
                 organization?: components["schemas"]["ResourceLink"] | null;
             };
+        };
+        SaasPlanLimit: {
+            /** @enum {string} */
+            metric_key: "MANAGED_ASSET_COUNT" | "AGENT_COUNT";
+            value?: number | null;
+            unlimited: boolean;
+        };
+        SaasPlanVersionTerms: {
+            price_amount: string;
+            currency_code: string;
+            /** @enum {string} */
+            billing_interval: "DAY" | "TEN_DAYS" | "WEEK" | "MONTH" | "QUARTER" | "YEAR";
+            /** @enum {string} */
+            tax_treatment: "GST_EXTRA";
+            industry_keys: string[];
+            limits: components["schemas"]["SaasPlanLimit"][];
+            included_features: string[];
+        };
+        SaasPlanCreate: {
+            code: string;
+            name: string;
+            draft: components["schemas"]["SaasPlanVersionTerms"];
+        };
+        SaasPlanDraftUpdate: components["schemas"]["SaasPlanVersionTerms"] & {
+            expected_revision: components["schemas"]["Revision"];
+            name?: string;
+        };
+        ExpectedRevision: {
+            expected_revision: components["schemas"]["Revision"];
+        };
+        SaasPlan: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "saas-plans";
+            attributes: Record<string, never>;
+        } & {
+            [key: string]: unknown;
+        };
+        SaasPlanCollection: {
+            data: components["schemas"]["SaasPlan"][];
+            page: components["schemas"]["Page"];
+        };
+        PlatformProviderAttributes: {
+            /** Format: date-time */
+            created_at: string;
+            display_name: string;
+            /** @enum {string} */
+            representation: "organization" | "person";
+            provider_code?: string | null;
+            normalized_provider_code?: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED";
+            revision: components["schemas"]["Revision"];
+            lifecycle_revision?: components["schemas"]["Revision"];
+            /** Format: date-time */
+            effective_from?: string | null;
+            /** Format: date-time */
+            effective_to?: string | null;
+            /** @enum {string} */
+            provider_admin_setup?: "configured" | "not_configured";
+            /** @enum {string} */
+            business_verification_status?: "NOT_SUBMITTED" | "PENDING_REVIEW" | "CORRECTIONS_REQUESTED" | "VERIFIED" | "REJECTED";
+            business_profile_revision?: number;
+            audit_history?: {
+                action: string;
+                actor_kind?: string;
+                /** Format: date-time */
+                occurred_at: string;
+                request_id?: string | null;
+            }[] | null;
+        };
+        PlatformProvider: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-providers";
+            attributes: components["schemas"]["PlatformProviderAttributes"];
+        };
+        PlatformProviderCollection: {
+            data: components["schemas"]["PlatformProvider"][];
+            page: components["schemas"]["Page"];
+        };
+        PlatformProviderCreate: {
+            name: string;
+            /** @enum {string} */
+            representation_kind: "ORGANIZATION";
+            provider_code?: string;
+        };
+        PlatformProviderUpdate: {
+            name?: string;
+            /** @enum {string} */
+            representation_kind?: "ORGANIZATION";
+            provider_code?: string | null;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ProviderLifecycleTransitionRequest: {
+            expected_revision: components["schemas"]["Revision"];
+            reason_code: string;
+            reason?: string | null;
+            /**
+             * Format: date-time
+             * @description Current or past effective time in the first implementation; scheduled future transitions return 422.
+             */
+            effective_at?: string | null;
+        };
+        ProviderLifecycleTransition: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-lifecycle-transitions";
+            attributes: {
+                /** @enum {string} */
+                action: "ACTIVATE" | "HOLD" | "SUSPEND" | "REACTIVATE" | "CLOSE";
+                /** @enum {string} */
+                from_status: "PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED";
+                /** @enum {string} */
+                to_status: "PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED";
+                reason_code: string;
+                reason?: string | null;
+                /** Format: date-time */
+                effective_at: string;
+                lifecycle_revision: components["schemas"]["Revision"];
+                actor_user_id: components["schemas"]["Id"];
+                /** Format: date-time */
+                created_at: string;
+            };
+        };
+        ProviderLifecycleTransitionResponse: {
+            data: components["schemas"]["ProviderLifecycleTransition"];
+            provider: components["schemas"]["PlatformProvider"];
+        };
+        IndiaPincodeLookupResponse: {
+            data: components["schemas"]["IndiaPincodeLookupData"];
+            dataset: components["schemas"]["IndiaPincodeDataset"];
+        };
+        IndiaPincodeLookupData: {
+            pincode: string;
+            found: boolean;
+            ambiguous: boolean;
+            state?: string | null;
+            district?: string | null;
+            post_offices: components["schemas"]["IndiaPincodeOffice"][];
+        };
+        IndiaPincodeOffice: {
+            name: string;
+            district: string;
+            state: string;
+            office_type?: string | null;
+            delivery_status?: string | null;
+        };
+        IndiaPincodeDataset: {
+            /** Format: date-time */
+            retrieved_at: string;
+            /** Format: date */
+            source_published_on?: string | null;
+            source_filename?: string | null;
+            sha256?: string | null;
+        };
+        ProviderBusinessProfileAddress: {
+            /** @constant */
+            country?: "India";
+            address_line?: string | null;
+            locality?: string | null;
+            city?: string | null;
+            district?: string | null;
+            state?: string | null;
+            pin_code?: string | null;
+            landmark?: string | null;
+        };
+        ProviderBusinessProfile: {
+            legal_name?: string | null;
+            registration_number?: string | null;
+            tax_identifier?: string | null;
+            gstin?: string | null;
+            pan_number?: string | null;
+            address?: components["schemas"]["ProviderBusinessProfileAddress"];
+            contact_point_ids?: components["schemas"]["Id"][];
+        };
+        ProviderBusinessProfileUpdate: {
+            business_profile: components["schemas"]["ProviderBusinessProfile"];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ProviderBusinessProfileResponse: {
+            data: {
+                provider_id: components["schemas"]["Id"];
+                profile: components["schemas"]["ProviderBusinessProfile"];
+                revision: components["schemas"]["Revision"];
+                /** @enum {string} */
+                verification_status: "NOT_SUBMITTED" | "PENDING_REVIEW" | "CORRECTIONS_REQUESTED" | "VERIFIED" | "REJECTED";
+                /** Format: date-time */
+                submitted_at?: string | null;
+                /** Format: date-time */
+                verified_at?: string | null;
+            };
+        };
+        ProviderVerificationReviewAttributes: {
+            /** @enum {string} */
+            review_kind: "BUSINESS_PROFILE" | "DOCUMENT_VERSION";
+            /** @enum {string} */
+            status: "PENDING_REVIEW" | "CORRECTIONS_REQUESTED" | "VERIFIED" | "REJECTED";
+            reason?: string | null;
+            business_profile_revision?: number | null;
+            /** Format: uuid */
+            document_version_id?: string | null;
+            /** Format: date-time */
+            submitted_at: string;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            revision: components["schemas"]["Revision"];
+        };
+        ProviderVerificationReview: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-verification-reviews";
+            attributes: components["schemas"]["ProviderVerificationReviewAttributes"];
+        };
+        ProviderVerificationReviewCollection: {
+            data: components["schemas"]["ProviderVerificationReview"][];
+            page: components["schemas"]["Page"];
+        };
+        ProviderVerificationDecision: {
+            /** @enum {string} */
+            decision: "VERIFY" | "REQUEST_CORRECTIONS" | "REJECT";
+            reason?: string | null;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ProviderDocument: {
+            id?: components["schemas"]["Id"];
+            /** @constant */
+            type?: "documents";
+            attributes?: {
+                filename?: string;
+                media_type?: string;
+                size_bytes?: number;
+                classification?: string;
+                status?: string;
+                /** @enum {string} */
+                scan_state?: "pending_scan" | "not_scanned" | "exempt" | "clean" | "quarantined" | "rejected";
+                scan_reason?: string | null;
+                /** Format: date-time */
+                scan_recorded_at?: string | null;
+                revision?: components["schemas"]["Revision"];
+                /** Format: uuid */
+                current_version_id?: string | null;
+                current_version?: number | null;
+                /** Format: date-time */
+                created_at?: string | null;
+            };
+        };
+        ProviderDocumentCollection: {
+            data: components["schemas"]["ProviderDocument"][];
+            page: components["schemas"]["Page"];
+        };
+        /** @description The exact current immutable version must be finalized as NOT_SCANNED with the server-recorded platform-policy timestamp and reason. */
+        ProviderLogoActivationRequest: {
+            document_id: components["schemas"]["Id"];
+            version_id: components["schemas"]["Id"];
+        };
+        /** @description Existing active logo history may retain legacy clean or exempt states; new activation accepts only exact current NOT_SCANNED versions. */
+        ProviderLogo: {
+            id: components["schemas"]["Id"];
+            provider_id: components["schemas"]["Id"];
+            document_id: components["schemas"]["Id"];
+            version_id: components["schemas"]["Id"];
+            filename: string;
+            /** @enum {string} */
+            media_type: "image/png" | "image/jpeg" | "image/webp";
+            /** @constant */
+            status: "ACTIVE";
+            /** @enum {string} */
+            scan_state: "clean" | "exempt" | "not_scanned";
+            scan_reason?: string | null;
+            /** Format: date-time */
+            scan_recorded_at?: string | null;
+            revision: components["schemas"]["Revision"];
+            transfer?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ProviderLogoResponse: {
+            data: components["schemas"]["ProviderLogo"] | null;
         };
         ServiceProviderCollection: {
             data: components["schemas"]["ServiceProvider"][];
@@ -6775,10 +8948,62 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             provider_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            status: "OPEN" | "ACTIVE" | "PAUSED" | "ENDED";
             /** Format: date-time */
             started_at: string;
             ended_at: string | null;
+            active_duration_seconds?: number;
+            provisional?: boolean;
+            intervals?: components["schemas"]["WorkSessionInterval"][];
             revision: components["schemas"]["Revision"];
+        };
+        WorkSessionInterval: {
+            id: components["schemas"]["Id"];
+            /** @enum {string} */
+            status: "OPEN" | "ENDED";
+            /** Format: date-time */
+            started_at: string;
+            ended_at: string | null;
+            duration_seconds: number;
+        };
+        WorkSessionPause: {
+            /** Format: date-time */
+            paused_at: string;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        WorkSessionResume: {
+            /** Format: date-time */
+            resumed_at: string;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        WorkSessionCorrection: {
+            interval_id: components["schemas"]["Id"];
+            /** Format: date-time */
+            corrected_started_at: string;
+            corrected_ended_at?: string | null;
+            reason: string;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        WorkSessionEffortReport: {
+            data: {
+                key: components["schemas"]["Id"];
+                active_duration_seconds: number;
+                elapsed_duration_seconds: number;
+                person_hours: number;
+                provisional: boolean;
+            }[];
+            meta: {
+                /** Format: date-time */
+                from: string;
+                /** Format: date-time */
+                until: string;
+                /** Format: date-time */
+                as_of: string;
+                /** @enum {string} */
+                group_by: "agent" | "job" | "visit";
+                provisional: boolean;
+            };
         };
         /** @description Authorized canonical WorkSession representation; fields and linked resources require independent authorization. */
         WorkSession: {
@@ -6989,6 +9214,8 @@ export interface components {
             /** Format: date-time */
             effective_to: string;
             revision: components["schemas"]["Revision"];
+            commercial_party_roles: components["schemas"]["CommercialPartySelection"];
+            commercial_party_snapshot_present: boolean;
         };
         /** @description ADR-014: activated versions immutable except lifecycle; amendments/successor renewals preserve all history. */
         MaintenanceContract: {
@@ -7200,6 +9427,8 @@ export interface components {
             /** @description Decimal serialized without binary floating-point loss. */
             total: string;
             revision: components["schemas"]["Revision"];
+            commercial_party_roles: components["schemas"]["CommercialPartySelection"];
+            commercial_party_snapshot_present: boolean;
         };
         /** @description Authorized canonical Quotation representation; fields and linked resources require independent authorization. */
         Quotation: {
@@ -7534,7 +9763,10 @@ export interface components {
             /** @enum {string} */
             status: "upload_pending" | "available" | "archived" | "deleted";
             /** @enum {string} */
-            scan_state: "pending_scan" | "exempt" | "clean" | "quarantined" | "rejected";
+            scan_state: "pending_scan" | "not_scanned" | "exempt" | "clean" | "quarantined" | "rejected";
+            scan_reason?: string | null;
+            /** Format: date-time */
+            scan_recorded_at?: string | null;
             retention: components["schemas"]["RetentionState"];
             revision: components["schemas"]["Revision"];
             /** @enum {string} */
@@ -7567,7 +9799,10 @@ export interface components {
             size_bytes: number;
             checksum: string;
             /** @enum {string} */
-            scan_state: "pending_scan" | "exempt" | "clean" | "quarantined" | "rejected";
+            scan_state: "pending_scan" | "not_scanned" | "exempt" | "clean" | "quarantined" | "rejected";
+            scan_reason?: string | null;
+            /** Format: date-time */
+            scan_recorded_at?: string | null;
         };
         /** @description Immutable version metadata; replacement never overwrites a signed/proof artifact. */
         DocumentVersion: {
@@ -7987,6 +10222,15 @@ export interface components {
             /** Format: date-time */
             captured_at: string;
         };
+        /** @description Authorized commercial-party references. The service recipient must match the customer relationship. Other roles are validated against active provider/customer relationships and contact points; these roles do not grant approval, payment, membership or billing authority. */
+        CommercialPartySelection: {
+            service_recipient_party_id?: components["schemas"]["Id"];
+            contracting_party_id?: components["schemas"]["Id"];
+            bill_to_party_id?: components["schemas"]["Id"];
+            payer_party_id?: components["schemas"]["Id"];
+            expense_approver_party_id?: components["schemas"]["Id"];
+            billing_contact_point_id?: components["schemas"]["Id"];
+        };
         MaintenanceContractCreate: {
             name: string;
             customer_relationship_id: components["schemas"]["Id"];
@@ -7996,6 +10240,7 @@ export interface components {
             effective_to: string;
             service_plan_definition_id: components["schemas"]["Id"];
             coverage_rule_ids: components["schemas"]["Id"][];
+            commercial_parties?: components["schemas"]["CommercialPartySelection"];
         };
         /** @description Draft only. Active commercial/scope/schedule changes require dated amendment. */
         MaintenanceContractPatch: {
@@ -8005,6 +10250,7 @@ export interface components {
             /** Format: date-time */
             effective_to?: string;
             expected_revision: components["schemas"]["Revision"];
+            commercial_parties?: components["schemas"]["CommercialPartySelection"];
         };
         /**
          * @description Creates successor version. At least one change required; add/remove disjoint. Replacement ends old scope and adds new scope. Never rewrites history or provider ownership.
@@ -8097,11 +10343,13 @@ export interface components {
             request_id?: components["schemas"]["Id"];
             currency: string;
             lines: components["schemas"]["QuotationLine"][];
+            commercial_parties?: components["schemas"]["CommercialPartySelection"];
         };
         /** @description Draft only; commercial policy is not calculated here. */
         QuotationPatch: {
             lines: components["schemas"]["QuotationLine"][];
             expected_revision: components["schemas"]["Revision"];
+            commercial_parties?: components["schemas"]["CommercialPartySelection"];
         };
         /** @description Approve/reject the exact revision; authority must include quotation approval for this customer relationship. */
         QuotationDecision: {
@@ -8138,6 +10386,11 @@ export interface components {
             visibility: "internal" | "customer";
             /** Format: date-time */
             captured_at?: string;
+        };
+        DocumentUploadFinalization: {
+            version_id: components["schemas"]["Id"];
+            checksum: string;
+            size_bytes: number;
         };
         DocumentVersionCreate: {
             filename: string;
@@ -9573,6 +11826,10 @@ export interface components {
             value: string;
             issuer?: string;
         };
+        ServiceLocationCollection: {
+            data: components["schemas"]["ServiceLocation"][];
+            page: components["schemas"]["Page"];
+        };
         /** @description Authorized service-context projection over canonical Location; not a duplicate physical-place identity. */
         ServiceLocation: {
             id: components["schemas"]["Id"];
@@ -9584,6 +11841,7 @@ export interface components {
                 parent?: components["schemas"]["ResourceLink"] | null;
                 assets: components["schemas"]["ResourceLink"][];
                 providers: components["schemas"]["ResourceLink"][];
+                ancestors: components["schemas"]["ResourceLink"][];
             };
         };
         ServiceLocationAttributes: {
@@ -9593,6 +11851,13 @@ export interface components {
             /** @enum {string} */
             status: "active" | "archived" | "merged" | "split";
             revision: components["schemas"]["Revision"];
+            hierarchy_context?: {
+                id: components["schemas"]["Id"];
+                /** @constant */
+                type: "service-locations";
+                display_name: string;
+                location_type: string;
+            }[];
         };
         /** @description Provisional intake context only; does not create a governed Asset or identifier. */
         ProvisionalAssetContext: {
@@ -10018,6 +12283,14 @@ export interface components {
             expected_revision?: number;
             idempotency_key?: string;
         };
+        PlatformOverview: {
+            data: {
+                provider_counts: {
+                    [key: string]: number;
+                };
+                total_providers: number;
+            };
+        };
     };
     responses: {
         /** @description Unauthorized; no unauthorized tenant/resource information. */
@@ -10078,6 +12351,15 @@ export interface components {
         };
         /** @description ServerError; no unauthorized tenant/resource information. */
         ServerError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Service unavailable. */
+        ServiceUnavailable: {
             headers: {
                 [name: string]: unknown;
             };
@@ -10528,6 +12810,2053 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    GetPlatformAdministrationOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform overview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOverview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetIndiaPincodeReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pincode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PIN lookup result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndiaPincodeLookupResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    ListPlatformPlans: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaasPlanCollection"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaasPlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaasPlan"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaasPlan"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreatePlatformPlanDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Draft version created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GetPlatformPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePlatformPlanDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaasPlanDraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Draft updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ValidatePlatformPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actionable readiness blockers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    PublishPlatformPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpectedRevision"];
+            };
+        };
+        responses: {
+            /** @description Published version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RetirePlatformPlanVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpectedRevision"];
+            };
+        };
+        responses: {
+            /** @description Retired version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider subscription collection with a bounded Service Provider summary on every record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetPlatformSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider subscription detail, accepted commercial snapshot, usage and bounded Service Provider summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreatePlatformSubscriptionChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Change requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptionChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription change collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetPlatformSubscriptionChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription change detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    DecidePlatformSubscriptionChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Decision recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    SubmitPlatformSubscriptionChangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence appended */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ReviewPlatformSubscriptionChangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence reviewed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ApplyPlatformSubscriptionChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change applied or scheduled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptionAddons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Add-on catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformSubscriptionAddon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Add-on draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    PublishPlatformSubscriptionAddon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addonId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Add-on version published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptionTaxRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax rate collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformSubscriptionTaxRate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Tax rate activated */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformSubscriptionInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformSubscriptionInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Invoice issued with immutable line and tax snapshots */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GetPlatformSubscriptionInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    SubmitPlatformSubscriptionInvoiceEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence appended */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ReviewPlatformSubscriptionInvoiceEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence reviewed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    MarkPlatformSubscriptionInvoicePaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice marked paid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptionRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription request collection with a bounded Service Provider summary on every record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetPlatformSubscriptionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription request detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreatePlatformSubscriptionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    DecidePlatformSubscriptionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Decision recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    SubmitPlatformSubscriptionEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence appended */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ReviewPlatformSubscriptionEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+                evidenceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Evidence review recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ActivatePlatformSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscription activated with commercial snapshot */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GetPlatformSubscriptionUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Explainable current usage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ObservePlatformSubscriptionUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage observations persisted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListProviderSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published plan catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetProviderSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped subscription summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateProviderSubscriptionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Pending request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    CreateProviderSubscriptionChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Pending change created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformProviders: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                q?: string;
+                "filter[status]"?: ("PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded provider directory. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProviderCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderCreate"];
+            };
+        };
+        responses: {
+            /** @description Pending provider profile created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvider"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider administration detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvider"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePlatformProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUpdate"];
+            };
+        };
+        responses: {
+            /** @description Provider profile updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvider"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    TransitionPlatformProviderLifecycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                lifecycleAction: "activate" | "hold" | "suspend" | "reactivate" | "close";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderLifecycleTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Provider lifecycle transition committed with audit and durable event intent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLifecycleTransitionResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Business profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderBusinessProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    SubmitPlatformProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                };
+            };
+        };
+        responses: {
+            /** @description Submitted profile review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdatePlatformProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderBusinessProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated business profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderBusinessProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformProviderVerificationReviews: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded review history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReviewCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformProviderDocuments: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded provider document metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderDocumentCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformProviderDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Authorized provider document upload */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentUpload"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    FinalizePlatformProviderDocumentUpload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUploadFinalization"];
+            };
+        };
+        responses: {
+            /** @description Authorized provider document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    AuthorizePlatformProviderDocumentDownload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    version_id: components["schemas"]["Id"];
+                    /**
+                     * @default attachment
+                     * @enum {string}
+                     */
+                    disposition?: "inline" | "attachment";
+                };
+            };
+        };
+        responses: {
+            /** @description Short-lived authorized attachment transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedTransfer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    GetPlatformProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active explicitly unscanned provider logo metadata and short-lived private transfer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLogoResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    ActivatePlatformProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderLogoActivationRequest"];
+            };
+        };
+        responses: {
+            /** @description Active provider logo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLogoResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RemovePlatformProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logo removed while document history is retained */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformProviderOnboardingContacts: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider onboarding contacts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformProviderOnboardingContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    display_name: string;
+                    /** @enum {string} */
+                    designation: "PRIMARY" | "SECONDARY";
+                    /** @enum {string} */
+                    responsibility_type: "BUSINESS_CONTACT" | "CUSTOMER_SUPPORT";
+                    email?: string;
+                    phone?: string;
+                    /** Format: date-time */
+                    effective_from?: string;
+                    /** Format: date-time */
+                    effective_to?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Contact assignment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdatePlatformProviderOnboardingContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Updated onboarding contact */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    EndPlatformProviderOnboardingContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Ended onboarding contact */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformProviderOnboardingLocations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider office locations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformProviderOnboardingLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** @enum {string} */
+                    location_kind: "REGISTERED_OFFICE" | "OPERATING_OFFICE";
+                    address: Record<string, never>;
+                    latitude?: number;
+                    longitude?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Office location created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdatePlatformProviderOnboardingLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                locationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Updated office location */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePlatformProviderManagerAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    user_id: components["schemas"]["Id"];
+                    provider_id: components["schemas"]["Id"];
+                    /** Format: date-time */
+                    effective_from?: string;
+                    /** Format: date-time */
+                    effective_to?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Delegated onboarding assignment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    EndPlatformProviderManagerAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Delegation ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    DecideProviderVerificationReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderVerificationDecision"];
+            };
+        };
+        responses: {
+            /** @description Review decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider business profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderBusinessProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    UpdateProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderBusinessProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderBusinessProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SubmitProviderBusinessProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                };
+            };
+        };
+        responses: {
+            /** @description Submitted review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderBusinessProfileReviews: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded review history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReviewCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active explicitly unscanned provider logo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLogoResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    ActivateProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderLogoActivationRequest"];
+            };
+        };
+        responses: {
+            /** @description Active provider logo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderLogoResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RemoveProviderLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logo removed while document history is retained */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    SubmitProviderDocumentReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["schemas"]["Id"];
+                versionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Submitted document review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderVerificationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     ListCustomer: {
@@ -14397,6 +18726,148 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    PauseWorkSession: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkSessionPause"];
+            };
+        };
+        responses: {
+            /** @description Paused WorkSession outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkSession"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ResumeWorkSession: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkSessionResume"];
+            };
+        };
+        responses: {
+            /** @description Resumed WorkSession outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkSession"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CorrectWorkSession: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                agentId: components["schemas"]["Id"];
+                workSessionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkSessionCorrection"];
+            };
+        };
+        responses: {
+            /** @description Corrected WorkSession outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkSession"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetWorkSessionEffort: {
+        parameters: {
+            query: {
+                from: string;
+                until: string;
+                group_by: "agent" | "job" | "visit";
+                include_open?: boolean;
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded effort report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkSessionEffortReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     ListLocationObservation: {
@@ -21013,6 +25484,111 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListServiceLocationRoots: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[service_location_type]"?: string[];
+                "filter[status]"?: string[];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized root ServiceLocations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceLocationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    ListServiceLocationChildren: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[service_location_type]"?: string[];
+                "filter[status]"?: string[];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                serviceLocationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized immediate children. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceLocationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    GetServiceLocationAncestors: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                serviceLocationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized ancestor chain. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceLocationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
     GetServiceLocation: {
         parameters: {
             query?: never;
@@ -21537,6 +26113,759 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceMembership"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListContactPoint: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[party_id]"?: components["schemas"]["Id"];
+                "filter[status]"?: "ACTIVE" | "INACTIVE";
+                "filter[contact_kind]"?: "PERSON" | "ORGANIZATION";
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized contact points */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPointCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreateContactPoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPointCreate"];
+            };
+        };
+        responses: {
+            /** @description Contact point */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPoint"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetContactPoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact point */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPoint"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdateContactPoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPointPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated contact point */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPoint"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    DeactivateContactPoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contactId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPointDeactivate"];
+            };
+        };
+        responses: {
+            /** @description Deactivated contact point */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPoint"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListResponsibilityAssignment: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[service_location_id]"?: components["schemas"]["Id"];
+                "filter[contact_point_id]"?: components["schemas"]["Id"];
+                "filter[responsibility_type]"?: string;
+                "filter[designation]"?: "PRIMARY" | "ALTERNATE";
+                "filter[status]"?: "ACTIVE" | "ENDED";
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized responsibilities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibilityAssignmentCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreateResponsibilityAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponsibilityAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Responsibility assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibilityAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetResponsibilityAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                responsibilityId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Responsibility assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibilityAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    EndResponsibilityAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                responsibilityId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponsibilityAssignmentEnd"];
+            };
+        };
+        responses: {
+            /** @description Ended responsibility assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibilityAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ReplaceResponsibilityAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                responsibilityId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponsibilityAssignmentReplace"];
+            };
+        };
+        responses: {
+            /** @description Successor responsibility assignment */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponsibilityAssignment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListContactRoutingResolution: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[purpose]"?: string;
+                "filter[source_type]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized routing resolutions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRoutingResolutionCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateContactRoutingResolution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactRoutingResolutionCreate"];
+            };
+        };
+        responses: {
+            /** @description Saved routing result; this does not confirm an appointment or dispatch an agent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRoutingResolution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetContactRoutingResolution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resolutionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized routing result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRoutingResolution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ListPropertyRepresentation: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[service_location_id]"?: components["schemas"]["Id"];
+                "filter[representing_party_id]"?: components["schemas"]["Id"];
+                "filter[status]"?: "ACTIVE" | "ENDED";
+                "filter[scope_mode]"?: "EXACT" | "DESCENDANTS";
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized property representations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePropertyRepresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyRepresentationCreate"];
+            };
+        };
+        responses: {
+            /** @description Property representation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPropertyRepresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                representationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Property representation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePropertyRepresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                representationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyRepresentationPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated property representation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    EndPropertyRepresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                representationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyRelationshipEnd"];
+            };
+        };
+        responses: {
+            /** @description Ended property representation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ReplacePropertyRepresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                representationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyRepresentationReplace"];
+            };
+        };
+        responses: {
+            /** @description Successor property representation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyRepresentation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPropertyManagementEngagement: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                "filter[service_location_id]"?: components["schemas"]["Id"];
+                "filter[managing_party_id]"?: components["schemas"]["Id"];
+                "filter[status]"?: "ACTIVE" | "ENDED";
+                "filter[scope_mode]"?: "EXACT" | "DESCENDANTS";
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized property management engagements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagementCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePropertyManagementEngagement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyManagementEngagementCreate"];
+            };
+        };
+        responses: {
+            /** @description Property management engagement */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPropertyManagementEngagement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagementId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Property management engagement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePropertyManagementEngagement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagementId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyManagementEngagementPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated property management engagement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    EndPropertyManagementEngagement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagementId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyRelationshipEnd"];
+            };
+        };
+        responses: {
+            /** @description Ended property management engagement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ReplacePropertyManagementEngagement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                engagementId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyManagementEngagementReplace"];
+            };
+        };
+        responses: {
+            /** @description Successor property management engagement */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyManagementEngagement"];
                 };
             };
             401: components["responses"]["Unauthorized"];

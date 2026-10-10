@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { apiClient, type ApiClient } from '@trise/api-client';
 
-export type Session = { userId: string; displayName: string; locale: string | null; revision: number; providerId?: string };
+export type ProviderCapabilityContext = { providerId: string; displayName: string; capabilities: string[] };
+export type Session = { userId: string; displayName: string; locale: string | null; revision: number; providerId?: string; platformAdmin?: boolean; platformCapabilities?: string[]; providerCapabilities: ProviderCapabilityContext[] };
 type AuthContextValue = { session: Session | null; loading: boolean; error: string | null; signInWithGoogleIdentityToken: (identityToken: string) => Promise<void>; signOut: () => Promise<void>; setProvider: (providerId?: string) => void; refreshCurrentUser: () => Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 type GoogleIdentityResponse = { credential?: string };
 type GoogleAccounts = { id: { initialize: (options: { client_id: string; callback: (response: GoogleIdentityResponse) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string>) => void } };
-type ApiUser = { id: string; attributes: { display_name?: string; locale?: string | null; revision: number } };
+type ApiUser = { id: string; attributes: { display_name?: string; locale?: string | null; revision: number; platform_admin?: boolean; platform_capabilities?: string[]; provider_capabilities?: Array<{ provider_id: string; display_name: string; capabilities: string[] }> } };
 declare global { interface Window { google?: { accounts: GoogleAccounts } } }
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
 let googleScriptPromise: Promise<void> | null = null;
@@ -17,7 +18,7 @@ function authDiagnostic(stage: string, details: Record<string, unknown> = {}) {
 }
 
 export function sessionFromApiUser(user: ApiUser): Session {
-  return { userId: user.id, displayName: user.attributes.display_name || 'TRISE User', locale: user.attributes.locale ?? null, revision: user.attributes.revision };
+  return { userId: user.id, displayName: user.attributes.display_name || 'TRISE User', locale: user.attributes.locale ?? null, revision: user.attributes.revision, providerCapabilities: (user.attributes.provider_capabilities || []).map((context) => ({ providerId: context.provider_id, displayName: context.display_name, capabilities: context.capabilities })), ...(user.attributes.platform_admin ? { platformAdmin: true, platformCapabilities: user.attributes.platform_capabilities || [] } : {}) };
 }
 
 export function authFailureMessage(cause: unknown, action: 'load' | 'sign-in' = 'load') {
@@ -71,7 +72,7 @@ export function AuthProvider({ children, client = apiClient }: { children: React
     setLoading(true); setError(null);
     authDiagnostic('session-exchange-started');
     try {
-      const body = await client.request<{ access_token: string; user: { id: string; attributes: { display_name?: string; locale?: string | null; revision: number } } }>('/session/google', { method: 'POST', body: JSON.stringify({ google_identity_token: identityToken, client_type: 'web' }) });
+      const body = await client.request<{ access_token: string; user: ApiUser }>('/session/google', { method: 'POST', body: JSON.stringify({ google_identity_token: identityToken, client_type: 'web' }) });
       client.setAccessToken(body.access_token);
       setSession(sessionFromApiUser(body.user));
       authDiagnostic('session-exchange-succeeded');
