@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { navigationForSession, providerRouteAllowed } from './navigation';
+import { navigationForSession, platformNavigation, providerRouteAllowed } from './navigation';
 
 const context = (capabilities: string[]) => ({ providerId: 'provider-1', displayName: 'Provider One', capabilities });
 
 describe('Operations capability navigation', () => {
   it('keeps platform navigation separate from provider capabilities', () => {
     const navigation = navigationForSession({ platformAdmin: true, platformCapabilities: ['PLATFORM_PLAN_READ', 'PLATFORM_SUBSCRIPTION_READ', 'PLATFORM_SUBSCRIPTION_USAGE_READ'], providerCapabilities: [context(['requests'])] }, 'provider-1');
-    expect(navigation.platform.map((item) => item.key)).toEqual(['platform-overview', 'platform-providers', 'platform-plans', 'platform-subscriptions', 'platform-subscription-requests', 'platform-subscription-usage', 'platform-subscription-billing']);
+    expect(navigation.platform.map((item) => item.key)).toEqual(['platform-plans', 'platform-subscriptions', 'platform-subscription-requests', 'platform-subscription-usage', 'platform-subscription-billing']);
     expect(navigation.provider.map((item) => item.key)).toEqual(['overview', 'requests']);
   });
 
@@ -25,6 +25,21 @@ describe('Operations capability navigation', () => {
     const navigation = navigationForSession({ platformAdmin: false, providerCapabilities: [] }, 'provider-1');
     expect(navigation.platform).toEqual([]);
     expect(navigation.provider).toEqual([]);
+  });
+
+  it('shows operations support menus without Platform Team or protected governance', () => {
+    const navigation = navigationForSession({ platformAdmin: true, platformCapabilities: ['PLATFORM_PROVIDER_READ', 'PLATFORM_SUBSCRIPTION_READ'], providerCapabilities: [] });
+    expect(navigation.platform.map(item => item.key)).toContain('platform-provider-users');
+    expect(navigation.platform.map(item => item.key)).not.toContain('platform-team');
+    expect(navigation.platform.map(item => item.key)).not.toContain('platform-roles');
+    expect(navigationForSession({ platformAdmin: true, platformCapabilities: [], providerCapabilities: [] }).platform).toEqual([]);
+  });
+
+
+  it('renders the complete platform menu when the server grants the full Global Administrator capability set', () => {
+    const allPlatformCapabilities = platformNavigation.flatMap((item) => item.capability ? [item.capability] : []);
+    const navigation = navigationForSession({ platformAdmin: true, platformCapabilities: allPlatformCapabilities, providerCapabilities: [] });
+    expect(navigation.platform.map((item) => item.key)).toEqual(platformNavigation.map((item) => item.key));
   });
 
   it('keeps business profile restricted to the returned provider capability', () => {

@@ -28,3 +28,5 @@ export function FilterToolbar({ children, resultLabel }: { children?: ReactNode;
 export function DetailSection({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return <section className="detail-section"><div className="detail-section-heading"><h2>{title}</h2>{description && <p>{description}</p>}</div>{children}</section>;
 }
+
+export { TriseBrandHeader } from './brand-header';

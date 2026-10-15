@@ -1,0 +1,198 @@
+[
+  {
+    "account": 1,
+    "displayName": "Demo Community Customer",
+    "platformCapabilities": [],
+    "providers": [
+      {
+        "provider_id": "01a0ed1c-94dc-7702-9ea8-64187649b5a3",
+        "display_name": "TRISE Demo Solar Water Heater Services",
+        "capabilities": []
+      }
+    ]
+  },
+  {
+    "account": 2,
+    "displayName": "Demo Operations Coordinator",
+    "platformCapabilities": [
+      "PLATFORM_ACCESS_DELEGATE",
+      "PLATFORM_ACCESS_PUBLISH",
+      "PLATFORM_ACCESS_READ",
+      "PLATFORM_ACCESS_WRITE"
+    ],
+    "providers": [
+      {
+        "provider_id": "01a0ed1c-94dc-7702-9ea8-64187649b5a3",
+        "display_name": "TRISE Demo Solar Water Heater Services",
+        "capabilities": [
+          "audit",
+          "requests",
+          "workforce"
+        ]
+      },
+      {
+        "provider_id": "01a10a91-fc7f-70bb-b4a1-ddeefdded2f7",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "audit",
+          "requests",
+          "workforce"
+        ]
+      },
+      {
+        "provider_id": "01a0fb76-da41-762d-9b1f-e02112367240",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "audit",
+          "requests",
+          "workforce"
+        ]
+      }
+    ]
+  },
+  {
+    "account": 3,
+    "displayName": "Demo Provider Administrator",
+    "platformCapabilities": [
+      "PLATFORM_ACCESS_READ",
+      "PLATFORM_ACCESS_REVIEW"
+    ],
+    "providers": [
+      {
+        "provider_id": "01a0ed1c-94dc-7702-9ea8-64187649b5a3",
+        "display_name": "TRISE Demo Solar Water Heater Services",
+        "capabilities": [
+          "audit",
+          "bookings",
+          "business_profile",
+          "configuration",
+          "customers",
+          "jobs",
+          "onboarding",
+          "requests",
+          "subscriptions",
+          "team_access",
+          "workforce"
+        ]
+      },
+      {
+        "provider_id": "01a0fb76-da41-762d-9b1f-e02112367240",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "audit",
+          "bookings",
+          "business_profile",
+          "configuration",
+          "customers",
+          "jobs",
+          "onboarding",
+          "requests",
+          "subscriptions",
+          "team_access",
+          "workforce"
+        ]
+      },
+      {
+        "provider_id": "01a10a91-fc7f-70bb-b4a1-ddeefdded2f7",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "audit",
+          "bookings",
+          "business_profile",
+          "configuration",
+          "customers",
+          "jobs",
+          "onboarding",
+          "requests",
+          "subscriptions",
+          "team_access",
+          "workforce"
+        ]
+      }
+    ]
+  },
+  {
+    "account": 4,
+    "displayName": "Demo Dispatcher",
+    "platformCapabilities": [
+      "PLATFORM_PLAN_PUBLISH",
+      "PLATFORM_PLAN_READ",
+      "PLATFORM_PLAN_WRITE",
+      "PLATFORM_PROVIDER_ACTIVATE",
+      "PLATFORM_PROVIDER_DOCUMENTS",
+      "PLATFORM_PROVIDER_LIFECYCLE",
+      "PLATFORM_PROVIDER_ONBOARD",
+      "PLATFORM_PROVIDER_PROFILE_WRITE",
+      "PLATFORM_PROVIDER_READ",
+      "PLATFORM_PROVIDER_REGISTER",
+      "PLATFORM_PROVIDER_RESTRICT",
+      "PLATFORM_SUBSCRIPTION_READ",
+      "PLATFORM_SUBSCRIPTION_REVIEW",
+      "PLATFORM_SUBSCRIPTION_USAGE_READ",
+      "PLATFORM_SUBSCRIPTION_WRITE"
+    ],
+    "providers": [
+      {
+        "provider_id": "01a0fb76-da41-762d-9b1f-e02112367240",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "bookings",
+          "jobs"
+        ]
+      },
+      {
+        "provider_id": "01a10a91-fc7f-70bb-b4a1-ddeefdded2f7",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "bookings",
+          "jobs"
+        ]
+      },
+      {
+        "provider_id": "01a0ed1c-94dc-7702-9ea8-64187649b5a3",
+        "display_name": "TRISE Demo Solar Water Heater Services",
+        "capabilities": [
+          "audit",
+          "bookings",
+          "business_profile",
+          "configuration",
+          "customers",
+          "jobs",
+          "onboarding",
+          "requests",
+          "subscriptions",
+          "team_access",
+          "workforce"
+        ]
+      }
+    ]
+  },
+  {
+    "account": 5,
+    "displayName": "Demo Elevator Technician",
+    "platformCapabilities": [],
+    "providers": [
+      {
+        "provider_id": "01a0ed1c-94dc-7702-9ea8-64187649b5a3",
+        "display_name": "TRISE Demo Solar Water Heater Services",
+        "capabilities": [
+          "my_work"
+        ]
+      },
+      {
+        "provider_id": "01a0fb76-da41-762d-9b1f-e02112367240",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "my_work"
+        ]
+      },
+      {
+        "provider_id": "01a10a91-fc7f-70bb-b4a1-ddeefdded2f7",
+        "display_name": "Lift Rise Elevators — Demo Operations",
+        "capabilities": [
+          "my_work"
+        ]
+      }
+    ]
+  }
+]

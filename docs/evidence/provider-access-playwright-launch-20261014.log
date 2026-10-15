@@ -1,0 +1,17 @@
+TRISE provider/user lifecycle browser launch establishment — 2026-10-14
+
+Command 1:
+npx playwright test tests/e2e/browser-policy.test.ts --project=operations-desktop --workers=1 --retries=0 --reporter=line
+
+Result: failed before Playwright/Chromium launch. Host npm 12.2.0 on Node
+18.20.8 raised ERR_REQUIRE_ESM while loading npm's http-proxy-agent wrapper.
+
+Command 2 (direct local Playwright CLI, no sandbox/security changes):
+./node_modules/.bin/playwright test tests/e2e/browser-policy.test.ts --project=operations-desktop --workers=1 --retries=0 --reporter=line
+
+Result: failed before Chromium launch. Local Playwright requires Node.js 20 or
+higher; the host runtime is Node.js 18.20.8.
+
+No Chromium process was established, so there was no crash log, page creation,
+screenshot, console/network diagnostic, or authenticated browser workflow. No
+retry or protection bypass was attempted. Browser acceptance is BLOCKED.

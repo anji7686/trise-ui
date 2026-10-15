@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Status } from '@trise/ui';
+import { Button } from '@trise/ui';
+import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type ChecklistAttributes, type Collection, type GenericAttributes, type Resource, type WorkSessionAttributes } from './data';
 
 function messageOf(error: unknown) { return (error as { message?: string })?.message || 'The execution request was rejected by the server.'; }

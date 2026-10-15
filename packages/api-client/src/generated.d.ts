@@ -4,6 +4,560 @@
  */
 
 export interface paths {
+    "/provider/access/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Members */
+        get: operations["ListProviderMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/members/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider Member */
+        get: operations["GetProviderMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/members/{membershipId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace Provider Member Roles */
+        put: operations["ReplaceProviderMemberRoles"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Access Invitations */
+        get: operations["ListProviderAccessInvitations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/team-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List ordinary team invitations */
+        get: operations["ListProviderTeamInvitations"];
+        put?: never;
+        /** Create invitation for an existing verified user */
+        post: operations["CreateProviderTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/team-invitations/{invitationId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke pending team invitation */
+        post: operations["RevokeProviderTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/self/team-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List team invitations addressed to the signed-in user */
+        get: operations["ListMyProviderTeamInvitations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/self/team-invitations/{invitationId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept team invitation and its selected roles */
+        post: operations["AcceptProviderTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Roles */
+        get: operations["ListProviderRoles"];
+        put?: never;
+        /** Create Provider Custom Role */
+        post: operations["CreateProviderCustomRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider Role */
+        get: operations["GetProviderRole"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider Custom Role */
+        patch: operations["UpdateProviderCustomRole"];
+        trace?: never;
+    };
+    "/provider/access/roles/{roleId}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Provider Custom Role Enabled */
+        post: operations["SetProviderCustomRoleEnabled"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Access Permissions */
+        get: operations["ListProviderAccessPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/custom-role-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform-managed provider custom-role settings */
+        get: operations["ListProviderCustomRolePolicies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/custom-role-policies/{providerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set provider custom-role management availability */
+        post: operations["UpdateProviderCustomRolePolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Platform Default Roles */
+        get: operations["ListPlatformDefaultRoles"];
+        put?: never;
+        /** Create Platform Default Role */
+        post: operations["CreatePlatformDefaultRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/roles/{roleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Platform Default Role */
+        get: operations["GetPlatformDefaultRole"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Platform Default Role Draft */
+        patch: operations["UpdatePlatformDefaultRoleDraft"];
+        trace?: never;
+    };
+    "/platform/access/roles/{roleId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Platform Default Role Review */
+        post: operations["SubmitPlatformDefaultRoleReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/roles/{roleId}/reviews/{reviewId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Platform Default Role Review */
+        post: operations["ApprovePlatformDefaultRoleReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/roles/{roleId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Platform Default Role */
+        post: operations["PublishPlatformDefaultRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/roles/{roleId}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Published Platform Default Role Enabled */
+        post: operations["SetPlatformDefaultRoleEnabled"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Platform Access Permissions */
+        get: operations["ListPlatformAccessPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/access/permissions/{permissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Permission Delegation */
+        patch: operations["UpdatePermissionDelegation"];
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/admin-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List Platform Provider Admin Invitations */
+        get: operations["ListPlatformProviderAdminInvitations"];
+        put?: never;
+        /** Create Platform Provider Admin Invitation */
+        post: operations["CreatePlatformProviderAdminInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/admin-invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get Platform Provider Admin Invitation */
+        get: operations["GetPlatformProviderAdminInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/admin-invitations/{invitationId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Platform Provider Admin Invitation */
+        post: operations["RevokePlatformProviderAdminInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/provider-admin-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Provider Admin Invitations */
+        get: operations["ListMyProviderAdminInvitations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/provider-admin-invitations/{invitationId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Provider Admin Invitation */
+        post: operations["AcceptProviderAdminInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/manager-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List Platform Provider Manager Assignments */
+        get: operations["ListPlatformProviderManagerAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/manager-assignments/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                assignmentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get Platform Provider Manager Assignment */
+        get: operations["GetPlatformProviderManagerAssignment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/onboarding/locations/{locationId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                locationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Provider Onboarding Location */
+        post: operations["EndProviderOnboardingLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/development": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with an approved local test credential
+         * @description Development/test only with explicit server opt-in and a configured local browser origin. Absent in production. Resolves an existing active approved User without identity linkage or authority grants.
+         */
+        post: operations["ExchangeDevelopmentCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/session/google": {
         parameters: {
             query?: never;
@@ -409,7 +963,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List subscription lifecycle changes */
+        /**
+         * List subscription lifecycle changes
+         * @description Optional cursor pagination uses -created_at,id and binds cursors to the current principal, collection and provider filter. Without page parameters the legacy latest-100 response is retained.
+         */
         get: operations["ListPlatformSubscriptionChanges"];
         put?: never;
         post?: never;
@@ -571,6 +1128,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/subscription-billing/tax-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview subscription tax using the configured engine mode */
+        post: operations["PreviewPlatformSubscriptionTax"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/subscription-invoices": {
         parameters: {
             query?: never;
@@ -578,7 +1152,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List manual subscription invoices */
+        /**
+         * List manual subscription invoices
+         * @description Optional cursor pagination uses -created_at,id and binds cursors to the current principal, collection and provider filter. Without page parameters the legacy latest-100 response is retained.
+         */
         get: operations["ListPlatformSubscriptionInvoices"];
         put?: never;
         /** Issue a server-calculated manual subscription invoice */
@@ -598,7 +1175,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get invoice snapshots and evidence */
+        /**
+         * Get invoice snapshots and evidence
+         * @description Evidence detail includes authorized reviews with decision, reason and reviewed_at; reviewer identities are omitted.
+         */
         get: operations["GetPlatformSubscriptionInvoice"];
         put?: never;
         post?: never;
@@ -692,7 +1272,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get request, review history and commercial evidence */
+        /**
+         * Get request, review history and commercial evidence
+         * @description Evidence detail includes reviews (SubscriptionEvidenceReviewFeedback) with decision, reason and time, excluding reviewer identities.
+         */
         get: operations["GetPlatformSubscriptionRequest"];
         put?: never;
         post?: never;
@@ -790,7 +1373,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Activate after approval and verified payment evidence */
+        /** Activate an approved paid subscription after verified payment evidence */
         post: operations["ActivatePlatformSubscription"];
         delete?: never;
         options?: never;
@@ -860,7 +1443,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the selected provider's subscription, usage, requests and invoices */
+        /**
+         * Get the selected provider's subscription, usage, requests and invoices
+         * @description Requests, changes and invoices retain their legacy latest-50 arrays when history is omitted. Optional history parameters page each collection independently in -created_at,id order. data.history_page contains requests, changes and invoices Page objects. Each history record includes evidence (SubscriptionEvidenceFeedback) with private correction feedback; reviewer identities are omitted. Cursors bind principal, provider and collection; they do not confer access.
+         */
         get: operations["GetProviderSubscription"];
         put?: never;
         post?: never;
@@ -930,6 +1516,424 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/provider-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List provider memberships for Platform Administration
+         * @description One row represents one provider membership. Business Operation access is resolved from the provider account's single active operation; last-sign-in and membership last-active remain null when no authoritative timestamp has been recorded.
+         */
+        get: operations["ListPlatformProviderUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}/provider-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite a user to another provider account
+         * @description Creates a pending provider membership invitation. The target provider account retains its one Business Operation; access is not active until the existing invitation acceptance and verification lifecycle completes.
+         */
+        post: operations["CreatePlatformProviderUserAccessInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace roles on a provider membership */
+        put: operations["ReplacePlatformProviderUserRoles"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}/invitations/{invitationId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend a pending provider access invitation */
+        post: operations["ResendPlatformProviderUserInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}/invitations/{invitationId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending provider access invitation */
+        post: operations["CancelPlatformProviderUserInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}/membership/{membershipAction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transition a provider membership */
+        post: operations["TransitionPlatformProviderUserMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/provider-users/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one provider membership in the platform user directory */
+        get: operations["GetPlatformProviderUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform administrators */
+        get: operations["ListPlatformTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/{adminId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get platform administrator details and audit history */
+        get: operations["GetPlatformTeamMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the two protected platform roles */
+        get: operations["ListPlatformTeamRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform team invitations */
+        get: operations["ListPlatformTeamInvitations"];
+        put?: never;
+        /** Invite a platform administrator */
+        post: operations["CreatePlatformTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/invitations/{invitationId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend a platform team invitation */
+        post: operations["ResendPlatformTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/invitations/{invitationId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a platform team invitation */
+        post: operations["CancelPlatformTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/{adminId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a platform administrator role */
+        put: operations["ReplacePlatformTeamRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/team/{adminId}/{accessAction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend, restore or revoke platform access */
+        post: operations["ChangePlatformTeamAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/team-invitations/{invitationId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a platform team invitation as the addressed identity */
+        post: operations["AcceptPlatformTeamInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Business parents for provider-account registration */
+        get: operations["ListPlatformBusinesses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/legal-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Business legal identity for Platform review */
+        post: operations["SubmitBusinessLegalProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/tax-registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request association to an existing canonical GST registration */
+        post: operations["RequestBusinessTaxRegistrationAssociation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/tax-registrations/{registrationId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a Business GST ownership association */
+        post: operations["VerifyBusinessTaxRegistrationAssociation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/tax-registrations/{registrationId}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request governed GST ownership association change or removal */
+        post: operations["RequestBusinessTaxRegistrationChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List private Business compliance documents */
+        get: operations["ListBusinessComplianceDocuments"];
+        put?: never;
+        /** Create a private Business compliance document upload */
+        post: operations["CreateBusinessComplianceDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/documents/{documentId}/upload-finalization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finalize a Business compliance document upload */
+        post: operations["FinalizeBusinessComplianceDocumentUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/documents/{documentId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize private Business evidence download */
+        post: operations["AuthorizeBusinessComplianceDocumentDownload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/providers/{providerId}": {
         parameters: {
             query?: never;
@@ -956,6 +1960,114 @@ export interface paths {
         patch: operations["UpdatePlatformProvider"];
         trace?: never;
     };
+    "/platform/businesses/{businessId}/identity-domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List Business Identity Domains */
+        get: operations["ListBusinessIdentityDomains"];
+        put?: never;
+        /** Request Business Identity Domain Verification */
+        post: operations["CreateBusinessIdentityDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/identity-domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Pending or Suspended Business Identity Domain */
+        delete: operations["DeleteBusinessIdentityDomain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/identity-domains/{domainId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Business Identity Domain */
+        post: operations["VerifyBusinessIdentityDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/identity-domains/{domainId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Business Identity Domain Verification */
+        post: operations["ResendBusinessIdentityDomainVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/businesses/{businessId}/identity-domains/{domainId}/{domainAction}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or Suspend Business Identity Domain */
+        post: operations["TransitionBusinessIdentityDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/identity-domain-verifications/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        /** Show Business Identity Domain Verification */
+        get: operations["ShowIdentityDomainVerification"];
+        put?: never;
+        /** Confirm Business Identity Domain Email Verification */
+        post: operations["ConfirmIdentityDomainVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/providers/{providerId}/lifecycle/{lifecycleAction}": {
         parameters: {
             query?: never;
@@ -970,7 +2082,7 @@ export interface paths {
         put?: never;
         /**
          * Transition Provider Operational Lifecycle
-         * @description Explicitly activates or restricts an operational provider. Verification remains a separate prerequisite and this command never disables the global User identity.
+         * @description Explicitly activates or restricts an operational provider. Verification remains a separate prerequisite and this command never disables the global User identity. On first activation, when no explicit subscription request is pending or accepted, the API assigns the configured zero-priced 14-day onboarding default from the business verification timestamp. The default assignment is in the same transaction and does not create payment evidence or a separate review decision.
          */
         post: operations["TransitionPlatformProviderLifecycle"];
         delete?: never;
@@ -7597,10 +8709,954 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/business-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active selectable Business Operations */
+        get: operations["ListBusinessOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/business-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform Business Operation catalogue */
+        get: operations["ListPlatformBusinessOperations"];
+        put?: never;
+        /** Create catalogue entry */
+        post: operations["CreateBusinessOperationType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/business-operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update catalogue metadata and selectability */
+        patch: operations["UpdateBusinessOperationType"];
+        trace?: never;
+    };
+    "/providers/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider Business Operations */
+        get: operations["ListProviderOperations"];
+        /** Set or replace the provider's single Business Operation before activation */
+        put: operations["ReplaceProviderOperations"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List operations for a platform provider detail */
+        get: operations["ListPlatformProviderOperations"];
+        /** Set or replace the provider's single Business Operation before activation */
+        put: operations["ReplacePlatformProviderOperations"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authoritative tax catalogue summary */
+        get: operations["GetPlatformTaxDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List structural GST rate templates */
+        get: operations["ListPlatformTaxRateTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List versioned tax rules */
+        get: operations["ListPlatformTaxRules"];
+        put?: never;
+        /** Create a tax rule draft */
+        post: operations["CreatePlatformTaxRuleDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tax rule details and audit history */
+        get: operations["GetPlatformTaxRule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a mutable tax rule draft */
+        patch: operations["UpdatePlatformTaxRuleDraft"];
+        trace?: never;
+    };
+    "/platform/taxes/rules/from-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a draft from a structural rate template */
+        post: operations["CreatePlatformTaxRuleFromTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/rules/{ruleId}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Audibly retire an unused draft tax rule */
+        post: operations["DiscardPlatformTaxRuleDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/rules/{ruleId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return a rule in review to draft with a reason */
+        post: operations["RequestPlatformTaxRuleChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/legal-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tax legal sources and verification status */
+        get: operations["ListPlatformTaxLegalSources"];
+        put?: never;
+        /** Register an unverified legal source candidate */
+        post: operations["CreatePlatformTaxLegalSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/legal-sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a legal source with verification metadata and linked rules */
+        get: operations["GetPlatformTaxLegalSource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update an unverified legal source candidate */
+        patch: operations["UpdatePlatformTaxLegalSource"];
+        trace?: never;
+    };
+    "/platform/taxes/legal-sources/{sourceId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a source after authorized document review */
+        post: operations["VerifyPlatformTaxLegalSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/platform-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the configured TRISE issuing tax profile */
+        get: operations["GetPlatformTaxProfile"];
+        /** Configure the TRISE issuing tax profile */
+        put: operations["UpdatePlatformTaxProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/platform-profile/{profileId}/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a pending issuing GST registration */
+        post: operations["CreatePlatformTaxRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/saas-configurations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a governed SaaS classification configuration */
+        post: operations["CreatePlatformSaasTaxConfiguration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/rules/{ruleId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish an approved effective-dated tax rule */
+        post: operations["PublishPlatformTaxRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/taxes/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List governed tax template imports */
+        get: operations["ListPlatformTaxImports"];
+        put?: never;
+        /** Validate and import tax candidates as drafts */
+        post: operations["ImportPlatformTaxTemplates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/tax-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get provider legal entity and GST registration context */
+        get: operations["GetPlatformProviderTaxProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/available-business-licences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List approved Business licences available to the current Provider */
+        get: operations["ListAvailableBusinessLicences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/operating-territories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List requested Provider operating territories */
+        get: operations["ListProviderOperatingTerritories"];
+        put?: never;
+        /** Request a Provider operating territory */
+        post: operations["RequestProviderOperatingTerritory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/licence-authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider licence authorization requests */
+        get: operations["ListProviderLicenceAuthorizations"];
+        put?: never;
+        /** Request scoped use of an approved Business licence */
+        post: operations["RequestProviderLicenceAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/licence-authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider licence authorization requests */
+        get: operations["ListPlatformLicenceAuthorizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/licence-authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List licence authorizations for a Provider */
+        get: operations["ListPlatformProviderLicenceAuthorizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/licence-authorizations/{authorizationId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a Provider licence authorization decision */
+        post: operations["DecideProviderLicenceAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/assets/{assetId}/compliance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List compliance requests for an authorized Asset */
+        get: operations["ListProviderAssetCompliance"];
+        put?: never;
+        /** Create an Asset compliance draft */
+        post: operations["CreateProviderAssetCompliance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/assets/{assetId}/compliance/requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List published requirements applicable to an Asset */
+        get: operations["ListProviderAssetComplianceRequirements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/assets/{assetId}/compliance/{requestId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit an Asset compliance request for Platform review */
+        post: operations["SubmitProviderAssetCompliance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/compliance/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent and Asset compliance requests for the current Provider */
+        get: operations["ListProviderComplianceReviewQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/compliance/review-queue/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a Provider-owned Agent or Asset compliance request */
+        get: operations["GetProviderComplianceReviewRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/compliance/review-queue/{requestId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign an authorized reviewer within the current Provider */
+        post: operations["AssignProviderComplianceReviewer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/compliance/review-queue/{requestId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve, reject or request corrections for a Provider-owned request */
+        post: operations["DecideProviderComplianceReviewRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/licence-authorizations/{authorizationId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign an authorized Platform reviewer to a licence authorization */
+        post: operations["AssignProviderLicenceAuthorizationReviewer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/compliance/records/{recordId}/regulatory-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a manually reviewed regulatory status */
+        post: operations["RecordManualComplianceRegulatoryStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProviderTeamInvitationCreate: {
+            /** Format: email */
+            email: string;
+            role_ids: components["schemas"]["Id"][];
+            /** Format: date-time */
+            expires_at: string;
+        };
+        ProviderTeamInvitationRevision: {
+            expected_revision: number;
+        };
+        ProviderTeamInvitation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-team-invitations";
+            attributes: {
+                /** Format: email */
+                email?: string;
+                provider_name?: string;
+                role_ids: components["schemas"]["Id"][];
+                /** @enum {string} */
+                status: "pending" | "accepted" | "revoked";
+                expired: boolean;
+                /** Format: date-time */
+                expires_at: string;
+                revision: number;
+            };
+        };
+        ProviderTeamInvitationCollection: {
+            data: components["schemas"]["ProviderTeamInvitation"][];
+            page?: components["schemas"]["Page"];
+        };
+        AccessMember: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-members";
+            attributes: {
+                user_id: components["schemas"]["Id"];
+                name: string | null;
+                email: string | null;
+                status: string;
+                revision: number;
+                roles: {
+                    id: components["schemas"]["Id"];
+                    name: string;
+                    enabled: boolean;
+                    /** @enum {string} */
+                    role_type: "default" | "custom";
+                }[];
+                administrator: boolean;
+                /** @enum {string} */
+                access_mode: "LEGACY_CONTEXT" | "ROLE_GOVERNED";
+                membership_context: string;
+            };
+        };
+        AccessMemberCollection: {
+            data: components["schemas"]["AccessMember"][];
+            page?: components["schemas"]["Page"];
+        };
+        MemberRoleReplacement: {
+            expected_revision: number;
+            role_ids: components["schemas"]["Id"][];
+        };
+        CustomRoleCreate: {
+            name: string;
+            description: string;
+            permissions: {
+                [key: string]: boolean;
+            };
+        };
+        CustomRoleUpdate: {
+            name: string;
+            description: string;
+            permissions: {
+                [key: string]: boolean;
+            };
+            expected_revision: number;
+        };
+        CustomRoleEnabledCommand: {
+            expected_revision: number;
+            enabled: boolean;
+        };
+        AccessReview: {
+            id: components["schemas"]["Id"];
+            /** @enum {string} */
+            status: "pending" | "approved" | "revoked" | "consumed";
+            candidate_revision: number;
+            submitted_by_user_id: components["schemas"]["Id"];
+            /** Format: uuid */
+            reviewer_user_id: string | null;
+        };
+        AccessRole: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "roles";
+            attributes: {
+                name: string;
+                role_code: string;
+                description: string;
+                /** @enum {string} */
+                role_type: "default" | "custom";
+                /** @enum {string} */
+                status: "draft" | "active" | "deprecated" | "archived";
+                enabled: boolean;
+                version: number;
+                revision: number;
+                permissions: {
+                    [key: string]: boolean;
+                };
+                applies_to_all_operations: boolean;
+                business_operation_type_ids: components["schemas"]["Id"][];
+                assignable: boolean;
+                /** Format: date-time */
+                updated_at: string;
+                active_assignment_count: number;
+                reviews: components["schemas"]["AccessReview"][];
+            };
+        };
+        AccessRoleCollection: {
+            data: components["schemas"]["AccessRole"][];
+            custom_role_management_enabled?: boolean;
+            page?: components["schemas"]["Page"];
+        };
+        ProviderCustomRolePolicy: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-custom-role-policies";
+            attributes: {
+                provider_name: string;
+                provider_code: string | null;
+                provider_status: string;
+                business_operation_type_id: components["schemas"]["Id"] | null;
+                business_operation_name: string | null;
+                existing_custom_roles_count: number;
+                enabled: boolean;
+                revision: number;
+            };
+        };
+        ProviderCustomRolePolicyCollection: {
+            data: components["schemas"]["ProviderCustomRolePolicy"][];
+            page?: components["schemas"]["Page"];
+        };
+        AccessPermission: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "permission-definitions";
+            attributes: {
+                code: string;
+                category: string;
+                module: string;
+                action: string;
+                description: string;
+                protected: boolean;
+                delegable: boolean;
+                revision: number;
+            };
+        };
+        AccessPermissionCollection: {
+            data: components["schemas"]["AccessPermission"][];
+        };
+        DefaultRoleCreate: {
+            name: string;
+            description: string;
+            permissions: {
+                [key: string]: boolean;
+            };
+            applies_to_all_operations: boolean;
+            business_operation_type_ids: components["schemas"]["Id"][];
+            predecessor_id?: components["schemas"]["Id"];
+        };
+        DefaultRoleUpdate: {
+            name: string;
+            description: string;
+            permissions: {
+                [key: string]: boolean;
+            };
+            applies_to_all_operations: boolean;
+            business_operation_type_ids: components["schemas"]["Id"][];
+            expected_revision: number;
+        };
+        AccessRevisionCommand: {
+            expected_revision: number;
+        };
+        AccessPublishCommand: {
+            expected_revision: number;
+            review_id: components["schemas"]["Id"];
+        };
+        AccessDelegationCommand: {
+            expected_revision: number;
+            delegable: boolean;
+        };
+        AccessEmptyCommand: Record<string, never>;
+        ProviderSubscriptionFeedbackResponse: {
+            data: {
+                requests?: {
+                    evidence?: components["schemas"]["SubscriptionEvidenceFeedback"][];
+                }[];
+                changes?: {
+                    evidence?: components["schemas"]["SubscriptionEvidenceFeedback"][];
+                }[];
+                invoices?: {
+                    evidence?: components["schemas"]["SubscriptionEvidenceFeedback"][];
+                }[];
+            };
+        };
+        SubscriptionEvidenceDetailResponse: {
+            data: {
+                id: components["schemas"]["Id"];
+                attributes: {
+                    evidence?: {
+                        id: components["schemas"]["Id"];
+                        attributes: {
+                            reviews: components["schemas"]["SubscriptionEvidenceReviewFeedback"][];
+                        };
+                    }[];
+                };
+            };
+        };
+        ProviderAdminInvitation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-admin-invitations";
+            attributes: {
+                provider_id: components["schemas"]["Id"];
+                provider_name: string;
+                target_user_id?: components["schemas"]["Id"];
+                /** @enum {string} */
+                status: "PENDING" | "ACCEPTED" | "REVOKED";
+                /** Format: date-time */
+                expires_at: string;
+                expired: boolean;
+                revision: components["schemas"]["Revision"];
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                accepted_at: string | null;
+                /** Format: date-time */
+                revoked_at: string | null;
+                accepted_membership_id: components["schemas"]["Id"] | null;
+            };
+        };
+        PlatformProviderManagerAssignment: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-provider-manager-assignments";
+            attributes: {
+                assignment_id: components["schemas"]["Id"];
+                user_id: components["schemas"]["Id"];
+                provider_id: components["schemas"]["Id"];
+                /** @enum {string} */
+                status: "ACTIVE" | "ENDED";
+                revision: components["schemas"]["Revision"];
+                /** Format: date-time */
+                effective_from: string;
+                /** Format: date-time */
+                effective_to: string | null;
+            };
+        };
+        ProviderAdminInvitationCreate: {
+            user_id: components["schemas"]["Id"];
+            /** Format: date-time */
+            expires_at: string;
+            reason: string;
+        };
+        ProviderAdminInvitationAccept: {
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ProviderAdminInvitationRevoke: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        ProviderOfficeEnd: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        SubscriptionEvidenceReviewFeedback: {
+            id: components["schemas"]["Id"];
+            /** @enum {string} */
+            decision: "VERIFIED" | "REJECTED" | "CORRECTIONS_REQUESTED";
+            reason: string | null;
+            /** Format: date-time */
+            reviewed_at: string;
+        };
+        SubscriptionEvidenceFeedback: {
+            id: components["schemas"]["Id"];
+            evidence_kind: string;
+            review_state: string;
+            reviews: components["schemas"]["SubscriptionEvidenceReviewFeedback"][];
+        };
+        ProviderAdminInvitationResponse: {
+            data: components["schemas"]["ProviderAdminInvitation"];
+        };
+        ProviderAdminInvitationCollection: {
+            data: components["schemas"]["ProviderAdminInvitation"][];
+            page: components["schemas"]["Page"];
+        };
+        PlatformProviderManagerAssignmentResponse: {
+            data: components["schemas"]["PlatformProviderManagerAssignment"];
+        };
+        PlatformProviderManagerAssignmentCollection: {
+            data: components["schemas"]["PlatformProviderManagerAssignment"][];
+            page: components["schemas"]["Page"];
+        };
+        ProviderOfficeLocation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-office-locations";
+            attributes: {
+                name: string;
+                /** @enum {string} */
+                location_kind: "REGISTERED_OFFICE" | "OPERATING_OFFICE";
+                address: Record<string, never>;
+                latitude: number | null;
+                longitude: number | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE";
+                revision: components["schemas"]["Revision"];
+            };
+        };
         ResourceMembershipCreate: {
             party_id: components["schemas"]["Id"];
             user_id?: components["schemas"]["Id"] | null;
@@ -8099,10 +10155,11 @@ export interface components {
             price_amount: string;
             currency_code: string;
             /** @enum {string} */
-            billing_interval: "DAY" | "TEN_DAYS" | "WEEK" | "MONTH" | "QUARTER" | "YEAR";
+            billing_interval: "DAY" | "TEN_DAYS" | "FOURTEEN_DAYS" | "WEEK" | "MONTH" | "QUARTER" | "YEAR";
             /** @enum {string} */
             tax_treatment: "GST_EXTRA";
             industry_keys: string[];
+            business_operation_type_ids: components["schemas"]["Id"][];
             limits: components["schemas"]["SaasPlanLimit"][];
             included_features: string[];
         };
@@ -8122,9 +10179,34 @@ export interface components {
             id: components["schemas"]["Id"];
             /** @constant */
             type: "saas-plans";
-            attributes: Record<string, never>;
+            attributes: {
+                code: string;
+                name: string;
+                /** @enum {string} */
+                status: "ACTIVE" | "RETIRED";
+                revision: components["schemas"]["Revision"];
+                onboarding_default: boolean;
+                latest_version?: components["schemas"]["SaasPlanVersion"];
+                versions?: components["schemas"]["SaasPlanVersion"][];
+            };
         } & {
             [key: string]: unknown;
+        };
+        SaasPlanVersion: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "saas-plan-versions";
+            attributes: components["schemas"]["SaasPlanVersionAttributes"];
+        };
+        SaasPlanVersionAttributes: components["schemas"]["SaasPlanVersionTerms"] & {
+            version_number: number;
+            /** @enum {string} */
+            status: "DRAFT" | "PUBLISHED" | "RETIRED";
+            revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            published_at?: string | null;
+            /** Format: date-time */
+            retired_at?: string | null;
         };
         SaasPlanCollection: {
             data: components["schemas"]["SaasPlan"][];
@@ -8134,6 +10216,8 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             display_name: string;
+            business_id?: components["schemas"]["Id"];
+            business_name?: string;
             /** @enum {string} */
             representation: "organization" | "person";
             provider_code?: string | null;
@@ -8169,12 +10253,215 @@ export interface components {
             data: components["schemas"]["PlatformProvider"][];
             page: components["schemas"]["Page"];
         };
+        PlatformProviderUserRole: {
+            id: components["schemas"]["Id"];
+            name: string;
+            /** @enum {string} */
+            role_type: "default" | "custom";
+        };
+        PlatformTeamMemberAttributes: {
+            user_id: components["schemas"]["Id"];
+            display_name?: string | null;
+            /** Format: email */
+            email?: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "ENDED";
+            /** @enum {string|null} */
+            platform_role_code?: "PLATFORM_GLOBAL_ADMIN" | "PLATFORM_OPERATIONS_MANAGER" | "null" | null;
+            platform_role_name?: string | null;
+            revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            effective_from?: string | null;
+            /** Format: date-time */
+            effective_to?: string | null;
+            effective_permissions?: string[];
+        };
+        PlatformTeamMember: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-team-members";
+            attributes: components["schemas"]["PlatformTeamMemberAttributes"];
+        };
+        PlatformTeamResponse: {
+            data: components["schemas"]["PlatformTeamMember"][];
+            page: components["schemas"]["Page"];
+        };
+        PlatformTeamRoleAttributes: {
+            /** @enum {string} */
+            code: "PLATFORM_GLOBAL_ADMIN" | "PLATFORM_OPERATIONS_MANAGER";
+            name: string;
+            description: string;
+            /** @enum {string} */
+            status: "ACTIVE";
+            protected: boolean;
+            assignable: boolean;
+            eligibility_reason?: string | null;
+            capabilities: string[];
+        };
+        PlatformTeamRole: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-role-definitions";
+            attributes: components["schemas"]["PlatformTeamRoleAttributes"];
+        };
+        PlatformTeamRoleResponse: {
+            data: components["schemas"]["PlatformTeamRole"][];
+        };
+        PlatformTeamInvitationAttributes: {
+            /** Format: email */
+            target_email: string;
+            /** @enum {string} */
+            platform_role_code: "PLATFORM_GLOBAL_ADMIN" | "PLATFORM_OPERATIONS_MANAGER";
+            platform_role_name: string;
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "CANCELLED" | "EXPIRED";
+            /** Format: date-time */
+            expires_at: string;
+            revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        PlatformTeamInvitation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-team-invitations";
+            attributes: components["schemas"]["PlatformTeamInvitationAttributes"];
+        };
+        PlatformTeamInvitationResponse: {
+            data: components["schemas"]["PlatformTeamInvitation"][];
+            page: components["schemas"]["Page"];
+        };
+        PlatformTeamInvitationCreate: {
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            platform_role_code: "PLATFORM_GLOBAL_ADMIN" | "PLATFORM_OPERATIONS_MANAGER";
+            /** Format: date-time */
+            expires_at: string;
+            reason: string;
+        };
+        PlatformTeamInvitationRevision: {
+            expected_revision: components["schemas"]["Revision"];
+        };
+        PlatformTeamInvitationCancel: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformTeamRoleChange: {
+            /** @enum {string} */
+            platform_role_code: "PLATFORM_GLOBAL_ADMIN" | "PLATFORM_OPERATIONS_MANAGER";
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformTeamAccessChange: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformProviderUserOperation: {
+            id: components["schemas"]["Id"];
+            code: string;
+            name: string;
+        };
+        PlatformProviderUserAttributes: {
+            user_id: components["schemas"]["Id"];
+            membership_id: components["schemas"]["Id"];
+            name?: string | null;
+            /** Format: email */
+            email?: string | null;
+            mobile?: string | null;
+            provider_id: components["schemas"]["Id"];
+            provider_code?: string | null;
+            provider_name: string;
+            /** Format: uuid */
+            business_id?: string | null;
+            business_name?: string | null;
+            business_operation?: components["schemas"]["PlatformProviderUserOperation"] | null;
+            business_operations: components["schemas"]["PlatformProviderUserOperation"][];
+            roles: components["schemas"]["PlatformProviderUserRole"][];
+            membership_status: string;
+            /** @enum {string} */
+            access_mode: "LEGACY_CONTEXT" | "ROLE_GOVERNED";
+            /** @enum {string|null} */
+            invitation_status?: "pending" | "null" | null;
+            /** Format: uuid */
+            invitation_id?: string | null;
+            /** Format: date-time */
+            last_sign_in_at: string | null;
+            /** Format: date-time */
+            last_active_at: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            created_by?: string | null;
+            provider_access?: Record<string, never>[] | null;
+            activity?: Record<string, never>[] | null;
+        };
+        PlatformProviderUser: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "platform-provider-users";
+            attributes: components["schemas"]["PlatformProviderUserAttributes"];
+        };
+        PlatformProviderUsersResponse: {
+            data: components["schemas"]["PlatformProviderUser"][];
+            page: components["schemas"]["Page"];
+            summary: {
+                [key: string]: number;
+            };
+            filters: {
+                [key: string]: unknown;
+            };
+        };
+        PlatformProviderUserResponse: {
+            data: components["schemas"]["PlatformProviderUser"];
+        };
+        PlatformProviderUserAccessInvitationCreate: {
+            provider_id: components["schemas"]["Id"];
+            role_ids: components["schemas"]["Id"][];
+            /** Format: date-time */
+            expires_at: string;
+            reason: string;
+        };
+        PlatformProviderUserRolesReplace: {
+            role_ids: components["schemas"]["Id"][];
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformProviderUserMembershipTransition: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformProviderUserInvitationReason: {
+            reason: string;
+        };
+        PlatformProviderUserInvitationCancel: {
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        PlatformBusinessAttributes: {
+            name: string;
+            provider_count: number;
+            revision: components["schemas"]["Revision"];
+        };
+        PlatformBusiness: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "businesses";
+            attributes: components["schemas"]["PlatformBusinessAttributes"];
+        };
+        PlatformBusinessCollection: {
+            data: components["schemas"]["PlatformBusiness"][];
+            page: components["schemas"]["Page"];
+        };
         PlatformProviderCreate: {
             name: string;
             /** @enum {string} */
             representation_kind: "ORGANIZATION";
             provider_code?: string;
-        };
+            business_id?: components["schemas"]["Id"];
+            /** @description Create a new Business parent; mutually exclusive with business_id. */
+            business_name?: string;
+            business_operation_type_id: components["schemas"]["Id"];
+        } & (unknown | unknown);
         PlatformProviderUpdate: {
             name?: string;
             /** @enum {string} */
@@ -12399,6 +14686,7 @@ export interface components {
         MembershipId: components["schemas"]["Id"];
         AssetId: components["schemas"]["Id"];
         GrantId: components["schemas"]["Id"];
+        RuleId: components["schemas"]["Id"];
         /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
         ProviderContext: components["schemas"]["Id"];
         /** @description Required for provider configuration. Omission is permitted only for an explicitly authorized platform administrator acting in platform scope, never inferred from resource ID. */
@@ -12524,6 +14812,1223 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListProviderMembers: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                roleId?: components["schemas"]["Id"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessMemberCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetProviderMember: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ReplaceProviderMemberRoles: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRoleReplacement"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderAccessInvitations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderTeamInvitations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team invitations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTeamInvitationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateProviderTeamInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderTeamInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Invitation created for signed-in acceptance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTeamInvitation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RevokeProviderTeamInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderTeamInvitationRevision"];
+            };
+        };
+        responses: {
+            /** @description Revoked invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTeamInvitation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListMyProviderTeamInvitations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own team invitations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTeamInvitationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    AcceptProviderTeamInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderTeamInvitationRevision"];
+            };
+        };
+        responses: {
+            /** @description Accepted invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTeamInvitation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListProviderRoles: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRoleCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreateProviderCustomRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomRoleCreate"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetProviderRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdateProviderCustomRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SetProviderCustomRoleEnabled: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomRoleEnabledCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderAccessPermissions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessPermissionCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderCustomRolePolicies: {
+        parameters: {
+            query?: {
+                q?: string;
+                "filter[enabled]"?: "true" | "false";
+                "filter[status]"?: string;
+                "filter[business_operation_type_id]"?: components["schemas"]["Id"];
+                sort?: "provider_name" | "-provider_name" | "status" | "-status" | "updated_date" | "-updated_date";
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider custom-role policy page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCustomRolePolicyCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    UpdateProviderCustomRolePolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated policy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCustomRolePolicy"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformDefaultRoles: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive role name or stable role-code search. */
+                q?: string;
+                "filter[status]"?: "draft" | "pending_review" | "approved" | "published" | "disabled";
+                "filter[business_operation_type_id]"?: components["schemas"]["Id"];
+                "filter[version]"?: number;
+                sort?: "role_name" | "-role_name" | "business_operation" | "-business_operation" | "status" | "-status" | "updated_date" | "-updated_date";
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRoleCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePlatformDefaultRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefaultRoleCreate"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformDefaultRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdatePlatformDefaultRoleDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefaultRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SubmitPlatformDefaultRoleReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessRevisionCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ApprovePlatformDefaultRoleReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessEmptyCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    PublishPlatformDefaultRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessPublishCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SetPlatformDefaultRoleEnabled: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                roleId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomRoleEnabledCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformAccessPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessPermissionCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdatePermissionDelegation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                permissionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessDelegationCommand"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessPermission"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformProviderAdminInvitations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                status?: "PENDING" | "ACCEPTED" | "REVOKED";
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePlatformProviderAdminInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderAdminInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformProviderAdminInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RevokePlatformProviderAdminInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderAdminInvitationRevoke"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListMyProviderAdminInvitations: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                status?: "PENDING" | "ACCEPTED" | "REVOKED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    AcceptProviderAdminInvitation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderAdminInvitationAccept"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderAdminInvitationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformProviderManagerAssignments: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                status?: "ACTIVE" | "ENDED";
+                userId?: components["schemas"]["Id"];
+            };
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProviderManagerAssignmentCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformProviderManagerAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                assignmentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProviderManagerAssignmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    EndProviderOnboardingLocation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                providerId: components["schemas"]["Id"];
+                locationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderOfficeEnd"];
+            };
+        };
+        responses: {
+            /** @description Authorized result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderOfficeLocation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ExchangeDevelopmentCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    secret: string;
+                    /** @enum {string} */
+                    client_type: "web";
+                };
+            };
+        };
+        responses: {
+            /** @description Real web session; HttpOnly refresh cookie and CSRF cookie, Cache-Control no-store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebSession"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
     ExchangeGoogleIdentity: {
         parameters: {
             query?: never;
@@ -13160,14 +16665,22 @@ export interface operations {
     };
     ListPlatformSubscriptionChanges: {
         parameters: {
-            query?: never;
+            query?: {
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                /** @description Filter within authorized platform subscription records; this does not select provider operational context. */
+                providerId?: components["schemas"]["Id"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Subscription change collection */
+            /** @description Subscription change collection with optional page metadata */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -13193,7 +16706,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubscriptionEvidenceDetailResponse"];
+                };
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -13406,16 +16921,55 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
-    ListPlatformSubscriptionInvoices: {
+    PreviewPlatformSubscriptionTax: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
+        requestBody: {
+            content: {
+                "application/json": {
+                    provider_subscription_id: components["schemas"]["Id"];
+                    tax_rate_id?: components["schemas"]["Id"];
+                    addons?: {
+                        addon_version_id: components["schemas"]["Id"];
+                        quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Authoritative tax preview or review-required result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformSubscriptionInvoices: {
+        parameters: {
+            query?: {
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                /** @description Filter within authorized platform subscription records; this does not select provider operational context. */
+                provider_id?: components["schemas"]["Id"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            /** @description Invoice collection */
+            /** @description Invoice collection with optional page metadata */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -13434,7 +16988,16 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": {
+                    provider_subscription_id: components["schemas"]["Id"];
+                    tax_rate_id?: components["schemas"]["Id"];
+                    /** Format: date-time */
+                    due_at: string;
+                    addons?: {
+                        addon_version_id: components["schemas"]["Id"];
+                        quantity: number;
+                    }[];
+                };
             };
         };
         responses: {
@@ -13465,7 +17028,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubscriptionEvidenceDetailResponse"];
+                };
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -13580,7 +17145,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubscriptionEvidenceDetailResponse"];
+                };
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -13777,7 +17344,17 @@ export interface operations {
     };
     GetProviderSubscription: {
         parameters: {
-            query?: never;
+            query?: {
+                "history[requests][limit]"?: number;
+                "history[requests][after]"?: components["schemas"]["Cursor"];
+                "history[requests][before]"?: components["schemas"]["Cursor"];
+                "history[changes][limit]"?: number;
+                "history[changes][after]"?: components["schemas"]["Cursor"];
+                "history[changes][before]"?: components["schemas"]["Cursor"];
+                "history[invoices][limit]"?: number;
+                "history[invoices][after]"?: components["schemas"]["Cursor"];
+                "history[invoices][before]"?: components["schemas"]["Cursor"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -13789,7 +17366,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProviderSubscriptionFeedbackResponse"];
+                };
             };
             403: components["responses"]["Forbidden"];
         };
@@ -13854,6 +17433,8 @@ export interface operations {
                 "page[limit]"?: components["parameters"]["PageLimit"];
                 q?: string;
                 "filter[status]"?: ("PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED")[];
+                /** @description Filter provider accounts by their owning Business. This does not grant access to sibling provider records. */
+                "filter[business_id]"?: string;
             };
             header?: never;
             path?: never;
@@ -13900,6 +17481,722 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformProviderUsers: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                q?: string;
+                providerId?: components["schemas"]["Id"];
+                "filter[role_id]"?: components["schemas"]["Id"];
+                "filter[status]"?: "ACTIVE" | "SUSPENDED" | "REVOKED";
+                "filter[business_operation_type_id]"?: components["schemas"]["Id"];
+                "filter[business_id]"?: components["schemas"]["Id"];
+                "filter[last_active_from]"?: string;
+                "filter[last_active_to]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform provider-user membership directory */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProviderUsersResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformProviderUserAccessInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUserAccessInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Pending provider access invitation */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ReplacePlatformProviderUserRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUserRolesReplace"];
+            };
+        };
+        responses: {
+            /** @description Updated provider membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ResendPlatformProviderUserInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUserInvitationReason"];
+            };
+        };
+        responses: {
+            /** @description Resent pending invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CancelPlatformProviderUserInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUserInvitationCancel"];
+            };
+        };
+        responses: {
+            /** @description Cancelled invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    TransitionPlatformProviderUserMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+                membershipAction: "suspend" | "restore" | "revoke";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformProviderUserMembershipTransition"];
+            };
+        };
+        responses: {
+            /** @description Updated provider membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetPlatformProviderUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider membership detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProviderUserResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ListPlatformTeam: {
+        parameters: {
+            query?: {
+                sort?: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "status" | "-status" | "platform_role_code" | "-platform_role_code" | "created_at,id" | "-created_at,id";
+                "page[limit]"?: number;
+                "page[after]"?: string;
+                "page[before]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform administrator directory */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTeamResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetPlatformTeamMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform administrator detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformTeamRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-eligible protected platform role catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTeamRoleResponse"];
+                };
+            };
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    ListPlatformTeamInvitations: {
+        parameters: {
+            query?: {
+                "page[limit]"?: number;
+                "page[after]"?: string;
+                "page[before]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform team invitation history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTeamInvitationResponse"];
+                };
+            };
+        };
+    };
+    CreatePlatformTeamInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTeamInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Pending invitation with one-time delivery token */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ResendPlatformTeamInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTeamInvitationRevision"];
+            };
+        };
+        responses: {
+            /** @description Rotated pending invitation token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CancelPlatformTeamInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTeamInvitationCancel"];
+            };
+        };
+        responses: {
+            /** @description Cancelled invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ReplacePlatformTeamRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTeamRoleChange"];
+            };
+        };
+        responses: {
+            /** @description Updated platform administrator */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ChangePlatformTeamAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                adminId: components["schemas"]["Id"];
+                accessAction: "suspend" | "restore" | "revoke";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformTeamAccessChange"];
+            };
+        };
+        responses: {
+            /** @description Updated platform administrator */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    AcceptPlatformTeamInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Active platform grant created after normal authentication and token validation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformBusinesses: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded Business catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformBusinessCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    SubmitBusinessLegalProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    proposed_values: {
+                        [key: string]: unknown;
+                    };
+                    reason: string;
+                    evidence_documents?: Record<string, never>[];
+                };
+            };
+        };
+        responses: {
+            /** @description Compliance draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RequestBusinessTaxRegistrationAssociation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Existing canonical provider tax registration to associate without copying the GST record
+                     */
+                    canonical_registration_id?: string;
+                    /** @description Used only when creating a new Business-owned canonical registration */
+                    gstin?: string;
+                    registration_category?: string;
+                    state_or_union_territory?: string;
+                    /** Format: date */
+                    effective_from: string;
+                    /** Format: date */
+                    effective_to?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Pending canonical tax association */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    VerifyBusinessTaxRegistrationAssociation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                registrationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    /** @constant */
+                    document_reviewed: true;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Verified canonical tax association */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RequestBusinessTaxRegistrationChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                registrationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "CHANGE" | "REMOVE";
+                    proposed_values?: {
+                        [key: string]: unknown;
+                    };
+                    reason: string;
+                    evidence_documents?: Record<string, never>[];
+                };
+            };
+        };
+        responses: {
+            /** @description Submitted governed GST ownership change request */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListBusinessComplianceDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized Business evidence documents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateBusinessComplianceDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Upload transfer and pending Business document */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    FinalizeBusinessComplianceDocumentUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Available Business compliance document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    AuthorizeBusinessComplianceDocumentDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Short-lived private transfer authorization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     GetPlatformProvider: {
@@ -13956,6 +18253,232 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    ListBusinessIdentityDomains: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Business identity domains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateBusinessIdentityDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    domain: string;
+                    /** Format: email */
+                    verification_email: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Domain verification request; a one-time link is sent to the requested domain email address */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    DeleteBusinessIdentityDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                domainId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Deleted pending or suspended Business identity domain with audit reference */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    VerifyBusinessIdentityDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                domainId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    verification_token: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Verified business identity domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ResendBusinessIdentityDomainVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                domainId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Verification email resent with a rotated one-time token and refreshed expiry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    TransitionBusinessIdentityDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+                domainId: components["schemas"]["Id"];
+                domainAction: "approve" | "suspend";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Transitioned business identity domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ShowIdentityDomainVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTML email-verification confirmation page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ConfirmIdentityDomainVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Email verified; Global Administrator approval remains required */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     TransitionPlatformProviderLifecycle: {
@@ -28006,6 +32529,1083 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    ListBusinessOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalogue entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    ListPlatformBusinessOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalogue entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateBusinessOperationType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    name: string;
+                    description?: string | null;
+                    industry_key?: string | null;
+                    icon_key?: string | null;
+                    display_order?: number;
+                    is_active?: boolean;
+                    is_selectable?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdateBusinessOperationType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    name?: string;
+                    description?: string | null;
+                    industry_key?: string | null;
+                    icon_key?: string | null;
+                    display_order?: number;
+                    is_active?: boolean;
+                    is_selectable?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListProviderOperations: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-TRISE-Provider-Id": components["schemas"]["Id"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider operations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ReplaceProviderOperations: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-TRISE-Provider-Id": components["schemas"]["Id"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    operations: {
+                        business_operation_type_id: components["schemas"]["Id"];
+                        is_primary: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            /** @description Revision conflict, incompatible subscription, or operation change after activation */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListPlatformProviderOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider operations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ReplacePlatformProviderOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    operations: {
+                        business_operation_type_id: components["schemas"]["Id"];
+                        is_primary: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            /** @description Revision conflict, incompatible subscription, or operation change after activation */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    GetPlatformTaxDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax dashboard summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformTaxRateTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Structural rate templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListPlatformTaxRules: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+                q?: string;
+                "filter[status]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax rule collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformTaxRuleDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax rule draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformTaxRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: components["parameters"]["RuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax rule detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePlatformTaxRuleDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: components["parameters"]["RuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated tax rule draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    CreatePlatformTaxRuleFromTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Draft tax rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    DiscardPlatformTaxRuleDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: components["parameters"]["RuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retired draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RequestPlatformTaxRuleChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: components["parameters"]["RuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Draft requiring changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformTaxLegalSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Legal source collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreatePlatformTaxLegalSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unverified legal source */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformTaxLegalSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Legal source detail and audit history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdatePlatformTaxLegalSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated legal source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    VerifyPlatformTaxLegalSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verified legal source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformTaxProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform tax profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    UpdatePlatformTaxProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated platform tax profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePlatformTaxRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending registration */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    CreatePlatformSaasTaxConfiguration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SaaS tax configuration */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    PublishPlatformTaxRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: components["parameters"]["RuleId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published tax rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformTaxImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import batch collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportPlatformTaxTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import batch result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetPlatformProviderTaxProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider tax profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListAvailableBusinessLicences: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                per_page?: number;
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized metadata result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderOperatingTerritories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Requested territories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestProviderOperatingTerritory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Territory request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListProviderLicenceAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorization requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RequestProviderLicenceAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorization request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListPlatformLicenceAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorization review queue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListPlatformProviderLicenceAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider authorization requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecideProviderLicenceAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decision recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListProviderAssetCompliance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                assetId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset compliance requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateProviderAssetCompliance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                assetId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset compliance draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ListProviderAssetComplianceRequirements: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                assetId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Applicable Asset requirements */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SubmitProviderAssetCompliance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                assetId: components["schemas"]["Id"];
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset compliance request submitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ListProviderComplianceReviewQueue: {
+        parameters: {
+            query?: {
+                status?: "SUBMITTED" | "IN_REVIEW" | "CORRECTIONS_REQUESTED" | "APPROVED" | "REJECTED";
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-owned compliance review requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetProviderComplianceReviewRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-owned compliance request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    AssignProviderComplianceReviewer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider reviewer assignment recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    DecideProviderComplianceReviewRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                requestId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider compliance decision recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    AssignProviderLicenceAuthorizationReviewer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reviewer assignment recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RecordManualComplianceRegulatoryStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Manual status recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
         };
     };
 }

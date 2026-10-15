@@ -1,0 +1,660 @@
+{
+  "console": [
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/session/refresh",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/session/refresh",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    }
+  ],
+  "exceptions": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "resourceType": "document",
+      "recordedAt": 1791788351676,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "resourceType": "script",
+      "recordedAt": 1791788351681,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351681,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "resourceType": "script",
+      "recordedAt": 1791788351682,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "resourceType": "script",
+      "recordedAt": 1791788351689,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351695,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351696,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351696,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351700,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351704,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351712,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351741,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351741,
+      "payloadKeys": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351753,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351766,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/gsi/client",
+      "resourceType": "script",
+      "recordedAt": 1791788351766,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "resourceType": "image",
+      "recordedAt": 1791788351766,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "resourceType": "document",
+      "recordedAt": 1791788351886,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "resourceType": "script",
+      "recordedAt": 1791788351892,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351894,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351898,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "resourceType": "script",
+      "recordedAt": 1791788351899,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791788351900,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351906,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351907,
+      "payloadKeys": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "resourceType": "fetch",
+      "recordedAt": 1791788351913,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "resourceType": "image",
+      "recordedAt": 1791788351925,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791788351925,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/gsi/client",
+      "resourceType": "script",
+      "recordedAt": 1791788351926,
+      "payloadKeys": []
+    }
+  ],
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "status": 304
+    }
+  ],
+  "failures": []
+}

@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page } from 'playwright/test';
 
+export function configuredAccount(persona: 'GLOBAL_ADMIN' | 'PROVIDER_ADMIN' | 'PROVIDER_REVIEWER' | 'OPERATOR') {
+  const email = process.env[`TRISE_E2E_${persona}_EMAIL`]?.trim();
+  if (!email) throw new Error(`Configure TRISE_E2E_${persona}_EMAIL privately before authenticated verification`);
+  return email;
+}
+
 export function approvedLocalAccounts() {
   return readFileSync(new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url), 'utf8').trim().split('\n').map(line => {
     const [email, secret] = line.split(': '); return { email, secret };
@@ -17,9 +23,9 @@ export async function localSignIn(page: Page, email: string) {
   const account = approvedLocalAccounts().find(item => item.email === email);
   if (!account) throw new Error('Account is not on the approved local list');
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Test email', exact: true }).selectOption(email);
+  await page.locator('input[name="email"]').fill(email);
   await paceLocalSignIn();
-  await page.getByLabel('Local secret', { exact: true }).fill(account.secret);
+  await page.locator('input[name="secret"]').fill(account.secret);
   const signedIn = page.waitForResponse(response => response.url().endsWith('/session/development') && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Sign in locally', exact: true }).click();
   const response = await signedIn;

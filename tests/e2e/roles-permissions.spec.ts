@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
-import { paceLocalSignIn, localSignIn, localSignOut } from './local-auth';
+import { paceLocalSignIn, localSignIn, localSignOut, configuredAccount } from './local-auth';
 import type { Page, TestInfo, APIResponse } from 'playwright/test';
 import type { components } from '../../packages/api-client/src/generated';
 
@@ -44,7 +44,7 @@ test('approved accounts expose only their existing access workspaces', async ({ 
   for (const [index, line] of accounts.entries()) {
     const [email, secret] = line.split(': ');
     await page.goto('/');
-    await page.getByRole('combobox', { name: 'Test email', exact: true }).selectOption(email);
+    await page.getByRole('combobox', { name: 'Test email', exact: true }).fill(email);
     await paceLocalSignIn();
     await page.getByLabel('Local secret', { exact: true }).fill(secret);
     const signedIn = page.waitForResponse(response => response.url().endsWith('/session/development') && response.request().method() === 'POST');
@@ -70,7 +70,7 @@ test('approved accounts expose only their existing access workspaces', async ({ 
 
 test('restore the approved session delegation baseline after interrupted acceptance', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'operations-desktop' || process.env.TRISE_E2E_RESTORE_ACCESS_BASELINE !== 'true', 'Explicit cleanup for the approved 2026-10-12 session only.');
-  const session = await localSignIn(page, 'tech.sahayya@gmail.com');
+  const session = await localSignIn(page, configuredAccount('OPERATOR'));
   await page.goto('/#/platform/roles');
   const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'Audit', exact: true }) });
   const disable = row.getByRole('button', { name: 'Delegated — disable', exact: true });
@@ -111,7 +111,7 @@ test('platform publication and provider multiple-role workflows persist with aud
   const excludedName = `Browser verification other operation ${suffix}`;
   const customNames = [`Browser verification audit ${suffix}`, `Browser verification support ${suffix}`];
   const api = 'http://127.0.0.1:3000/api/v1';
-  const providerSession = await localSignIn(page, 'liftriseorg@gmail.com');
+  const providerSession = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const provider = providerSession.user.attributes.provider_capabilities.find((entry: { display_name: string; capabilities: string[] }) => entry.display_name.startsWith('Lift Rise Elevators') && entry.capabilities.includes('team_access'));
   expect(provider).toBeTruthy();
   const providerId: string = provider.provider_id;
@@ -125,7 +125,7 @@ test('platform publication and provider multiple-role workflows persist with aud
   await screenshot(page, testInfo, 'provider-members-before');
   await localSignOut(page);
 
-  const authorSession = await localSignIn(page, 'tech.sahayya@gmail.com');
+  const authorSession = await localSignIn(page, configuredAccount('OPERATOR'));
   expect(authorSession.user.attributes.platform_capabilities).toContain('PLATFORM_ACCESS_WRITE');
   const authorHeaders = { Authorization: `Bearer ${authorSession.accessToken}` };
   let originalDelegable: boolean | undefined;
@@ -175,7 +175,7 @@ test('platform publication and provider multiple-role workflows persist with aud
       await expect(row.getByRole('button', { name: 'Submit for review', exact: true })).toHaveCount(0);
     }
     await localSignOut(page);
-    await localSignIn(page, 'liftriseorg@gmail.com');
+    await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
     await page.goto('/#/platform/roles');
     for (const name of [defaultName, excludedName]) {
       const row = page.getByRole('row').filter({ hasText: name });
@@ -187,7 +187,7 @@ test('platform publication and provider multiple-role workflows persist with aud
     }
     await screenshot(page, testInfo, 'independent-review');
     await localSignOut(page);
-    await localSignIn(page, 'tech.sahayya@gmail.com');
+    await localSignIn(page, configuredAccount('OPERATOR'));
     await page.goto('/#/platform/roles');
     for (const [index, name] of [defaultName, excludedName].entries()) {
       const row = page.getByRole('row').filter({ hasText: name });
@@ -201,11 +201,11 @@ test('platform publication and provider multiple-role workflows persist with aud
     }
     await screenshot(page, testInfo, 'published-defaults');
     await localSignOut(page);
-    await localSignIn(page, 'liftriseorg@gmail.com');
+    await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
     await selectProvider(page, providerId);
     const membersResponse = await page.request.get(`${api}/provider/access/members`, { headers: providerHeaders });
     expect(membersResponse.status()).toBe(200);
-    const member = (await membersResponse.json()).data.find((entry: { attributes: { email: string } }) => entry.attributes.email === 'tech.sahayya@gmail.com');
+    const member = (await membersResponse.json()).data.find((entry: { attributes: { email: string } }) => entry.attributes.email === configuredAccount('OPERATOR'));
     expect(member).toBeTruthy(); memberId = member.id; originalRoleIds = member.attributes.roles.map((role: { id: string }) => role.id);
     await page.getByRole('navigation', { name: 'Team & Access tabs', exact: true }).getByRole('button', { name: 'Roles & Permissions', exact: true }).click();
     await expect(page.getByText('Loading roles…', { exact: true })).toHaveCount(0);
@@ -246,7 +246,7 @@ test('platform publication and provider multiple-role workflows persist with aud
     await page.getByRole('dialog').getByRole('checkbox', { name: 'Audit: View', exact: true }).check();
     await command(page, `/provider/access/roles/${customIds[0]}`, 'PATCH', () => page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click());
     await page.getByRole('navigation', { name: 'Team & Access tabs', exact: true }).getByRole('button', { name: 'Members', exact: true }).click();
-    const memberRow = page.getByRole('row').filter({ hasText: 'tech.sahayya@gmail.com' });
+    const memberRow = page.getByRole('row').filter({ hasText: configuredAccount('OPERATOR') });
     await memberRow.getByRole('button', { name: 'Manage Roles', exact: true }).click();
     const picker = page.getByRole('dialog', { name: 'Manage Roles', exact: true });
     for (const name of customNames) await picker.getByRole('checkbox', { name, exact: true }).check();
@@ -255,7 +255,7 @@ test('platform publication and provider multiple-role workflows persist with aud
     await command(page, `/provider/access/members/${memberId}/roles`, 'PUT', () => picker.getByRole('button', { name: 'Save', exact: true }).click());
     for (const name of [...customNames, defaultName]) await expect(memberRow.getByText(name, { exact: true })).toBeVisible();
     await page.reload();
-    for (const name of [...customNames, defaultName]) await expect(page.getByRole('row').filter({ hasText: 'tech.sahayya@gmail.com' }).getByText(name, { exact: true })).toBeVisible();
+    for (const name of [...customNames, defaultName]) await expect(page.getByRole('row').filter({ hasText: configuredAccount('OPERATOR') }).getByText(name, { exact: true })).toBeVisible();
     await screenshot(page, testInfo, 'persisted-member-role-badges');
     await page.getByRole('navigation', { name: 'Team & Access tabs', exact: true }).getByRole('button', { name: 'Roles & Permissions', exact: true }).click();
     for (const [index, name] of customNames.entries()) {
@@ -266,7 +266,7 @@ test('platform publication and provider multiple-role workflows persist with aud
       await expect(row.getByRole('button', { name: 'Disable', exact: true })).toBeVisible();
     }
     await customRow.getByRole('button', { name: 'View assigned members', exact: true }).click();
-    await expect(page.getByRole('dialog').getByText('tech.sahayya@gmail.com', { exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog').getByText(configuredAccount('OPERATOR'), { exact: true })).toBeVisible();
     await screenshot(page, testInfo, 'assigned-member-read-only');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);

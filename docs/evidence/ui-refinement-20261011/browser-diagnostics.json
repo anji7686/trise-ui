@@ -1,0 +1,43 @@
+{
+  "freshInstrumentedRead": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Script ran on page and returned:\n```json\n{\"url\":\"http://127.0.0.1:4174/#platform/subscription-requests\",\"viewport\":{\"width\":390,\"height\":844,\"documentWidth\":390},\"evidence\":{\"exceptions\":[],\"rejections\":[],\"http\":[{\"path\":\"/api/v1/me\",\"status\":401,\"method\":\"GET\"},{\"path\":\"/api/v1/me\",\"status\":401,\"method\":\"GET\"},{\"path\":\"/api/v1/session/refresh\",\"status\":200,\"method\":\"POST\"},{\"path\":\"/api/v1/me\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/me\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/platform/subscription-requests\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/platform/plans\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/providers\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/providers\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/platform/subscription-requests\",\"status\":200,\"method\":\"GET\"},{\"path\":\"/api/v1/platform/plans\",\"status\":200,\"method\":\"GET\"}],\"failed\":[],\"console\":[]}}\n```"
+      }
+    ]
+  },
+  "operationsConsole": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Emulating viewport: {\"deviceScaleFactor\":1,\"isMobile\":false,\"hasTouch\":false,\"isLandscape\":false,\"width\":390,\"height\":844}\n## Console messages\nShowing 1-1 of 1 (Page 1 of 1).\nmsgid=118 [error] Failed to load resource: the server responded with a status of 401 (Unauthorized) (0 args) [2 times]"
+        }
+      ]
+    }
+  },
+  "operationsNetwork": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Emulating viewport: {\"deviceScaleFactor\":1,\"isMobile\":false,\"hasTouch\":false,\"isLandscape\":false,\"width\":390,\"height\":844}\n## Network requests\nShowing 1-13 of 13 (Page 1 of 1).\nreqid=1402 GET http://127.0.0.1:3000/api/v1/me [401]\nreqid=1403 GET http://127.0.0.1:3000/api/v1/me [401]\nreqid=1404 POST http://127.0.0.1:3000/api/v1/session/refresh [200]\nreqid=1406 GET http://127.0.0.1:3000/api/v1/me [304]\nreqid=1407 GET http://127.0.0.1:3000/api/v1/me [304]\nreqid=1414 GET http://127.0.0.1:3000/api/v1/platform/subscription-requests?page%5Blimit%5D=25 [304]\nreqid=1415 GET http://127.0.0.1:3000/api/v1/platform/plans?page%5Blimit%5D=25&filter%5Bstatus%5D=ACTIVE [304]\nreqid=1416 GET http://127.0.0.1:3000/api/v1/providers [304]\nreqid=1417 GET http://127.0.0.1:3000/api/v1/providers [304]\nreqid=1418 GET http://127.0.0.1:3000/api/v1/platform/subscription-requests?page%5Blimit%5D=25 [304]\nreqid=1419 GET http://127.0.0.1:3000/api/v1/platform/plans?page%5Blimit%5D=25&filter%5Bstatus%5D=ACTIVE [304]\nreqid=1422 GET http://127.0.0.1:3000/api/v1/providers [304]\nreqid=1423 GET http://127.0.0.1:3000/api/v1/providers [304]"
+        }
+      ]
+    }
+  },
+  "customerConsole": {
+    "status": "fulfilled",
+    "value": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Emulating viewport: {\"deviceScaleFactor\":1,\"isMobile\":false,\"hasTouch\":false,\"isLandscape\":false,\"width\":390,\"height\":844}\n## Console messages\nShowing 1-2 of 2 (Page 1 of 1).\nmsgid=17 [error] Failed to load resource: the server responded with a status of 401 (Unauthorized) (0 args) [3 times]\nmsgid=24 [error] [GSI_LOGGER]: The given origin is not allowed for the given client ID. (1 args) [2 times]"
+        }
+      ]
+    }
+  }
+}

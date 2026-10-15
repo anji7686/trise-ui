@@ -1,9 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { apiClient, type ApiClient } from '@trise/api-client';
 
 export type ProviderCapabilityContext = { providerId: string; displayName: string; capabilities: string[] };
 export type Session = { userId: string; displayName: string; locale: string | null; revision: number; providerId?: string; platformAdmin?: boolean; platformCapabilities?: string[]; providerCapabilities: ProviderCapabilityContext[] };
-type AuthContextValue = { session: Session | null; loading: boolean; error: string | null; signInWithGoogleIdentityToken: (identityToken: string) => Promise<void>; signOut: () => Promise<void>; setProvider: (providerId?: string) => void; refreshCurrentUser: () => Promise<void> };
+type AuthContextValue = { session: Session | null; loading: boolean; error: string | null; signInWithGoogleIdentityToken: (identityToken: string) => Promise<void>; signInForDevelopment: (email: string, secret: string) => Promise<void>; signOut: () => Promise<void>; setProvider: (providerId?: string) => void; refreshCurrentUser: () => Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 type GoogleIdentityResponse = { credential?: string };
 type GoogleAccounts = { id: { initialize: (options: { client_id: string; callback: (response: GoogleIdentityResponse) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string>) => void } };
@@ -12,6 +12,8 @@ declare global { interface Window { google?: { accounts: GoogleAccounts } } }
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
 let googleScriptPromise: Promise<void> | null = null;
 let initializedGoogleClientId: string | null = null;
+const DevelopmentSignInForm = import.meta.env.DEV && import.meta.env.VITE_DEVELOPMENT_SIGN_IN === 'true'
+  ? lazy(() => import('./development-sign-in')) : null;
 
 function authDiagnostic(stage: string, details: Record<string, unknown> = {}) {
   if (import.meta.env.DEV) console.info(`[trise-auth] ${stage}`, details);
@@ -67,6 +69,21 @@ export function AuthProvider({ children, client = apiClient }: { children: React
     }
     finally { setLoading(false); }
   }, [client]);
+  const signInForDevelopment = useCallback(async (email: string, secret: string) => {
+    if (!import.meta.env.DEV || import.meta.env.VITE_DEVELOPMENT_SIGN_IN !== 'true') throw new Error('Local sign-in is unavailable');
+    setLoading(true); setError(null);
+    client.clearSession();
+    try {
+      const body = await client.request<{ access_token: string; user: ApiUser }>('/session/development', { method: 'POST', body: JSON.stringify({ email, secret, client_type: 'web' }) });
+      client.setAccessToken(body.access_token);
+      setSession(sessionFromApiUser(body.user));
+    } catch (cause) {
+      client.clearSession(); setSession(null);
+      const status = (cause as { status?: number }).status;
+      setError(status === 429 ? 'Too many sign-in attempts. Wait a minute and retry.' : status === 401 ? 'Local sign-in was rejected. Check your email and secret.' : 'Local sign-in is unavailable. Check the development API configuration.');
+      throw cause;
+    } finally { setLoading(false); }
+  }, [client]);
   useEffect(() => { void loadCurrentUser(); }, [loadCurrentUser]);
   const signInWithGoogleIdentityToken = useCallback(async (identityToken: string) => {
     setLoading(true); setError(null);
@@ -84,14 +101,24 @@ export function AuthProvider({ children, client = apiClient }: { children: React
     catch { /* local cleanup still happens for expired/revoked sessions */ }
     finally { client.clearSession(); setSession(null); setError(null); sessionStorage.clear(); }
   }, [client, session]);
-  const setProvider = useCallback((providerId?: string) => { client.changeContext(); setSession((current) => current ? { ...current, providerId } : current); }, [client]);
-  const value = useMemo(() => ({ session, loading, error, signInWithGoogleIdentityToken, signOut, refreshCurrentUser: loadCurrentUser, setProvider }), [session, loading, error, signInWithGoogleIdentityToken, signOut, loadCurrentUser, setProvider]);
+  const setProvider = useCallback((providerId?: string) => {
+    setSession((current) => {
+      if (!current || current.providerId === providerId) return current;
+      client.changeContext();
+      return { ...current, providerId };
+    });
+  }, [client]);
+  const value = useMemo(() => ({ session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signOut, refreshCurrentUser: loadCurrentUser, setProvider }), [session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signOut, loadCurrentUser, setProvider]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('AuthProvider is required'); return value; }
 
 export function GoogleSignInButton() {
+  return <><GoogleIdentityButton />{DevelopmentSignInForm && <Suspense fallback={<p role="status">Loading local sign-in…</p>}><DevelopmentSignInForm /></Suspense>}</>;
+}
+
+function GoogleIdentityButton() {
   const { signInWithGoogleIdentityToken } = useAuth();
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [gisError, setGisError] = useState<string | null>(null);

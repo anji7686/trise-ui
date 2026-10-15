@@ -1,5 +1,6 @@
 export type PlatformProviderRoute =
   | { kind: 'overview' }
+  | { kind: 'businesses' }
   | { kind: 'directory' }
   | { kind: 'new' }
   | { kind: 'detail'; providerId: string }
@@ -10,12 +11,19 @@ export type PlatformProviderRoute =
   | { kind: 'documents'; providerId: string }
   | { kind: 'subscription'; providerId: string }
   | { kind: 'review'; providerId: string }
+  | { kind: 'lifecycle'; providerId: string }
   | { kind: 'unknown' };
 
 const providerRoute = /^#platform\/providers\/([^/]+)(?:\/(.*?))?\/?$/;
 
+export function normalizePlatformHash(hash: string): string {
+  return hash.replace(/^#\//, '#');
+}
+
 export function parsePlatformProviderRoute(hash: string): PlatformProviderRoute {
+  hash = normalizePlatformHash(hash).split('?')[0];
   if (hash === '#platform/providers' || hash === '#platform/providers/') return { kind: 'directory' };
+  if (hash === '#platform/businesses' || hash === '#platform/businesses/') return { kind: 'businesses' };
   if (hash === '#platform/providers/new' || hash === '#platform/providers/new/') return { kind: 'new' };
   if (hash === '#platform/overview' || hash === '#platform/overview/' || hash === '') return { kind: 'overview' };
 
@@ -32,6 +40,7 @@ export function parsePlatformProviderRoute(hash: string): PlatformProviderRoute 
     case 'onboarding/documents': return { kind: 'documents', providerId };
     case 'onboarding/subscription': return { kind: 'subscription', providerId };
     case 'onboarding/review': return { kind: 'review', providerId };
+    case 'lifecycle': return { kind: 'lifecycle', providerId };
     default: return { kind: 'unknown' };
   }
 }

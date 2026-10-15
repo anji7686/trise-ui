@@ -1,0 +1,8 @@
+- main:
+  - img "TRISE INDIA"
+  - text: Synthetic preview
+  - heading "Service care that follows your asset." [level=1]
+  - paragraph: Sign in to view only the assets and provider relationships authorized for you.
+  - strong: Sign-in required for private data
+  - paragraph: Google Identity Services exchanges a browser credential for a TRISE session. No private record is rendered while signed out.
+  - status: Loading local sign-in…

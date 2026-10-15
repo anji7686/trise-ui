@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function TriseBrandHeader({ variant = 'dark', compact = false }) {
+    return _jsx("div", { className: `trise-brand-header trise-brand-header-${variant}${compact ? ' trise-brand-header-compact' : ''}`, children: _jsx("img", { src: variant === 'dark' ? '/assets/trise-india-logo-dark-header.svg' : '/assets/trise-india-logo-light-header.svg', alt: "TRISE India", className: "trise-brand-logo" }) });
+}
+export function VerificationHeader({ variant = 'dark', context = 'Secure Business Access', showSecurityIndicator = true, compact = false }) {
+    return _jsxs("header", { className: `verification-header verification-header-${variant}${compact ? ' verification-header-compact' : ''}`, children: [_jsx("div", { className: "verification-brand", children: _jsx(TriseBrandHeader, { variant: variant, compact: compact }) }), _jsxs("div", { className: "verification-security", "aria-label": context, children: [showSecurityIndicator && _jsxs("svg", { className: "verification-security-icon", viewBox: "0 0 24 24", "aria-hidden": "true", focusable: "false", children: [_jsx("path", { d: "M12 3.5 19 6v5.2c0 4.4-2.9 7.8-7 9.3-4.1-1.5-7-4.9-7-9.3V6l7-2.5Z" }), _jsx("path", { d: "m8.8 12 2.1 2.1 4.4-4.5" })] }), _jsxs("div", { children: [_jsx("strong", { children: context }), _jsx("span", { children: "TRISE India Platform" })] })] })] });
+}

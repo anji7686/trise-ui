@@ -1,4 +1,4 @@
-export type ProviderLifecycleAction = 'activate' | 'hold' | 'suspend' | 'reactivate' | 'close';
+export type ProviderLifecycleAction = 'activate' | 'restrict' | 'reactivate' | 'close';
 
 export type LifecycleActionOption = {
   action: ProviderLifecycleAction;
@@ -13,22 +13,11 @@ export function lifecycleActions(status: string): LifecycleActionOption[] {
     case 'PENDING_ACTIVATION':
       return [{ action: 'activate', label: 'Activate provider', capability: 'PLATFORM_PROVIDER_ACTIVATE' }];
     case 'ACTIVE':
-      return [
-        { action: 'hold', label: 'Place on hold', capability: 'PLATFORM_PROVIDER_RESTRICT' },
-        { action: 'suspend', label: 'Suspend provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true },
-        { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }
-      ];
+      return [{ action: 'restrict', label: 'Restrict provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }, { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }];
     case 'ON_HOLD':
-      return [
-        { action: 'reactivate', label: 'Reactivate provider', capability: 'PLATFORM_PROVIDER_ACTIVATE' },
-        { action: 'suspend', label: 'Suspend provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true },
-        { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }
-      ];
+      return [{ action: 'reactivate', label: 'Reactivate provider', capability: 'PLATFORM_PROVIDER_ACTIVATE' }, { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }];
     case 'SUSPENDED':
-      return [
-        { action: 'reactivate', label: 'Reactivate provider', capability: 'PLATFORM_PROVIDER_ACTIVATE' },
-        { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }
-      ];
+      return [{ action: 'reactivate', label: 'Reactivate provider', capability: 'PLATFORM_PROVIDER_ACTIVATE' }, { action: 'close', label: 'Close provider', capability: 'PLATFORM_PROVIDER_RESTRICT', danger: true }];
     default:
       return [];
   }

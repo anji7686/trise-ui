@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Button, Status } from '@trise/ui';
+import { Button } from '@trise/ui';
+import { OperationsStatus as Status } from './operations-status';
 import { ExecutionPanel } from './execution';
 import { operationsData, type AgentAttributes, type AssignmentAttributes, type Collection, type JobAttributes, type PartUsageAttributes, type Resource, type VisitAttributes, type WorkNoteAttributes } from './data';
 import { SvgIcon } from './icons';

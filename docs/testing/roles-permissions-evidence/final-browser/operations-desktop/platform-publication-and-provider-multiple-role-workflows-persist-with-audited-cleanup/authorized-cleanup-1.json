@@ -1,0 +1,26 @@
+[
+  {
+    "action": "restore-original-member-roles",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-custom-role",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-custom-role",
+    "status": 200
+  },
+  {
+    "action": "restore-original-delegation",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-default-role",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-default-role",
+    "status": 200
+  }
+]

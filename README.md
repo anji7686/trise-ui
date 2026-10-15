@@ -19,6 +19,10 @@ npm run dev:customer
 npm run dev:operations
 ```
 
+Typecheck rebuilds all referenced packages with `tsc -b --force` so a fresh
+checkout does not reuse tracked TypeScript build metadata for missing or stale
+declaration outputs.
+
 Start the local API in a separate terminal with its ignored environment file:
 
 ```sh

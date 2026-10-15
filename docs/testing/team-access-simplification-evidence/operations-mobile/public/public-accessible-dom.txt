@@ -1,0 +1,8 @@
+- main:
+  - img "TRISE INDIA"
+  - text: Secure workspace
+  - heading "Sign in to TRISE Operations" [level=1]
+  - paragraph: Manage providers, subscriptions, billing and service operations.
+  - strong: Protected operations workspace
+  - paragraph: Sign in with Google to see the workspaces and actions available to your account.
+  - status: Loading local sign-in…

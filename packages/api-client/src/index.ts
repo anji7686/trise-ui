@@ -16,6 +16,22 @@ export class ApiClient {
     return this.perform<T>(path, init, context, true);
   }
 
+  async requestBlob(path: string, init: RequestInit = {}, context: RequestContext = {}): Promise<Blob> {
+    const headers = new Headers(init.headers);
+    headers.set('Accept', 'application/pdf');
+    if (this.accessToken) headers.set('Authorization', `Bearer ${this.accessToken}`);
+    const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers, signal: context.signal, credentials: 'include' });
+    if (response.status === 401 && !path.startsWith('/session/')) {
+      const token = await this.refresh();
+      if (token) return this.requestBlob(path, init, context);
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw { status: response.status, code: body.code ?? 'http_error', message: body.message ?? 'Request failed', details: body.details } satisfies ApiError;
+    }
+    return response.blob();
+  }
+
   private async perform<T>(path: string, init: RequestInit, context: RequestContext, mayRefresh: boolean): Promise<T> {
     const requestEpoch = this.contextEpoch;
     const headers = new Headers(init.headers);

@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { parsePlatformProviderRoute, providerOnboardingRoute } from './platform-provider-routing';
+import { normalizePlatformHash, parsePlatformProviderRoute, providerOnboardingRoute } from './platform-provider-routing';
 
 describe('platform provider routing', () => {
   it.each([
     ['#platform/overview', { kind: 'overview' }],
+    ['#platform/businesses', { kind: 'businesses' }],
     ['#platform/providers', { kind: 'directory' }],
     ['#platform/providers/new', { kind: 'new' }],
+    ['#platform/providers/new?business_id=business-1', { kind: 'new' }],
     ['#platform/providers/provider-1', { kind: 'detail', providerId: 'provider-1' }],
+    ['#platform/providers/provider-1?tab=subscription', { kind: 'detail', providerId: 'provider-1' }],
     ['#platform/providers/provider-1/edit', { kind: 'edit', providerId: 'provider-1' }],
     ['#platform/providers/provider-1/business-profile/edit', { kind: 'business-profile', providerId: 'provider-1' }],
     ['#platform/providers/provider-1/onboarding', { kind: 'contacts', providerId: 'provider-1' }],
@@ -14,9 +17,11 @@ describe('platform provider routing', () => {
     ['#platform/providers/provider-1/onboarding/locations', { kind: 'locations', providerId: 'provider-1' }],
     ['#platform/providers/provider-1/onboarding/documents', { kind: 'documents', providerId: 'provider-1' }],
     ['#platform/providers/provider-1/onboarding/subscription', { kind: 'subscription', providerId: 'provider-1' }],
-    ['#platform/providers/provider-1/onboarding/review', { kind: 'review', providerId: 'provider-1' }]
+    ['#platform/providers/provider-1/onboarding/review', { kind: 'review', providerId: 'provider-1' }],
+    ['#platform/providers/provider-1/lifecycle', { kind: 'lifecycle', providerId: 'provider-1' }]
   ])('parses %s exactly', (hash, expected) => {
     expect(parsePlatformProviderRoute(hash)).toEqual(expected);
+    expect(parsePlatformProviderRoute(hash.replace(/^#/, '#/'))).toEqual(expected);
   });
 
   it.each([
@@ -26,6 +31,7 @@ describe('platform provider routing', () => {
     '#platform/providers/provider-1/edit/extra'
   ])('does not silently turn an unsupported path into provider detail: %s', (hash) => {
     expect(parsePlatformProviderRoute(hash)).toEqual({ kind: 'unknown' });
+    expect(parsePlatformProviderRoute(hash.replace(/^#/, '#/'))).toEqual({ kind: 'unknown' });
   });
 
   it('does not expose later onboarding routes before a provider exists', () => {
@@ -35,6 +41,12 @@ describe('platform provider routing', () => {
 
   it('retains the route provider when a page omits the explicit step prop', () => {
     expect(providerOnboardingRoute('', 2, '#platform/providers/provider-1/business-profile/edit')).toBe('platform/providers/provider-1/onboarding');
+    expect(providerOnboardingRoute('', 2, '#/platform/providers/provider-1/business-profile/edit')).toBe('platform/providers/provider-1/onboarding');
+  });
+
+  it.each(['platform/plans', 'platform/plans/plan-1/edit', 'platform/subscriptions', 'platform/subscription-requests', 'platform/subscription-usage', 'platform/subscription-billing'])('preserves the destination when normalizing a bookmarked %s link', (path) => {
+    expect(normalizePlatformHash(`#/${path}`)).toBe(`#${path}`);
+    expect(normalizePlatformHash(`#${path}`)).toBe(`#${path}`);
   });
 
   it('builds every onboarding route with the exact provider id', () => {

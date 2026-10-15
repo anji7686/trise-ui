@@ -1,0 +1,90 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: manual-session-20261011/public.spec.ts >> keep Operations browser open for user authentication
+- Location: tests/e2e/manual-session-20261011/public.spec.ts:2:1
+
+# Error details
+
+```
+Error: browserType.launch: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Users/anjanreddy/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --user-data-dir=/var/folders/tt/nbcp2pcd7rn5rm6vp34zsl5m0000gn/T/playwright_chromiumdev_profile-EcAzqN --remote-debugging-pipe --no-startup-window
+<launched> pid=18958
+[pid=18958][err] [1011/104543.989096:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.18962.159828.GAGSMWXGQIRXIPEN: Permission denied (1100)
+[pid=18958][err] [1011/104543.990059:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0
+[pid=18958][err] [1011/104543.991183:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.18960.159826.TTMLNIOCXMVOGTNI: Permission denied (1100)
+[pid=18958][err] [1011/104543.992219:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0
+[pid=18958][err] [1011/104543.996929:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/anjanreddy/Library/Application Support/Google/Chrome for Testing/Crashpad/settings.dat: Operation not permitted (1)
+[pid=18958][err] [1011/104543.997341:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/anjanreddy/Library/Application Support/Google/Chrome for Testing/Crashpad/settings.dat: Operation not permitted (1)
+[pid=18958][err] Received signal 6
+[pid=18958][err]  [0x00011898ca60]
+[pid=18958][err]  [0x000180578620]
+[pid=18958][err]  [0x00018053e888]
+[pid=18958][err]  [0x000180447c5c]
+[pid=18958][err]  [0x00018738f9e0]
+[pid=18958][err]  [0x00018738c6e4]
+[pid=18958][err]  [0x000185304498]
+[pid=18958][err]  [0x000185305114]
+[pid=18958][err]  [0x000185304174]
+[pid=18958][err]  [0x000185307640]
+[pid=18958][err]  [0x00018451cefc]
+[pid=18958][err]  [0x00018451ad8c]
+[pid=18958][err]  [0x00018451a8c0]
+[pid=18958][err]  [0x0001143aa038]
+[pid=18958][err]  [0x000113546e7c]
+[pid=18958][err]  [0x000113546d10]
+[pid=18958][err]  [0x0001124a7544]
+[pid=18958][err]  [0x000112ab4da0]
+[pid=18958][err]  [0x0001100854dc]
+[pid=18958][err]  [0x000100ee080c]
+[pid=18958][err]  [0x00018019eb94]
+[pid=18958][err] [end of stack trace]
+Call log:
+  - <launching> /Users/anjanreddy/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --user-data-dir=/var/folders/tt/nbcp2pcd7rn5rm6vp34zsl5m0000gn/T/playwright_chromiumdev_profile-EcAzqN --remote-debugging-pipe --no-startup-window
+  - <launched> pid=18958
+  - [pid=18958][err] [1011/104543.989096:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.18962.159828.GAGSMWXGQIRXIPEN: Permission denied (1100)
+  - [pid=18958][err] [1011/104543.990059:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0
+  - [pid=18958][err] [1011/104543.991183:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.18960.159826.TTMLNIOCXMVOGTNI: Permission denied (1100)
+  - [pid=18958][err] [1011/104543.992219:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0
+  - [pid=18958][err] [1011/104543.996929:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/anjanreddy/Library/Application Support/Google/Chrome for Testing/Crashpad/settings.dat: Operation not permitted (1)
+  - [pid=18958][err] [1011/104543.997341:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /Users/anjanreddy/Library/Application Support/Google/Chrome for Testing/Crashpad/settings.dat: Operation not permitted (1)
+  - [pid=18958][err] Received signal 6
+  - [pid=18958][err]  [0x00011898ca60]
+  - [pid=18958][err]  [0x000180578620]
+  - [pid=18958][err]  [0x00018053e888]
+  - [pid=18958][err]  [0x000180447c5c]
+  - [pid=18958][err]  [0x00018738f9e0]
+  - [pid=18958][err]  [0x00018738c6e4]
+  - [pid=18958][err]  [0x000185304498]
+  - [pid=18958][err]  [0x000185305114]
+  - [pid=18958][err]  [0x000185304174]
+  - [pid=18958][err]  [0x000185307640]
+  - [pid=18958][err]  [0x00018451cefc]
+  - [pid=18958][err]  [0x00018451ad8c]
+  - [pid=18958][err]  [0x00018451a8c0]
+  - [pid=18958][err]  [0x0001143aa038]
+  - [pid=18958][err]  [0x000113546e7c]
+  - [pid=18958][err]  [0x000113546d10]
+  - [pid=18958][err]  [0x0001124a7544]
+  - [pid=18958][err]  [0x000112ab4da0]
+  - [pid=18958][err]  [0x0001100854dc]
+  - [pid=18958][err]  [0x000100ee080c]
+  - [pid=18958][err]  [0x00018019eb94]
+  - [pid=18958][err] [end of stack trace]
+  - [pid=18958] <gracefully close start>
+  - [pid=18958] <kill>
+  - [pid=18958] <will force kill>
+  - [pid=18958] exception while trying to kill process: Error: kill EPERM
+  - [pid=18958] <process did exit: exitCode=null, signal=SIGABRT>
+  - [pid=18958] starting temporary directories cleanup
+  - [pid=18958] finished temporary directories cleanup
+  - [pid=18958] <gracefully close end>
+
+```

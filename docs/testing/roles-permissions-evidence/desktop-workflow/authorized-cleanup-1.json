@@ -1,0 +1,14 @@
+[
+  {
+    "action": "restore-original-member-roles",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-custom-role",
+    "status": 200
+  },
+  {
+    "action": "disable-verification-custom-role",
+    "status": 200
+  }
+]

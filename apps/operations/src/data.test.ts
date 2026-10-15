@@ -4,6 +4,81 @@ import { operationsData } from './data';
 afterEach(() => vi.restoreAllMocks());
 
 describe('operations execution contracts', () => {
+  it('uses the explicit stable Platform Team sort and paginates independently', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [], page: { next: 'next-team', previous: null } }), { status: 200 }));
+    await operationsData.platformTeam();
+    await operationsData.platformTeam({ after: 'next-team' });
+    expect(String(fetchMock.mock.calls[0][0])).toContain('sort=-created_at%2Cid');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('page%5Bafter%5D=next-team');
+  });
+
+  it('keeps Platform Team invitation lifecycle platform-scoped and idempotent', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'invitation-1', attributes: { revision: 2 } }, delivery: { token: 'one-time-token' } }), { status: 200 }));
+    await operationsData.createPlatformTeamInvitation({ email: 'operator@example.test', platform_role_code: 'PLATFORM_OPERATIONS_MANAGER', expires_at: '2026-10-20T00:00:00Z', reason: 'Onboarding' }, 'team-invite-1');
+    await operationsData.resendPlatformTeamInvitation('invitation-1', 1, 'team-resend-1');
+    await operationsData.cancelPlatformTeamInvitation('invitation-1', { expected_revision: 2, reason: 'Cancelled' }, 'team-cancel-1');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/platform/team/invitations');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/invitations/invitation-1/resend');
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/invitations/invitation-1/cancel');
+    expect(fetchMock.mock.calls.every(([, init]) => new Headers(init?.headers).get('X-TRISE-Provider-Id') === null)).toBe(true);
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('team-invite-1');
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ expected_revision: 2, reason: 'Cancelled' });
+  });
+
+  it('keeps Platform compliance correction and resubmission revisioned and platform-scoped', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'request-1', attributes: { revision: 3, status: 'SUBMITTED' } } }), { status: 200 }));
+    await operationsData.updatePlatformCompliance('request-1', { expected_revision: 2, proposed_values: { legal_name: 'Corrected' }, reason: 'Corrected legal name' }, 'compliance-correction-1');
+    await operationsData.submitPlatformCompliance('request-1', 3);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/platform/compliance/request-1');
+    expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('compliance-correction-1');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBeNull();
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ expected_revision: 2, proposed_values: { legal_name: 'Corrected' }, reason: 'Corrected legal name' });
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/platform/compliance/request-1/submit');
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ expected_revision: 3 });
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-TRISE-Provider-Id')).toBeNull();
+  });
+
+  it('filters platform provider accounts by Business through the server collection query', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [], page: { next: null, previous: null } }), { status: 200 }));
+    await operationsData.platformProviders({ businessId: 'business-uuid' });
+    expect(String(fetchMock.mock.calls[0][0])).toContain('filter%5Bbusiness_id%5D=business-uuid');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBeNull();
+  });
+
+  it('uses contact-point IDs, revisions, reasons and scoped continuation cursors', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }));
+    await operationsData.platformOnboardingContacts('provider-1', 'cursor+/=');
+    await operationsData.platformOnboardingLocations('provider-1', 'cursor+/=');
+    await operationsData.updatePlatformOnboardingContact('provider-1', 'contact-point-1', { expected_revision: 7, display_name: 'Updated' }, 'edit-contact');
+    await operationsData.endPlatformOnboardingContact('provider-1', 'contact-point-1', { expected_revision: 8, reason: 'Replaced contact' }, 'end-contact');
+    await operationsData.updatePlatformOnboardingLocation('provider-1', 'office-1', { expected_revision: 4, latitude: null, longitude: null }, 'edit-office');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('page[after]=cursor%2B%2F%3D');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('page[after]=cursor%2B%2F%3D');
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/contacts/contact-point-1');
+    expect(fetchMock.mock.calls[2][1]?.method).toBe('PATCH');
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ expected_revision: 8, reason: 'Replaced contact' });
+    expect(JSON.parse(String(fetchMock.mock.calls[4][1]?.body))).toEqual({ expected_revision: 4, latitude: null, longitude: null });
+    for (const [, init] of fetchMock.mock.calls.slice(2)) {
+      expect(new Headers(init?.headers).get('Idempotency-Key')).toBeTruthy();
+      expect(new Headers(init?.headers).get('X-TRISE-Provider-Id')).toBeNull();
+    }
+  });
+
+  it('keeps delegated onboarding assignments separate from memberships and platform grants', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ id: 'assignment-1', attributes: {} }), { status: 200 }));
+    const body = { user_id: 'existing-user', provider_id: 'provider-1', effective_from: '2026-10-10T10:00:00Z', effective_to: '2026-10-11T10:00:00Z' };
+    await operationsData.createPlatformProviderManagerAssignment(body, 'assign-key');
+    await operationsData.endPlatformProviderManagerAssignment('assignment-1', { expected_revision: 1, reason: 'Handoff complete' }, 'end-key');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/platform/provider-manager-assignments');
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(body);
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/assignment-1/end');
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ expected_revision: 1, reason: 'Handoff complete' });
+    expect(fetchMock.mock.calls.every(([, init]) => init?.method === 'POST')).toBe(true);
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBeNull();
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('Idempotency-Key')).toBe('end-key');
+  });
+
   it('keeps subscription evidence review platform-scoped and idempotent', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'request-1', attributes: {} } }), { status: 200 }));
 
@@ -38,6 +113,15 @@ describe('operations execution contracts', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/documents/document-1/versions/version-1/reviews');
     expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('Idempotency-Key')).toBe('document-review-1');
     expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('X-TRISE-Provider-Id')).toBe('provider-1');
+  });
+
+  it('keeps provider compliance review evidence preview provider-scoped and exact-versioned', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ url: 'https://signed.example.test/provider-evidence' }), { status: 200 }));
+    await operationsData.authorizeProviderDocumentDownload('provider-1', 'document-1', 'version-7', 'provider-review-preview-1', 'inline');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/documents/document-1/download');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBe('provider-1');
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('provider-review-preview-1');
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ version_id: 'version-7', disposition: 'inline' });
   });
 
   it('uses only supported platform directory filters and bounded cursors', async () => {
@@ -90,12 +174,12 @@ describe('operations execution contracts', () => {
   it('uses platform provider mutations without a provider context and with idempotency', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'provider-1', attributes: { revision: 22 } } }), { status: 201 }));
 
-    await operationsData.createPlatformProvider({ name: 'Lift Rise Demo', representation_kind: 'ORGANIZATION', provider_code: 'LIFT-RISE' }, 'provider-create-1');
+    await operationsData.createPlatformProvider({ name: 'Lift Rise Demo', representation_kind: 'ORGANIZATION', provider_code: 'LIFT-RISE', business_name: 'Lift Rise', business_operation_type_id: 'operation-1' }, 'provider-create-1');
     await operationsData.updatePlatformProvider('provider-1', { name: 'Lift Rise Updated', expected_revision: 22 }, 'provider-update-1');
 
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBeNull();
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('provider-create-1');
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ name: 'Lift Rise Demo', representation_kind: 'ORGANIZATION' });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ name: 'Lift Rise Demo', representation_kind: 'ORGANIZATION', business_name: 'Lift Rise', business_operation_type_id: 'operation-1' });
     expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('Idempotency-Key')).toBe('provider-update-1');
     expect(String(fetchMock.mock.calls[1][0])).toContain('/platform/providers/provider-1');
   });

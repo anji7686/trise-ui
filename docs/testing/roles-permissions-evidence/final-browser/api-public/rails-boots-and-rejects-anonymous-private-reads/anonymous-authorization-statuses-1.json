@@ -1,0 +1,1 @@
+[{"method":"GET","path":"/me","status":401},{"method":"GET","path":"/platform/subscriptions","status":401},{"method":"GET","path":"/providers/subscription","status":401}]

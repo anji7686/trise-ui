@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Button, Status } from '@trise/ui';
+import { Button } from '@trise/ui';
+import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type Collection, type GenericAttributes, type Resource } from './data';
 
 type T = (key: string) => string;

@@ -1,0 +1,1686 @@
+{
+  "console": [
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/session/refresh",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/session/refresh",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/me",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "path": "/api/v1/session/refresh",
+      "line": 0,
+      "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    }
+  ],
+  "exceptions": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "resourceType": "document",
+      "recordedAt": 1791800365343,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "resourceType": "script",
+      "recordedAt": 1791800365347,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365347,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "resourceType": "script",
+      "recordedAt": 1791800365349,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "resourceType": "script",
+      "recordedAt": 1791800365356,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365360,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-access.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365360,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365360,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365360,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365360,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-status.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/account-menu.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/execution.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/onboarding.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-business-profile.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365361,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-subscription.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-admin-invitations.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-members.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/navigation.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/icons.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-design.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365362,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365365,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365368,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-matrix.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365368,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-dialog.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365368,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-scoped-records.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365368,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365378,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365379,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-review.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365382,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-support.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365382,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-subscription-actions.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365382,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-insights.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365382,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/logo-crop.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365382,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/configuration.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365383,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365383,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-roles.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-routing.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-validation.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-documents.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-lifecycle.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-plans.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-subscriptions.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-subscription.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/searchable-select.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-detail-model.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-ui.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-review.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin-ui.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365397,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-document-upload.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365403,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-workflow.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365407,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365446,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365446,
+      "payloadKeys": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365459,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365472,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/gsi/client",
+      "resourceType": "script",
+      "recordedAt": 1791800365473,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "resourceType": "image",
+      "recordedAt": 1791800365473,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "resourceType": "document",
+      "recordedAt": 1791800365560,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "resourceType": "script",
+      "recordedAt": 1791800365566,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365566,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "resourceType": "script",
+      "recordedAt": 1791800365568,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "resourceType": "script",
+      "recordedAt": 1791800365568,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-access.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365572,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-status.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/account-menu.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/execution.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/onboarding.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-business-profile.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-subscription.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-admin-invitations.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-members.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/navigation.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365573,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/icons.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365574,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-design.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365574,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365579,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "resourceType": "script",
+      "recordedAt": 1791800365579,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-data.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365580,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-matrix.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365580,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-dialog.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365580,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-scoped-records.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365580,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/configuration.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.css",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/logo-crop.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-review.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-support.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-subscription-actions.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-insights.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-roles.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-routing.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-validation.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-documents.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-lifecycle.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-plans.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-subscriptions.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-subscription.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365583,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/searchable-select.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365584,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-detail-model.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365585,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-ui.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365585,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-review.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365585,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin-ui.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365585,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-document-upload.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365586,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-workflow.ts",
+      "resourceType": "script",
+      "recordedAt": 1791800365586,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365603,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365603,
+      "payloadKeys": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365609,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "resourceType": "image",
+      "recordedAt": 1791800365619,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "resourceType": "script",
+      "recordedAt": 1791800365619,
+      "payloadKeys": []
+    },
+    {
+      "method": "GET",
+      "path": "/gsi/client",
+      "resourceType": "script",
+      "recordedAt": 1791800365620,
+      "payloadKeys": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "resourceType": "fetch",
+      "recordedAt": 1791800365620,
+      "payloadKeys": []
+    }
+  ],
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-access.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-status.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/account-menu.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/execution.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/onboarding.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-subscription.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-business-profile.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-admin-invitations.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/navigation.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/icons.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-design.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-members.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-data.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-matrix.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-dialog.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-scoped-records.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-review.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-support.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-subscription-actions.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/logo-crop.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-insights.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/configuration.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.css",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-roles.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-routing.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-validation.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-documents.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-lifecycle.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-plans.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-subscriptions.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-subscription.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/searchable-select.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-detail-model.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-ui.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-review.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-document-upload.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-workflow.ts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin-ui.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@vite/client",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/main.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react_jsx-dev-runtime.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/react-dom_client.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-USMGBKC7.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/.vite/deps/chunk-KNBTRAFC.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/@react-refresh",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/node_modules/vite/dist/client/env.mjs",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-access.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/index.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/api-client/src/index.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/i18n/src/index.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/index.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-status.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/design-tokens/src/theme.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/styles.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/brand-background.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/account-menu.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/workflow.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/ui-primitives/src/primitives.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/data.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/execution.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/onboarding.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-business-profile.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-subscription.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-admin-invitations.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-members.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/navigation.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/icons.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-design.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-data.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/access-matrix.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-dialog.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-scoped-records.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/jobs.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/configuration.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/operations-pages.css",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/logo-crop.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-review.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-support.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/use-subscription-actions.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-insights.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-roles.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-routing.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-validation.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-documents.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-lifecycle.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-plans.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-subscriptions.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-provider-subscription.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/searchable-select.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-detail-model.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-ui.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-onboarding-review.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/platform-admin-ui.tsx",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/provider-document-upload.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/src/subscription-workflow.ts",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/assets/trise-bg-logo.png",
+      "status": 304
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/@fs/Users/anjanreddy/wrk/trise/trise-ui/packages/auth/src/development-sign-in.tsx",
+      "status": 304
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session/refresh",
+      "status": 401
+    }
+  ],
+  "failures": []
+}

@@ -17,6 +17,9 @@
 .topbar { min-height: 64px; padding: 8px 0; overflow: visible; }
 .topbar .wordmark { min-width: 0; flex: 0 1 auto; }
 .topbar .wordmark img { width: clamp(120px, 14vw, 150px); max-width: 100%; max-height: 48px; object-fit: contain; object-position: left center; }
+.platform-shell-context { display: grid; gap: .2rem; min-width: 0; margin-inline: auto 1rem; color: var(--trise-brand-white, #fff); }
+.platform-shell-context strong { color: var(--trise-brand-white, #fff); font-size: .95rem; }
+.platform-shell-context small { color: #d6e3f2; font-size: .75rem; }
 .operations-layout { grid-template-columns: 232px minmax(0, 1fr); gap: 28px; min-height: calc(100vh - 64px); }
 .workspace-sidebar { align-self: stretch; min-width: 0; padding: 24px 12px; background: var(--brand-surface); border-radius: 0 0 .9rem .9rem; }
 .workspace-sidebar button { display: flex; align-items: center; gap: .65rem; min-height: 40px; color: #dce8f7; }
@@ -45,3 +48,45 @@
   .workspace-sidebar { margin: 0 -16px; padding: 8px 16px; border-radius: 0; overflow-x: auto; }
   .workspace-sidebar button { flex: 0 0 auto; white-space: nowrap; }
 }
+ .public-verification-shell { min-height: 100vh; display: grid; place-items: center; padding: 36px 20px; background: radial-gradient(circle at 100% 0, #dceeff 0, transparent 32%), radial-gradient(circle at 0 100%, #e5f0ff 0, transparent 28%), var(--trise-brand-surface, #f3f6fb); color: var(--text, #1a2c45); }
+ .public-verification-card { width: min(100%, 900px); padding: clamp(26px, 5vw, 46px); border: 1px solid #d8e2ee; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgba(31, 60, 100, .14); }
+ .verification-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: auto; margin: calc(-1 * clamp(26px, 5vw, 46px)) calc(-1 * clamp(26px, 5vw, 46px)) 0; padding: 22px clamp(26px, 5vw, 46px); border-radius: 20px 20px 0 0; background: var(--trise-brand-header, #193458); }
+ .verification-brand { display: flex; align-items: center; min-width: 0; }
+ .trise-brand-header, .trise-brand-logo { display: block; }
+ .trise-brand-logo { width: 190px; max-width: 100%; height: auto; max-height: 60px; object-fit: contain; object-position: left center; }
+ .verification-security { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; text-align: right; color: #fff; }
+ .verification-security-icon { flex: 0 0 auto; width: 26px; height: 26px; fill: none; stroke: var(--trise-brand-white, #fff); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+ .verification-security div { display: grid; gap: 4px; }
+ .verification-security strong { font-size: 14px; }
+ .verification-security span { color: #d6e3f2; font-size: 12px; font-weight: 500; }
+ .public-verification-eyebrow { margin: 42px 0 12px; color: #60748f; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+ .public-verification-card h1 { max-width: 760px; margin: 0; color: var(--trise-brand-header, #193458); font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spacing: -.04em; }
+ .public-verification-message { max-width: 720px; margin: 18px 0 0; color: var(--secondary, #385273); font-size: 18px; line-height: 1.6; }
+ .public-verification-icon { width: 64px; height: 64px; display: grid; place-items: center; margin: 34px 0 -30px; border-radius: 50%; font-size: 30px; font-weight: 800; }
+ .public-verification-icon.success { color: #087443; background: #dff7eb; }
+ .public-verification-icon.pending { color: #1f6feb; background: #e6f0ff; }
+ .public-verification-icon.error { color: #9a5b00; background: #fff1cf; }
+ .public-verification-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 42px 0 30px; padding-top: 18px; border-top: 3px solid #dce5f0; }
+ .public-verification-step { position: relative; display: grid; gap: 5px; color: #60748f; font-size: 13px; }
+ .public-verification-step span { position: absolute; top: -34px; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: #dce5f0; color: #60748f; font-weight: 800; }
+ .public-verification-step strong { padding-top: 8px; color: #193458; }
+ .public-verification-step small { color: #60748f; }
+ .public-verification-step.completed span { background: #03a329; color: #fff; }
+ .public-verification-step.completed small { color: #03a329; }
+ .public-verification-step.current span { background: #294d7a; color: #fff; }
+ .public-verification-step.current small { color: #294d7a; }
+ .public-verification-action, .public-verification-next { margin: 26px 0; padding: 22px 26px; border-radius: 14px; background: #eff6ff; color: var(--secondary, #385273); line-height: 1.6; }
+ .public-verification-action p, .public-verification-next p { margin: 0; }
+ .public-verification-action button { margin-top: 18px; padding: 12px 22px; border: 0; border-radius: 7px; background: #294d7a; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+ .public-verification-action button:disabled { opacity: .65; cursor: wait; }
+ .public-verification-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+ .public-verification-columns section { padding: 22px; border-radius: 14px; background: #f4fbf6; color: #385273; line-height: 1.6; }
+ .public-verification-columns section + section { background: #f3f6fb; }
+ .public-verification-columns strong { color: #193458; }
+ .public-verification-columns ol { margin: 12px 0 0; padding-left: 22px; }
+ .public-verification-columns p { margin: 12px 0 0; }
+ .public-verification-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 28px; padding-top: 18px; border-top: 1px solid #dce5f0; color: #60748f; font-size: 12px; line-height: 1.6; }
+ .public-verification-spinner { width: 42px; height: 42px; margin: 34px 0 8px; border: 4px solid #dce5f0; border-top-color: #294d7a; border-radius: 50%; animation: public-verification-spin .8s linear infinite; }
+ @keyframes public-verification-spin { to { transform: rotate(360deg); } }
+ @media (max-width: 768px) { .trise-brand-logo { width: 160px; max-height: 52px; } }
+ @media (max-width: 620px) { .public-verification-shell { padding: 14px; } .public-verification-card { padding: 24px 20px; border-radius: 16px; } .verification-header { width: calc(100% + 40px); margin: -24px -20px 0; padding: 18px 20px; border-radius: 16px 16px 0 0; align-items: flex-start; flex-wrap: wrap; gap: 16px; } .trise-brand-logo { width: 140px; max-height: 46px; } .verification-security { justify-content: flex-start; text-align: left; } .public-verification-steps, .public-verification-columns { grid-template-columns: 1fr; } .public-verification-steps { gap: 22px; border-top: 0; padding-top: 0; } .public-verification-step { padding-left: 46px; } .public-verification-step span { top: 0; } .public-verification-step strong { padding-top: 0; } .public-verification-footer { display: grid; } }

@@ -1,5 +1,6 @@
 # UI capability checklist
 
+
 This matrix records the current frontend state against implemented API contracts. “Implemented” means a route and typed transport exist; browser verification remains separate.
 
 | Group | Actor / route | API operation(s) | Authority boundary | Implementation | Tests | Browser |
@@ -214,11 +215,15 @@ Visual reference index: [UBold reference index](../../trise-architecture/docs/ub
 | Route | Actor | API operations | Implementation | Automated evidence | Browser evidence |
 |---|---|---|---|---|---|
 | `#/platform/overview` | Explicit platform administrator | `GET /platform/overview` | IMPLEMENTED: authoritative provider status summaries; no subscription data is presented | API integration test; UI typecheck | NOT RUN: no designated platform-admin Google identity enrolled |
-| `#/platform/providers` | Explicit platform administrator | `GET /platform/providers` | IMPLEMENTED: UBold-style searchable, status-filtered, cursor-paginated read-only directory | API integration test; UI tests; typecheck | NOT RUN |
+| `#/platform/businesses` | Explicit platform administrator | `GET /platform/businesses`, `GET /platform/providers?filter[business_id]=...` | IMPLEMENTED: searchable, cursor-paginated Business directory with provider-account counts; rows open the server-filtered child-account directory or start registration with Business preselected. Business-level profile/detail workflows are not implied by the summary API | API integration test; routing/data tests; typecheck/lint/build | NOT RUN: Chromium launch remains blocked; no rendered screenshots or interactions |
+| `#/platform/providers` | Explicit platform administrator | `GET /platform/providers` with supported status and Business filters | IMPLEMENTED: UBold-style searchable, status/Business-filtered, cursor-paginated read-only directory | API integration test; UI tests; typecheck | NOT RUN |
 | `#/platform/providers/:providerId` | Explicit platform administrator | `GET /platform/providers/:providerId`, `PATCH /platform/providers/:providerId` | IMPLEMENTED: detail, bounded audit history, allowlisted profile edit; lifecycle remains read-only | API/UI tests; typecheck/build | NOT RUN |
-| `#/platform/providers/new` | Explicit platform administrator with `PLATFORM_PROVIDER_REGISTER` | `POST /platform/providers` | IMPLEMENTED: pending provider profile form; no activation, verification, membership or subscription side effects | API/UI tests; typecheck/build | NOT RUN |
-| `#/platform/providers/:providerId/business-profile/edit` Business | Platform administrator with `PLATFORM_PROVIDER_PROFILE_WRITE`; explicit target provider, no provider membership required | `GET/PATCH /platform/providers/:providerId/business-profile`, `POST /platform/providers/:providerId/business-profile/submit` | IMPLEMENTED: platform-scoped edit/save/submit, revision and idempotency handling, on-behalf-of evidence; remains in Platform workspace | API request tests; platform header-isolation data test; typecheck/build | NOT RUN: current browser is synthetic Demo Dispatcher |
+| `#/platform/providers/new` | Explicit platform administrator with `PLATFORM_PROVIDER_REGISTER` | `POST /platform/providers` | IMPLEMENTED: choose an existing Business or create one with the first provider account using compact Existing/New Business radio options, then choose exactly one searchable Business Operation. Modal and full-page entry share the same form. Continues into the existing six provider-onboarding stages | API/UI tests; route tests; typecheck/build | NOT RUN: Chromium launch remains blocked |
+| `#/platform/providers/:providerId/business-profile/edit` Business | Platform administrator with `PLATFORM_PROVIDER_PROFILE_WRITE`; explicit target provider, no provider membership required | `GET/PATCH /platform/providers/:providerId/business-profile`, `POST /platform/providers/:providerId/business-profile/submit`, provider-operation API | IMPLEMENTED: platform-scoped edit/save/submit; one searchable Business Operation is preloaded from registration; operation changes are pre-activation only and separately confirmed; profile and operation edits save as separate requests | API request tests; platform header-isolation data test; typecheck/build | NOT RUN: Chromium launch remains blocked |
+| Provider onboarding stepper | Capability-gated platform administrator or authorized delegated onboarding manager for explicit provider | Existing provider, business, contact, office, document, plan/request and verification reads | IMPLEMENTED: six stages show backend-derived states; direct navigation is limited by existing UI capabilities; operational lifecycle remains separate from registration review | `provider-detail-model.test.ts`, routing tests, typecheck/lint/build | Browser NOT RUN; Chromium launch previously blocked |
 | `#/platform/providers/:providerId/onboarding` Contacts & locations | Platform administrator with onboarding authority or delegated manager assigned to the target provider | `GET/POST/PATCH /platform/providers/:providerId/onboarding/contacts`, `POST .../:contactId/end`, `GET/POST/PATCH /platform/providers/:providerId/onboarding/locations` | IMPLEMENTED: persisted primary/secondary contacts require email + mobile; landline is optional; office addresses are India-only with six-digit PIN validation and optional persisted latitude/longitude. No identity, membership, customer-access or service-coverage side effects | `platform_administration_api_test.rb` (18 tests/124 assertions); UI typecheck/build; API contract reconciliation | NOT RUN: no browser connector/authenticated real-account evidence. PIN lookup is wired but production data import remains blocked pending the official CSV |
+| `#/platform/providers/:providerId/onboarding/review` Review & Activate | `PLATFORM_PROVIDER_READ`; separate lifecycle action requires its explicit server capability | Existing provider/profile, documents, verification reviews, contacts/offices, plan/subscription/request, and invitation reads | IMPLEMENTED: compact readiness summary and six collapsible evidence groups; activation CTA routes to separate lifecycle screen and API remains authoritative; scan state is represented exactly | Model/routing tests; typecheck/lint/build | Browser NOT RUN; no new screenshots or rendered workflow evidence |
+| `#/platform/providers/:providerId/onboarding/subscription` Plan & Approval | Platform plan/subscription read; request actions require `PLATFORM_SUBSCRIPTION_WRITE` | Published plan versions, subscriptions, requests, usage, changes and timeline operations | IMPLEMENTED: dynamic published-plan comparison cards precede accepted subscription, entitlements/usage, validity, upgrade request and approval details; default demo plan policy remains API-owned | Subscription workflow tests; typecheck/lint/build | Browser NOT RUN; no new screenshots or rendered workflow evidence |
 | `#/platform/providers/:providerId/onboarding` India address entry | Platform administrator or delegated onboarding manager | Existing onboarding location API; PIN reference API remains available for future consumers | UI uses fully manual India address entry. State, District, City, PIN and landmark are entered by the operator; PIN is format-validated only and never autofills fields | Operations tests/typecheck/lint/build | Browser NOT RUN |
 
 ### Provider onboarding foundation (2026-10-05)
@@ -256,7 +261,7 @@ provider action remains limited to `PLATFORM_PROVIDER_REGISTER`.
 
 The platform route is separate from provider workspace context. A platform
 grant does not grant provider customer, job, or commercial data access. The
-development seed contains an explicit local grant for `triseindia@gmail.com`,
+development seed contains an explicit local grant for `<PRIVATE_EMAIL>`,
 but no Google identity mapping is created by the seed; normal verified identity
 enrollment is still required for browser login. SaaS plans, subscriptions,
 usage limits, trials, renewal, payment and subscription enforcement remain
@@ -345,3 +350,141 @@ The new provider form presents the supported identity → business profile
 sequence and clearly labels later steps as not started. It does not imply
 that unsupported contacts, locations, teams, documents, or approvals were
 created by the wizard.
+
+## Platform subscription administration UI standardization (2026-10-11)
+
+| Screen | Route / API | Status | Exact boundary |
+|---|---|---|---|
+| Plans & Pricing | `#platform/plans`, plan detail routes; plan list/detail/version APIs | Implemented | Cursor paging; server name/industry/plan-state filters; billing-cycle filtering applies to loaded records; immutable publication remains server controlled |
+| Provider Subscriptions | `#platform/subscriptions`, `#platform/subscriptions/:id`; subscription/detail/change APIs | Implemented | Dedicated subscription detail URL and commercial snapshot; lifecycle activation remains separate; non-list change history remains loaded-page scoped |
+| Requests & Approvals | `#platform/subscription-requests`, `#platform/subscription-requests/:id`; request/decision/evidence/activation APIs | Implemented | Review is primary list action; separate capability gates and transitions; required review reason retained; no provider editing from queue |
+| Usage & Limits | `#platform/subscription-usage`; provider-scoped usage API | Implemented | API-projected metrics and limits only; absent entitlement, unlimited and finite limit display distinctly; elevator deduplication remains server authoritative |
+| Billing & Payments | `#platform/subscription-billing`, `#platform/subscription-billing/new`, `#platform/subscription-billing/:invoiceId`; invoice, billing-context, tax-preview, evidence, email and PDF APIs | Implemented with browser evidence blocked | Four-step invoice wizard, server-backed eligible subscription search, authoritative billing context/tax preview, immutable issue flow, inline authenticated PDF preview with explicit download, payment/delivery actions; server does not expose a separate invoice audit endpoint |
+
+Shared platform admin header, filter, data table, empty state and pagination
+components are in `platform-admin-ui.tsx` and reused by provider and
+subscription administration. Subscription API filtering is partial for
+requests, subscriptions, changes and invoices; affected screens label loaded
+page scope. Typecheck, lint, 143 tests, builds and bundle budgets pass. Formal
+Playwright visual/browser acceptance remains blocked by the preserved Chromium
+launch crash; see the dated evidence in `docs/testing/browser-readiness-report.md`.
+
+Tax Management (`#platform/taxes`) is implemented locally with API-backed
+templates, draft rules, legal sources, imports and readiness actions. Its
+authenticated browser evidence remains blocked by the host-level Chromium,
+Chrome and WebKit launch crashes documented in `docs/browser-environment-blocker.md`.
+
+## Business Operations single-operation provider accounts (2026-10-12)
+
+The Platform shell now exposes a Business directory using the existing
+read-only paginated Business API. It presents only returned name, ID and
+provider-account count. “Add provider account” starts the existing provider
+registration workflow with that Business selected; the server remains
+authoritative for Business membership and exactly-one-operation assignment.
+The six provider onboarding stages remain unchanged. Business-level legal
+profile, documents, approvals and detail mutations are not represented as
+implemented UI because the accepted Business summary contract does not expose
+those shared workflows.
+
+| Capability | Route / API | Status | Exact boundary |
+|---|---|---|---|
+| Business Profile operation selection | `#platform/providers/:id/business-profile/edit`; catalogue and provider-operation APIs | Implemented | One searchable single-select loads the registration-saved operation; draft account changes are revision checked, and activated accounts are locked until a controlled transition workflow exists. The selected option remains visible if it is no longer selectable for new accounts |
+| Provider Detail Business Operation | `#platform/providers/:id?tab=operations`; platform provider-operation APIs | Partial | Displays one selected operation, its Industry, actual association status and provider subscription state; changes are available only before activation. Workspace readiness remains unavailable from the current API |
+| Plan applicability | `#platform/plans`; plan-version APIs | Partial | Draft form, list filter, detail and catalogue labels use canonical Business Operation IDs/names; Industry remains a separate sector field; provider-type eligibility and operation-specific entitlements are not yet modeled |
+| Platform catalogue management UI | Business Operation catalogue APIs | Not implemented | Existing provider-profile-write authority protects APIs; no catalogue list/create/edit screen is exposed yet |
+| Operations workspace switcher and operation-scoped records | Operations shell and operational APIs | Not implemented | No workspace switcher is exposed because operation-level workforce grants and operation-filtered operational records are not yet implemented server-side |
+
+The Operations provider selector remains an authorized provider-account
+context selector, not an operation-only workspace selector. It lists provider
+accounts returned to the authenticated user; membership in one Business-owned
+provider account does not imply access to its siblings. A selected operation or
+a saved preference cannot grant provider access. The registration existing/new
+Business radio options use compact, fully clickable inline labels with the
+native controls kept at intrinsic dimensions by scoped form CSS.
+
+## Global responsive form layout and alignment (2026-10-12)
+
+| Capability | Status | Exact boundary |
+|---|---|---|
+| Shared admin page and form widths | Implemented | Operations admin content uses up to 1280px and provider form cards up to 1120px, within the shell’s available width |
+| Responsive form sections and grids | Implemented | Two columns are used when the form container allows; fields stack at narrow container widths, including dialogs |
+| Provider Registration and six-stage stepper | Implemented in source | Related identity/business fields align in columns; the stepper adapts to six, three or two columns without a forced horizontal minimum |
+| Business Profile, Contacts and Offices | Implemented in source | Address/name spans and contact groupings are explicit; office coordinates keep geolocation beside the coordinate fields and action footer |
+| Operations onboarding forms | Implemented in source | Existing onboarding form controls use the shared container-aware two-column pattern |
+| Typed configuration editor | Implemented in source | Editor and draft fields use a responsive split/list layout with full-width multiline inputs and stacked actions at narrow container widths |
+| Rendered viewport and modal acceptance | Blocked | No screenshots or browser rendering checks are claimed because the earlier terminal Chromium CLI launch failed; see `docs/testing/browser-readiness-report.md` |
+
+The UI changes preserve Business Operation single-select, API payloads,
+validation and server authorization. Typecheck, lint, 148 tests, both builds,
+bundle budgets and `git diff --check` passed. The Customer application CSS was
+not changed.
+
+## Roles & Permissions — 2026-10-12
+
+- Implemented: platform default role catalogue/draft editor, permission matrix, independent review/publish and delegation controls guarded by explicit server capabilities.
+- Implemented: provider Settings → Team & Access; Members role badges and multi-select assignment; locked platform defaults; delegated custom-role create/edit/enable/disable; assigned-member view; existing administrator invitation history.
+- Implemented: generated OpenAPI types, account-scoped signed pagination, stale-response/context cleanup, validation/error/loading presentation and Operations-only design components. Customer build source experience remains separate.
+- Automated: 154 frontend tests, application/browser typechecks, lint, both builds and bundle budgets passed; Rails full suite 566 tests / 3,984 assertions; OpenAPI strict validation zero findings (20 access / 491 total operations).
+- Browser: host-terminal Chromium with sandbox enabled passed 24 checks at desktop/tablet/mobile, including independent default publication, default/custom enable/disable, read-only defaults, persisted custom permissions and three roles on one existing member. Four inventory/cleanup repetitions were intentionally desktop-only; complete role workflows ran at every Operations width. Sixty-three real screenshots and diagnostics are preserved. See [browser readiness report](testing/browser-readiness-report.md).
+- Remaining live case: matching selected-operation catalogue/assignment; approved demo providers have no active Business Operation recorded and the specific local configuration choice remains unanswered. Backend operation eligibility regressions pass.
+- Cleanup: separately approved temporary local platform grants revoked; original member roles/delegation restored; verification roles disabled with immutable history retained. Google local-origin rejection recorded separately; approved local credential authentication used.
+- Current catalogue: nine existing enforced capabilities; unsupported action checkboxes omitted. Sensitive role assignment and platform authority provisioning remain separately controlled.
+
+## Team & Access simplification follow-up — 2026-10-12
+
+- Implemented: Members / Invitations / Available Roles at `/team-access`, truthful legacy membership labels, compact role badges, Add Member invitation form with multiple role choices, and a signed-in recipient acceptance view. The new staff invitation currently targets an existing verified TRISE user; it creates no outbound email. Platform default definitions remain read-only to providers. Custom-role actions appear only when the server's provider policy permits them. When custom-role management is disabled, disabled historical custom roles are omitted from Available Roles; existing member assignments remain visible.
+- Implemented: platform page at `#platform/roles`, version/history controls, readable applicable-action matrix and a platform custom-role policy control. Navigation requires `PLATFORM_ACCESS_READ`; authoring, independent review and publishing have separate server grants. No active local platform grant exists now, so authenticated browser coverage of this page is pending separate named authority approval.
+- Verified: 156 component tests, app/browser TypeScript checks, ESLint, both production builds, nine terminal Playwright checks at three widths for signed-out Customer/Operations and authenticated provider Team & Access. The current provider has no eligible published default role, so Add Member's empty state is visible and submission is disabled. Invitation creation/acceptance and multi-role persistence were verified by Rails integration tests, not this browser run.
+- Outstanding: publish canonical templates after action/scope checks, demonstrate a full invitation flow in a normally authenticated browser with eligible roles, and isolate future browser fixture mutation. See [browser evidence](testing/browser-readiness-report.md) and [ADR-067](../../trise-architecture/adr/067-role-governed-team-memberships.md).
+# Platform Roles & Permissions redesign — 12 October 2026
+
+## Compliance review ownership correction — 2026-10-14
+
+- Platform Compliance is limited to Business and Service Provider governance requests; Agent and Asset requests are not actionable in that queue.
+- Provider Operations now has a real Provider-owned compliance review queue for Agent and Asset requests, backed by scoped Rails APIs and explicit Provider compliance capabilities.
+- Provider review assignment and decisions use the shared governance service, revision protection and maker-checker rules; no frontend-only approval state is used.
+- Customer Complaints and Service Jobs remain in their operational modules and are not represented as compliance review requests.
+- Provider queue browser approval remains `IMPLEMENTED_NOT_VERIFIED` pending an authenticated Provider reviewer fixture with the explicit review capabilities.
+
+- [x] Default Roles, Provider Role Settings and Permission Delegation are separate tabs.
+- [x] Role search, lifecycle/operation/version filters, sorting and 10/25/50 cursor pages are server-backed.
+- [x] Row actions are compact and capability/state aware; published definitions create successor drafts.
+- [x] Category/module/action checkboxes expose native mixed state and preserve protected descendants.
+- [x] Draft and delegation edits show unsaved state and retain revision/audit commands.
+- [x] Provider-policy search and filters use the authorized server dataset and show policy impact context.
+- [x] Current-page selection is explicit; no all-results bulk action is implied.
+- [ ] Historical browser-verification roles need reliable provenance before ordinary views can exclude them safely.
+- [ ] Dedicated role security-audit pagination and atomic multi-role lifecycle APIs remain gaps.
+
+## Compliance UX refactor — 2026-10-15
+
+## Platform human-readable references — 2026-10-15
+
+- [x] Added typed human-readable display infrastructure with UUID-safe fallbacks and tests.
+- [x] Added a full UI inventory covering Platform, Business, Provider, Customer, Operations, documents, notifications and exports.
+- [x] Business Compliance primary tables and selectors use names, published titles, status and version numbers.
+- [ ] Remaining user-facing raw identifiers are documented where current API responses expose only foreign keys or technical review references.
+- [ ] Backend summary projections are required before linked Approval Inbox, licence, Provider Compliance, Customer and notification/export surfaces can be completed without N+1 lookups or cross-tenant risk.
+
+### Business Compliance workspace
+
+- [x] Business directory opens a focused seven-tab Business Compliance workspace using real server data.
+- [x] Legal identity and GST association forms are modal and preserve the existing governed APIs.
+- [x] Business requirements use published names without exposing internal codes or synthetic fixtures.
+- [x] Documents use private upload/finalization, scan-state gating and authorized inline image/PDF previews.
+- [x] Requests, approved versions and audit history use server-backed ten-record pages.
+- [x] Platform reviewer assignment and decision controls remain in the Approval Inbox.
+- [x] India-only country and State/UT selectors use the shared geography master list.
+- [ ] Business document list server pagination and Business-filtered licence authorization endpoint are backend contract gaps.
+- [ ] Authenticated browser execution of the 51 acceptance scenarios remains pending the private development admin fixture.
+
+- [x] Provider Compliance Center uses server eligibility, provider-scoped records, guided request steps and private document APIs.
+- [x] Optional request audit history no longer blanks the page when omitted by a valid API response.
+- [x] Host-browser evidence covers responsive Agent Compliance Center, provider-scoped Asset Compliance and Document Transfer workflows.
+- [x] Screen/action/API/permission and scenario matrices are recorded in `docs/compliance-ux-action-api-matrix.md`.
+- [x] Business Legal Identity and GST Association entry uses structured fields while preserving the existing governed API payload and canonical GST source-of-truth boundary.
+- [ ] Consolidate the visible provider navigation to the four feed views while preserving deep links.
+- [ ] Add server-published requirement field schemas and server-side request query pagination before claiming those capabilities.
+- [x] Platform Approval correction requests expose structured common fields while preserving the compatibility payload editor; Business legal identity, GST and registration/brand entry are structured.
+- [ ] Remove the compatibility payload editor after the API publishes complete field-level requirement schemas.
+- [ ] Production-only expiry scheduling, external notification delivery, strict CLEAN malware scanning and broader legal-variant authorization review remain `PRODUCTION_PENDING`.

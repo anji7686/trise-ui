@@ -1,0 +1,30 @@
+# TEMPORARY host bootstrap profile. Remove after installation.
+# Merge alongside trise-local.config.toml; select this profile only for downloads.
+[permissions.trise-browser-download.workspace_roots]
+"/Users/anjanreddy/wrk/trise" = true
+
+[permissions.trise-browser-download.filesystem]
+":minimal" = "read"
+":tmpdir" = "write"
+":slash_tmp" = "write"
+"/opt/homebrew" = "read"
+
+[permissions.trise-browser-download.filesystem.":workspace_roots"]
+"." = "read"
+"trise-ui/.browser-cache" = "write"
+"trise-ui/node_modules" = "write"
+"trise-ui/.npm-cache" = "write"
+"trise-ui/package.json" = "write"
+"trise-ui/package-lock.json" = "write"
+".aws" = "deny"
+
+[permissions.trise-browser-download.network]
+enabled = true
+allow_local_binding = false
+
+[permissions.trise-browser-download.network.domains]
+"registry.npmjs.org" = "allow"
+"cdn.playwright.dev" = "allow"
+"playwright.download.prss.microsoft.com" = "allow"
+# Enable only if a verified browser-download redirect needs this host:
+# "storage.googleapis.com" = "allow"

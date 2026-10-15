@@ -1,0 +1,17 @@
+# INACTIVE until packages are installed, pinned and actual entrypoints are supplied.
+# Commands use existing native Node 24. No startup-time npx download or personal Chrome profile.
+[mcp_servers.trise_playwright]
+command = "/opt/homebrew/opt/node@24/bin/node"
+args = ["/ABSOLUTE/PATH/TO/REVIEWED/PLAYWRIGHT-MCP-ENTRYPOINT"]
+enabled = false
+default_tools_approval_mode = "prompt"
+startup_timeout_sec = 30
+tool_timeout_sec = 45
+
+[mcp_servers.trise_devtools]
+command = "/opt/homebrew/opt/node@24/bin/node"
+args = ["/ABSOLUTE/PATH/TO/REVIEWED/DEVTOOLS-MCP-ENTRYPOINT"]
+enabled = false
+default_tools_approval_mode = "prompt"
+startup_timeout_sec = 30
+tool_timeout_sec = 45

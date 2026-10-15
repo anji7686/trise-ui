@@ -1,0 +1,609 @@
+{
+  "stats": {
+    "startTime": "2026-10-12T06:58:52.470Z",
+    "duration": 314758.665,
+    "expected": 24,
+    "skipped": 4,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "project": "api-public",
+      "test": "Rails boots and rejects anonymous private reads",
+      "status": "passed",
+      "duration_ms": 105,
+      "attachments": [
+        "api-public/rails-boots-and-rejects-anonymous-private-reads/anonymous-authorization-statuses-1.json"
+      ]
+    },
+    {
+      "project": "customer-desktop",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 9422,
+      "attachments": [
+        "customer-desktop/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "customer-desktop/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 9,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-desktop",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8250,
+      "attachments": [
+        "customer-desktop/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 6,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 2,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-tablet",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 8453,
+      "attachments": [
+        "customer-tablet/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "customer-tablet/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 8,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 2,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-tablet",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8237,
+      "attachments": [
+        "customer-tablet/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 5,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-mobile",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 8415,
+      "attachments": [
+        "customer-mobile/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "customer-mobile/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 7,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-mobile",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8165,
+      "attachments": [
+        "customer-mobile/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 6,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 2,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 9325,
+      "attachments": [
+        "operations-desktop/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "operations-desktop/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 9,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8341,
+      "attachments": [
+        "operations-desktop/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 5,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 9341,
+      "attachments": [
+        "operations-tablet/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "operations-tablet/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 10,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 2,
+          "403 /gsi/button": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8337,
+      "attachments": [
+        "operations-tablet/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 5,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "local email selection authenticates a real user and logout restores the form",
+      "status": "passed",
+      "duration_ms": 8606,
+      "attachments": [
+        "operations-mobile/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/authenticated-local-user-1.png",
+        "operations-mobile/local-email-selection-authenticates-a-real-user-and-logout-restores-the-form/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 7,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "auto sign-in still requires the selected account local secret",
+      "status": "passed",
+      "duration_ms": 8398,
+      "attachments": [
+        "operations-mobile/auto-sign-in-still-requires-the-selected-account-local-secret/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 5,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 2,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 1
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-desktop",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 450,
+      "attachments": [
+        "customer-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "customer-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "customer-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "customer-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 6,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-tablet",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 422,
+      "attachments": [
+        "customer-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "customer-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "customer-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "customer-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 7,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 3
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "customer-mobile",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 392,
+      "attachments": [
+        "customer-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "customer-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "customer-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "customer-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 8,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 4
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 468,
+      "attachments": [
+        "operations-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "operations-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "operations-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "operations-desktop/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 7,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 3
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 462,
+      "attachments": [
+        "operations-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "operations-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "operations-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "operations-tablet/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 6,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "duration_ms": 425,
+      "attachments": [
+        "operations-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/initial-page-1.png",
+        "operations-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/protected-route-1.png",
+        "operations-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/public-accessible-dom-1.txt",
+        "operations-mobile/signed-out-screen-protects-private-workflows-and-fits-the-viewport/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 7,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 3
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "approved accounts expose only their existing access workspaces",
+      "status": "passed",
+      "duration_ms": 41116,
+      "attachments": [
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/account-1-access-boundary-1.png",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/account-2-access-boundary-1.png",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/account-3-access-boundary-1.png",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/account-4-access-boundary-1.png",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/account-5-access-boundary-1.png",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/existing-access-authority-1.json",
+        "operations-desktop/approved-accounts-expose-only-their-existing-access-workspaces/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 26,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 10,
+          "401 /api/v1/session/refresh": 6,
+          "403 /gsi/button": 5
+        },
+        "failed_requests": {
+          "/gsi/button net::ERR_ABORTED": 4
+        }
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "restore the approved session delegation baseline after interrupted acceptance",
+      "status": "passed",
+      "duration_ms": 8885,
+      "attachments": [
+        "operations-desktop/restore-the-approved-session-delegation-baseline-after-interrupted-acceptance/interrupted-run-cleanup-1.json",
+        "operations-desktop/restore-the-approved-session-delegation-baseline-after-interrupted-acceptance/restored-delegation-baseline-1.png",
+        "operations-desktop/restore-the-approved-session-delegation-baseline-after-interrupted-acceptance/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 8,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 4,
+          "401 /api/v1/session/refresh": 1,
+          "403 /gsi/button": 2
+        },
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-desktop",
+      "test": "platform publication and provider multiple-role workflows persist with audited cleanup",
+      "status": "passed",
+      "duration_ms": 50335,
+      "attachments": [
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-operation-state-1.json",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-members-before-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/platform-role-table-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-0-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-1-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/independent-review-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/published-defaults-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-read-only-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-2.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-accessible-name-1.json",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/multiple-role-picker-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/persisted-member-role-badges-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/assigned-member-read-only-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/existing-invitations-1.png",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/authorized-cleanup-1.json",
+        "operations-desktop/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/browser-diagnostics-1.json"
+      ],
+      "provider_operation": {
+        "hasActiveOperation": false
+      },
+      "diagnostics": {
+        "console_count": 31,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 16,
+          "401 /api/v1/session/refresh": 5,
+          "403 /gsi/button": 5
+        },
+        "failed_requests": {
+          "/gsi/button net::ERR_ABORTED": 7
+        }
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "approved accounts expose only their existing access workspaces",
+      "status": "skipped",
+      "duration_ms": 48,
+      "attachments": [
+        "operations-tablet/approved-accounts-expose-only-their-existing-access-workspaces/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 0,
+        "exception_count": 0,
+        "http_errors": {},
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "restore the approved session delegation baseline after interrupted acceptance",
+      "status": "skipped",
+      "duration_ms": 36,
+      "attachments": [
+        "operations-tablet/restore-the-approved-session-delegation-baseline-after-interrupted-acceptance/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 0,
+        "exception_count": 0,
+        "http_errors": {},
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-tablet",
+      "test": "platform publication and provider multiple-role workflows persist with audited cleanup",
+      "status": "passed",
+      "duration_ms": 50820,
+      "attachments": [
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-operation-state-1.json",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-members-before-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/platform-role-table-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-0-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-1-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/independent-review-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/published-defaults-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-read-only-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-2.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-accessible-name-1.json",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/multiple-role-picker-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/persisted-member-role-badges-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/assigned-member-read-only-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/existing-invitations-1.png",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/authorized-cleanup-1.json",
+        "operations-tablet/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/browser-diagnostics-1.json"
+      ],
+      "provider_operation": {
+        "hasActiveOperation": false
+      },
+      "diagnostics": {
+        "console_count": 31,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 16,
+          "401 /api/v1/session/refresh": 5,
+          "403 /gsi/button": 5
+        },
+        "failed_requests": {
+          "/gsi/button net::ERR_ABORTED": 7
+        }
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "approved accounts expose only their existing access workspaces",
+      "status": "skipped",
+      "duration_ms": 57,
+      "attachments": [
+        "operations-mobile/approved-accounts-expose-only-their-existing-access-workspaces/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 0,
+        "exception_count": 0,
+        "http_errors": {},
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "restore the approved session delegation baseline after interrupted acceptance",
+      "status": "skipped",
+      "duration_ms": 43,
+      "attachments": [
+        "operations-mobile/restore-the-approved-session-delegation-baseline-after-interrupted-acceptance/browser-diagnostics-1.json"
+      ],
+      "diagnostics": {
+        "console_count": 0,
+        "exception_count": 0,
+        "http_errors": {},
+        "failed_requests": {}
+      }
+    },
+    {
+      "project": "operations-mobile",
+      "test": "platform publication and provider multiple-role workflows persist with audited cleanup",
+      "status": "passed",
+      "duration_ms": 51357,
+      "attachments": [
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-operation-state-1.json",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/provider-members-before-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/platform-role-table-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-0-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-editor-1-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/independent-review-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/published-defaults-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/default-read-only-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-2.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/custom-editor-accessible-name-1.json",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/multiple-role-picker-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/persisted-member-role-badges-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/assigned-member-read-only-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/existing-invitations-1.png",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/authorized-cleanup-1.json",
+        "operations-mobile/platform-publication-and-provider-multiple-role-workflows-persist-with-audited-cleanup/browser-diagnostics-1.json"
+      ],
+      "provider_operation": {
+        "hasActiveOperation": false
+      },
+      "diagnostics": {
+        "console_count": 32,
+        "exception_count": 0,
+        "http_errors": {
+          "401 /api/v1/me": 16,
+          "401 /api/v1/session/refresh": 6,
+          "403 /gsi/button": 5
+        },
+        "failed_requests": {
+          "/gsi/button net::ERR_ABORTED": 7
+        }
+      }
+    }
+  ]
+}

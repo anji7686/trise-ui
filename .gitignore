@@ -5,3 +5,9 @@ dist/
 !.env.example
 playwright-report/
 test-results/
+
+.auth/
+.browser-cache/
+docs/evidence/browser-automation/
+
+.npm-cache/

@@ -10,11 +10,10 @@
   flex: 0 1 auto;
 }
 
-.topbar .wordmark img {
+.topbar .wordmark .trise-brand-logo {
   display: block;
   width: clamp(9rem, 22vw, 14rem);
   height: auto;
-  aspect-ratio: 2695 / 899;
   object-fit: contain;
   object-position: left center;
 }

@@ -1,0 +1,40 @@
+
+Running 1 test using 1 worker
+
+(node:21749) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [customer-desktop] › tests/e2e/public.spec.ts:3:1 › signed-out screen protects private workflows and fits the viewport (0ms)
+Testing stopped early after 1 maximum allowed failures.
+
+
+  1) [customer-desktop] › tests/e2e/public.spec.ts:3:1 › signed-out screen protects private workflows and fits the viewport 
+
+    Error: browserType.launch: Target page, context or browser has been closed
+    Browser logs:
+
+    <launching> /Users/anjanreddy/Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --user-data-dir=/var/folders/tt/nbcp2pcd7rn5rm6vp34zsl5m0000gn/T/playwright_chromiumdev_profile-dvO1xx --remote-debugging-pipe --no-startup-window
+    <launched> pid=21755
+    [pid=21755][err] [1011/110851.593748:ERROR:base/power_monitor/thermal_state_observer_mac.mm:122] ThermalStateObserverMac unable to register to power notifications. Result: 9
+    [pid=21755][err] [1011/110851.609289:ERROR:net/dns/dns_config_service_posix.cc:139] DNS config watch failed to start.
+    [pid=21755][err] [1011/110851.613951:WARNING:net/dns/dns_config_service_posix.cc:198] Failed to read DnsConfig.
+    Call log:
+      - <launching> /Users/anjanreddy/Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --user-data-dir=/var/folders/tt/nbcp2pcd7rn5rm6vp34zsl5m0000gn/T/playwright_chromiumdev_profile-dvO1xx --remote-debugging-pipe --no-startup-window
+      - <launched> pid=21755
+      - [pid=21755][err] [1011/110851.593748:ERROR:base/power_monitor/thermal_state_observer_mac.mm:122] ThermalStateObserverMac unable to register to power notifications. Result: 9
+      - [pid=21755][err] [1011/110851.609289:ERROR:net/dns/dns_config_service_posix.cc:139] DNS config watch failed to start.
+      - [pid=21755][err] [1011/110851.613951:WARNING:net/dns/dns_config_service_posix.cc:198] Failed to read DnsConfig.
+      - [pid=21755] <gracefully close start>
+      - [pid=21755] <kill>
+      - [pid=21755] <will force kill>
+      - [pid=21755] exception while trying to kill process: Error: kill EPERM
+      - [pid=21755] <process did exit: exitCode=null, signal=SIGTRAP>
+      - [pid=21755] starting temporary directories cleanup
+      - [pid=21755] finished temporary directories cleanup
+      - [pid=21755] <gracefully close end>
+
+
+    Error Context: test-results/public-signed-out-screen-p-01e58-flows-and-fits-the-viewport-customer-desktop/error-context.md
+
+  1 failed
+    [customer-desktop] › tests/e2e/public.spec.ts:3:1 › signed-out screen protects private workflows and fits the viewport 
+  1 error was not a part of any test, see above for details

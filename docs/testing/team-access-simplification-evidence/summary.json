@@ -1,0 +1,114 @@
+{
+  "stats": {
+    "startTime": "2026-10-12T10:19:00.035Z",
+    "duration": 35547.236999999994,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "project": "customer-desktop",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/customer-desktop/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/customer-desktop/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/customer-desktop/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/customer-desktop/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "customer-tablet",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/customer-tablet/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/customer-tablet/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/customer-tablet/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/customer-tablet/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "customer-mobile",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/customer-mobile/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/customer-mobile/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/customer-mobile/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/customer-mobile/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-desktop",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-desktop/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-tablet",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-tablet/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-mobile",
+      "test": "signed-out screen protects private workflows and fits the viewport",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-mobile/public/initial-page.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/public/protected-route.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/public/public-accessible-dom.txt",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/public/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-desktop",
+      "test": "provider Team & Access is simple, truthful and responsive",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-desktop/team-access/members.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/team-access/available-roles.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/team-access/add-member.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/team-access/invitations.png",
+        "docs/testing/team-access-simplification-evidence/operations-desktop/team-access/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-tablet",
+      "test": "provider Team & Access is simple, truthful and responsive",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-tablet/team-access/members.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/team-access/available-roles.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/team-access/add-member.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/team-access/invitations.png",
+        "docs/testing/team-access-simplification-evidence/operations-tablet/team-access/browser-diagnostics.json"
+      ]
+    },
+    {
+      "project": "operations-mobile",
+      "test": "provider Team & Access is simple, truthful and responsive",
+      "status": "passed",
+      "attachments": [
+        "docs/testing/team-access-simplification-evidence/operations-mobile/team-access/members.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/team-access/available-roles.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/team-access/add-member.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/team-access/invitations.png",
+        "docs/testing/team-access-simplification-evidence/operations-mobile/team-access/browser-diagnostics.json"
+      ]
+    }
+  ]
+}
