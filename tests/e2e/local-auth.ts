@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page } from 'playwright/test';
 
-export function configuredAccount(persona: 'GLOBAL_ADMIN' | 'PROVIDER_ADMIN' | 'PROVIDER_REVIEWER' | 'OPERATOR') {
+export function configuredAccount(persona: 'GLOBAL_ADMIN' | 'PLATFORM_REVIEWER' | 'PROVIDER_ADMIN' | 'PROVIDER_REVIEWER' | 'OPERATOR') {
   const email = process.env[`TRISE_E2E_${persona}_EMAIL`]?.trim();
   if (!email) throw new Error(`Configure TRISE_E2E_${persona}_EMAIL privately before authenticated verification`);
   return email;
