@@ -956,6 +956,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/subscriptions/{subscriptionId}/recipient-tax-registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List approved Business GST registrations available for subscription billing
+         * @description Returns only current, verified canonical GST registrations owned by or validly associated with the subscription Provider's Business. The response does not expose the TRISE issuer tax profile and does not select a billing default.
+         */
+        get: operations["ListPlatformSubscriptionRecipientTaxRegistrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/subscription-changes": {
         parameters: {
             query?: never;
@@ -2519,7 +2541,7 @@ export interface paths {
         head?: never;
         /**
          * Update Customer
-         * @description Related customer acting on own authorized records; scoped provider operations may act with explicit permission.
+         * @description Related customer acting on own authorized records; provider operations and authorized Field Marketing users with LEAD_READ may list provider-scoped customer/prospect relationships for lead capture.
          */
         patch: operations["UpdateCustomer"];
         trace?: never;
@@ -4565,6 +4587,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/maintenance-contracts/{contractId}/iterations/{iterationId}/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contractId: components["schemas"]["Id"];
+                iterationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Preventive Maintenance Job
+         * @description Provider operations materializes one idempotent ServiceJob from a planned maintenance iteration. ServiceJob remains the execution aggregate.
+         */
+        post: operations["CreateMaintenanceIterationJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/warranties": {
         parameters: {
             query?: never;
@@ -4659,6 +4704,50 @@ export interface paths {
          * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation.
          */
         patch: operations["UpdateQuotation"];
+        trace?: never;
+    };
+    "/quotations/{quotationId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create immutable quotation revision
+         * @description Create a new editable revision from an issued provider quotation; the source revision is superseded and remains immutable.
+         */
+        post: operations["CreateQuotationRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get immutable quotation revision PDF
+         * @description Provider or related customer commercial read access to the exact stored quotation revision.
+         */
+        get: operations["GetQuotationPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/quotations/{quotationId}/approve": {
@@ -4766,6 +4855,28 @@ export interface paths {
          * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation.
          */
         post: operations["TransitionQuotation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/negotiations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Quotation Negotiation
+         * @description Record an immutable provider-scoped negotiation event for a Lead-linked quotation.
+         */
+        post: operations["RecordQuotationNegotiation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8284,9 +8395,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ListServiceCaseJobs"];
         put?: never;
         post: operations["LinkServiceCaseJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/jobs/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateServiceCaseJob"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8303,6 +8430,135 @@ export interface paths {
         get: operations["ListServiceStage"];
         put?: never;
         post: operations["CreateServiceStage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/change-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListServiceCaseChangeOrder"];
+        put?: never;
+        post: operations["CreateServiceCaseChangeOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/change-orders/{changeOrderId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TransitionServiceCaseChangeOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/material-requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMaterialRequirement"];
+        put?: never;
+        post: operations["CreateMaterialRequirement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/shipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListShipment"];
+        put?: never;
+        post: operations["CreateShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/{shipmentId}/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RecordShipmentDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/payment-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPaymentSchedule"];
+        put?: never;
+        post: operations["CreatePaymentSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider customer payments for an installation case */
+        get: operations["ListServiceCasePayments"];
+        put?: never;
+        post: operations["CreateCustomerPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{paymentId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TransitionCustomerPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8761,6 +9017,23 @@ export interface paths {
         patch: operations["UpdateBusinessOperationType"];
         trace?: never;
     };
+    "/providers/operations/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read provider-scoped elevator operations dashboard */
+        get: operations["GetProviderOperationsDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/operations": {
         parameters: {
             query?: never;
@@ -8995,7 +9268,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                profileId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -9064,7 +9339,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         /** Get provider legal entity and GST registration context */
@@ -9151,7 +9428,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         /** List licence authorizations for a Provider */
@@ -9168,7 +9447,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                authorizationId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -9305,7 +9586,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                authorizationId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -9322,7 +9605,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                recordId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -9339,6 +9624,47 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ProviderOperationsDashboard: {
+            data: {
+                id: components["schemas"]["Id"];
+                /** @constant */
+                type: "provider-operations-dashboards";
+                attributes: {
+                    /** Format: date-time */
+                    generated_at: string;
+                    counts: {
+                        leads: number;
+                        installation_projects: number;
+                        open_installation_jobs: number;
+                        customers: number;
+                        shipments: number;
+                        open_payment_schedules: number;
+                        outstanding_amount: string;
+                        unread_notifications: number;
+                    } & {
+                        [key: string]: unknown;
+                    };
+                    event_catalog: {
+                        event_type: string;
+                        label: string;
+                        category: string;
+                        emitted: boolean;
+                    }[];
+                    recent_events: Record<string, never>[];
+                    recent_notifications: {
+                        id: components["schemas"]["Id"];
+                        category: string;
+                        title: string;
+                        body: string;
+                        /** Format: date-time */
+                        read_at?: string | null;
+                        /** Format: date-time */
+                        created_at?: string | null;
+                    }[];
+                    recent_audit: Record<string, never>[];
+                };
+            };
+        };
         ProviderTeamInvitationCreate: {
             /** Format: email */
             email: string;
@@ -10058,6 +10384,8 @@ export interface components {
             unit_price: string;
             /** @description Decimal serialized without binary floating-point loss. */
             amount: string;
+            /** @description Authorized discount amount; the provider terms policy bounds the permitted percentage. */
+            discount_amount?: string;
         };
         CoverageItem: {
             service_type_id: components["schemas"]["Id"];
@@ -10440,6 +10768,20 @@ export interface components {
         PlatformBusinessAttributes: {
             name: string;
             provider_count: number;
+            /**
+             * @description Effective operational status. A restricted Business blocks provider activity across all accounts.
+             * @enum {string}
+             */
+            status: "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "BLOCKED" | "CLOSED";
+            /**
+             * @description Authoritative Business lifecycle status.
+             * @enum {string}
+             */
+            business_status?: "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "BLOCKED" | "CLOSED";
+            /** @enum {string|null} */
+            restriction_type?: "TEMPORARY_MAINTENANCE" | "POLICY_REVIEW" | "SECURITY" | "COMPLIANCE" | "ADMINISTRATIVE" | null;
+            /** Format: date-time */
+            restriction_ends_at?: string | null;
             revision: components["schemas"]["Revision"];
         };
         PlatformBusiness: {
@@ -10676,6 +11018,7 @@ export interface components {
             relationships: {
                 party: components["schemas"]["ResourceLink"];
                 customer_relationship: components["schemas"]["ResourceLink"];
+                marketing_lead?: components["schemas"]["ResourceLink"] | null;
             };
         };
         CustomerCollection: {
@@ -11501,6 +11844,9 @@ export interface components {
             /** Format: date-time */
             effective_to: string;
             revision: components["schemas"]["Revision"];
+            source_quotation_id?: components["schemas"]["Id"] | null;
+            predecessor_contract_id?: components["schemas"]["Id"] | null;
+            paid_renewal?: boolean;
             commercial_party_roles: components["schemas"]["CommercialPartySelection"];
             commercial_party_snapshot_present: boolean;
         };
@@ -12375,6 +12721,8 @@ export interface components {
             location_id?: components["schemas"]["Id"];
             service_type_id: components["schemas"]["Id"];
             request_id?: components["schemas"]["Id"];
+            service_location_id?: components["schemas"]["Id"];
+            lead_id?: components["schemas"]["Id"];
             booking_id?: components["schemas"]["Id"];
             issue_category_id?: components["schemas"]["Id"];
         };
@@ -12528,6 +12876,10 @@ export interface components {
             service_plan_definition_id: components["schemas"]["Id"];
             coverage_rule_ids: components["schemas"]["Id"][];
             commercial_parties?: components["schemas"]["CommercialPartySelection"];
+            /** @description Immutable installation terms snapshot retained with the issued quotation revision. */
+            terms?: {
+                [key: string]: unknown;
+            };
         };
         /** @description Draft only. Active commercial/scope/schedule changes require dated amendment. */
         MaintenanceContractPatch: {
@@ -12607,6 +12959,12 @@ export interface components {
             due_at?: string;
             job_id?: components["schemas"]["Id"];
         } & (unknown & unknown & unknown & unknown);
+        /** @description Provider Operations materializes one idempotent ServiceJob from a planned maintenance iteration. */
+        MaintenanceIterationJobCreate: {
+            service_type_id: components["schemas"]["Id"];
+            summary: string;
+            expected_revision: components["schemas"]["Revision"];
+        };
         /** @description Creates separate extra_service iteration, not an assumed entitlement. */
         ExtraIterationCreate: {
             asset_scope_id: components["schemas"]["Id"];
@@ -12628,6 +12986,8 @@ export interface components {
             customer_relationship_id: components["schemas"]["Id"];
             job_id?: components["schemas"]["Id"];
             request_id?: components["schemas"]["Id"];
+            /** @enum {string} */
+            purpose?: "SERVICE" | "REPAIR" | "PARTS" | "INSTALLATION" | "NEW_ASSET" | "PROCUREMENT" | "MAINTENANCE_CONTRACT" | "CONTRACT_RENEWAL" | "OTHER_CONTROLLED";
             currency: string;
             lines: components["schemas"]["QuotationLine"][];
             commercial_parties?: components["schemas"]["CommercialPartySelection"];
@@ -12637,6 +12997,43 @@ export interface components {
             lines: components["schemas"]["QuotationLine"][];
             expected_revision: components["schemas"]["Revision"];
             commercial_parties?: components["schemas"]["CommercialPartySelection"];
+        };
+        QuotationRevisionCreate: {
+            lines: components["schemas"]["QuotationLine"][];
+            expected_revision: components["schemas"]["Revision"];
+            terms?: {
+                [key: string]: unknown;
+            };
+        };
+        QuotationNegotiationCreate: {
+            /** @enum {string} */
+            event_type: "CUSTOMER_FEEDBACK" | "DISCOUNT_REQUESTED" | "SCOPE_CHANGE" | "TERMS_CHANGE" | "COUNTER_OFFER" | "OTHER";
+            notes: string;
+            /** Format: date-time */
+            occurred_at?: string;
+            offered_total?: string;
+            currency_code?: string;
+        };
+        QuotationNegotiation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "quotation-negotiations";
+            attributes: {
+                /** Format: date-time */
+                created_at: string;
+                provider_id: components["schemas"]["Id"];
+                event_type: string;
+                notes: string;
+                offered_total?: string;
+                currency_code?: string;
+                /** Format: date-time */
+                occurred_at: string;
+            };
+            relationships: {
+                quotation?: components["schemas"]["ResourceLink"];
+                marketing_lead?: components["schemas"]["ResourceLink"];
+                recorded_by?: components["schemas"]["ResourceLink"];
+            };
         };
         /** @description Approve/reject the exact revision; authority must include quotation approval for this customer relationship. */
         QuotationDecision: {
@@ -14512,6 +14909,15 @@ export interface components {
             /** Format: uuid */
             predecessor_job_id?: string | null;
         };
+        Batch47CreateCaseJob: {
+            /** Format: uuid */
+            service_type_id: string;
+            summary: string;
+            /** Format: uuid */
+            asset_id?: string | null;
+            /** @default INSTALLATION */
+            role: string;
+        };
         Batch47Stage: {
             code: string;
             title: string;
@@ -14524,6 +14930,8 @@ export interface components {
             team_id?: string | null;
             /** Format: uuid */
             agent_id?: string | null;
+            /** Format: uuid */
+            asset_id?: string | null;
             prerequisite_stage_ids?: string[];
         };
         Batch47StagePatch: components["schemas"]["Batch47Stage"] & components["schemas"]["Batch47Revision"];
@@ -14568,7 +14976,92 @@ export interface components {
             /** @enum {string} */
             target: "INSTALLATION_CASE" | "DRAFT_MAINTENANCE_CONTRACT";
             expected_revision?: number;
+            /** @description Existing customer/site elevator assets to link as independent project units. */
+            asset_ids?: string[];
             idempotency_key?: string;
+        };
+        Batch47ChangeOrder: {
+            /** @enum {string} */
+            change_type: "SCOPE" | "MATERIAL" | "COMMERCIAL" | "SCHEDULE" | "TECHNICAL" | "OTHER";
+            description: string;
+            changes: {
+                [key: string]: unknown;
+            };
+            commercial_delta?: number;
+            currency_code?: string;
+            schedule_delta_days?: number;
+        };
+        Batch47ChangeOrderTransition: {
+            expected_revision: number;
+            /** @enum {string} */
+            transition: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELLED";
+            reason?: string;
+        };
+        Batch47MaterialRequirement: {
+            material_code: string;
+            description: string;
+            required_quantity: number;
+            unit_code: string;
+        };
+        Batch47Shipment: {
+            shipment_number: string;
+            lines: {
+                /** Format: uuid */
+                material_requirement_id: string;
+                dispatched_quantity: number;
+            }[];
+        };
+        Batch47ShipmentDelivery: {
+            delivery_notes?: string;
+            lines: {
+                /** Format: uuid */
+                shipment_line_id: string;
+                accepted_quantity?: number;
+                rejected_quantity?: number;
+                rejection_reason?: string;
+            }[];
+        };
+        Batch47PaymentSchedule: {
+            milestone_code: string;
+            description: string;
+            due_amount: number;
+            currency_code?: string;
+            /** Format: date */
+            due_on?: string;
+        };
+        Batch47Payment: {
+            /** Format: uuid */
+            payment_schedule_id: string;
+            payment_reference: string;
+            /** @enum {string} */
+            method: "CASH" | "CHEQUE" | "ONLINE" | "BANK_TRANSFER";
+            amount: number;
+            currency_code?: string;
+            instrument_reference?: string;
+            /** Format: date-time */
+            received_at?: string;
+        };
+        Batch47PaymentCollection: {
+            data: {
+                data: {
+                    /** Format: uuid */
+                    id: string;
+                    /** @enum {string} */
+                    type: "service-case-payments";
+                    attributes: {
+                        [key: string]: unknown;
+                    };
+                };
+            }[];
+            page?: {
+                [key: string]: unknown;
+            };
+        };
+        Batch47PaymentTransition: {
+            expected_revision: number;
+            /** @enum {string} */
+            transition: "SETTLED" | "BOUNCED" | "REVERSED";
+            reason?: string;
         };
         PlatformOverview: {
             data: {
@@ -14705,6 +15198,9 @@ export interface components {
         Batch47appointmentId: string;
         Batch47caseId: string;
         Batch47stageId: string;
+        Batch47changeOrderId: string;
+        Batch47shipmentId: string;
+        Batch47paymentId: string;
         Batch47assetId: string;
         Batch47handOffId: string;
         Batch47contractId: string;
@@ -14771,6 +15267,11 @@ export interface components {
                 "application/json": components["schemas"]["Batch47CaseJob"];
             };
         };
+        Batch47CreateCaseJob: {
+            content: {
+                "application/json": components["schemas"]["Batch47CreateCaseJob"];
+            };
+        };
         Batch47Stage: {
             content: {
                 "application/json": components["schemas"]["Batch47Stage"];
@@ -14804,6 +15305,46 @@ export interface components {
         Batch47Conversion: {
             content: {
                 "application/json": components["schemas"]["Batch47Conversion"];
+            };
+        };
+        Batch47ChangeOrder: {
+            content: {
+                "application/json": components["schemas"]["Batch47ChangeOrder"];
+            };
+        };
+        Batch47ChangeOrderTransition: {
+            content: {
+                "application/json": components["schemas"]["Batch47ChangeOrderTransition"];
+            };
+        };
+        Batch47MaterialRequirement: {
+            content: {
+                "application/json": components["schemas"]["Batch47MaterialRequirement"];
+            };
+        };
+        Batch47Shipment: {
+            content: {
+                "application/json": components["schemas"]["Batch47Shipment"];
+            };
+        };
+        Batch47ShipmentDelivery: {
+            content: {
+                "application/json": components["schemas"]["Batch47ShipmentDelivery"];
+            };
+        };
+        Batch47PaymentSchedule: {
+            content: {
+                "application/json": components["schemas"]["Batch47PaymentSchedule"];
+            };
+        };
+        Batch47Payment: {
+            content: {
+                "application/json": components["schemas"]["Batch47Payment"];
+            };
+        };
+        Batch47PaymentTransition: {
+            content: {
+                "application/json": components["schemas"]["Batch47PaymentTransition"];
             };
         };
     };
@@ -16663,6 +17204,28 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    ListPlatformSubscriptionRecipientTaxRegistrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved Business GST registration choices for the recipient context */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     ListPlatformSubscriptionChanges: {
         parameters: {
             query?: {
@@ -17951,7 +18514,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -17984,7 +18549,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                businessId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -24305,6 +24872,43 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    CreateMaintenanceIterationJob: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                contractId: components["schemas"]["Id"];
+                iterationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceIterationJobCreate"];
+            };
+        };
+        responses: {
+            /** @description Preventive maintenance ServiceJob. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceJob"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     ListWarranty: {
         parameters: {
             query?: {
@@ -24583,6 +25187,68 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    CreateQuotationRevision: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotationRevisionCreate"];
+            };
+        };
+        responses: {
+            /** @description Authorized quotation revision */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quotation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetQuotationPdf: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quotation PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     ApproveQuotation: {
         parameters: {
             query?: never;
@@ -24773,6 +25439,43 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    RecordQuotationNegotiation: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotationNegotiationCreate"];
+            };
+        };
+        responses: {
+            /** @description Immutable negotiation event. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationNegotiation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ServerError"];
@@ -31696,6 +32399,20 @@ export interface operations {
             200: components["responses"]["Batch47Ok"];
         };
     };
+    ListServiceCaseJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
     LinkServiceCaseJob: {
         parameters: {
             query?: never;
@@ -31706,6 +32423,20 @@ export interface operations {
             cookie?: never;
         };
         requestBody: components["requestBodies"]["Batch47CaseJob"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    CreateServiceCaseJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47CreateCaseJob"];
         responses: {
             201: components["responses"]["Batch47Created"];
         };
@@ -31736,6 +32467,199 @@ export interface operations {
         requestBody: components["requestBodies"]["Batch47Stage"];
         responses: {
             201: components["responses"]["Batch47Created"];
+        };
+    };
+    ListServiceCaseChangeOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateServiceCaseChangeOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47ChangeOrder"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    TransitionServiceCaseChangeOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeOrderId: components["parameters"]["Batch47changeOrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47ChangeOrderTransition"];
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+        };
+    };
+    ListMaterialRequirement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateMaterialRequirement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47MaterialRequirement"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    ListShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47Shipment"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    RecordShipmentDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shipmentId: components["parameters"]["Batch47shipmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47ShipmentDelivery"];
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+        };
+    };
+    ListPaymentSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreatePaymentSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47PaymentSchedule"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    ListServiceCasePayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped payment records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.api+json": components["schemas"]["Batch47PaymentCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateCustomerPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47Payment"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    TransitionCustomerPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentId: components["parameters"]["Batch47paymentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47PaymentTransition"];
+        responses: {
+            200: components["responses"]["Batch47Ok"];
         };
     };
     UpdateServiceStage: {
@@ -32218,6 +33142,8 @@ export interface operations {
                 "application/json": {
                     expected_revision: number;
                     evidence_ids: string[];
+                    /** Format: uuid */
+                    asset_id?: string | null;
                 };
             };
         };
@@ -32274,6 +33200,8 @@ export interface operations {
                     expected_revision: number;
                     evidence_ids: string[];
                     acknowledgement_method: string;
+                    /** Format: uuid */
+                    asset_id?: string | null;
                 };
             };
         };
@@ -32327,6 +33255,8 @@ export interface operations {
                     source_warranty_id?: string | null;
                     /** Format: date-time */
                     effective_from?: string | null;
+                    /** Format: uuid */
+                    asset_id?: string | null;
                 };
             };
         };
@@ -32635,6 +33565,29 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    GetProviderOperationsDashboard: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-TRISE-Provider-Id": components["schemas"]["Id"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped operational aggregates, elevator event catalogue and recent activity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderOperationsDashboard"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
         };
     };
     ListProviderOperations: {
@@ -33105,7 +34058,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                profileId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -33204,7 +34159,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -33342,7 +34299,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -33360,7 +34319,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                authorizationId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -33574,7 +34535,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                authorizationId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -33593,7 +34556,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                recordId: components["schemas"]["Id"];
+            };
             cookie?: never;
         };
         requestBody?: never;

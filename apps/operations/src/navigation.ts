@@ -1,6 +1,7 @@
 import type { ProviderCapabilityContext, Session } from '@trise/auth';
 
-export type OperationsNavigationItem = { key: string; label: string; hash: string; capability?: string };
+export type ProviderNavigationGroup = 'Overview' | 'Operations' | 'Customers & Assets' | 'Service Programs' | 'Workforce' | 'Commercial' | 'Insights' | 'Administration';
+export type OperationsNavigationItem = { key: string; label: string; hash: string; capability?: string; group?: ProviderNavigationGroup };
 
 export const platformNavigation: OperationsNavigationItem[] = [
   { key: 'platform-overview', label: 'Platform Overview', hash: 'platform/overview', capability: 'PLATFORM_PROVIDER_READ' },
@@ -19,20 +20,23 @@ export const platformNavigation: OperationsNavigationItem[] = [
 ];
 
 const providerItems: OperationsNavigationItem[] = [
-  { key: 'team-access', label: 'Team & Access', hash: 'team-access', capability: 'team_access' },
-  { key: 'overview', label: 'Overview', hash: 'overview', capability: 'requests' },
-  { key: 'requests', label: 'Requests', hash: 'requests', capability: 'requests' },
-  { key: 'bookings', label: 'Bookings', hash: 'bookings', capability: 'bookings' },
-  { key: 'jobs', label: 'Jobs', hash: 'jobs', capability: 'jobs' },
-  { key: 'customers', label: 'Customers', hash: 'customers', capability: 'customers' },
-  { key: 'onboarding', label: 'Onboarding', hash: 'onboarding', capability: 'onboarding' },
-  { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration' },
-  { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile' },
-  { key: 'compliance', label: 'Compliance', hash: 'compliance', capability: 'compliance' },
-  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions' },
-  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work' },
-  { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce' },
-  { key: 'audit', label: 'Audit history', hash: 'audit', capability: 'audit' }
+  { key: 'overview', label: 'Overview', hash: 'overview', capability: 'requests', group: 'Overview' },
+  { key: 'leads', label: 'Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Commercial' },
+  { key: 'quotations', label: 'Quotations', hash: 'quotations', capability: 'quotations', group: 'Commercial' },
+  { key: 'projects', label: 'Installation Projects', hash: 'projects', capability: 'projects', group: 'Operations' },
+  { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Operations' },
+  { key: 'bookings', label: 'Bookings & Appointments', hash: 'bookings', capability: 'bookings', group: 'Operations' },
+  { key: 'jobs', label: 'Jobs', hash: 'jobs', capability: 'jobs', group: 'Operations' },
+  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Operations' },
+  { key: 'customers', label: 'Customers & Assets', hash: 'customers', capability: 'customers', group: 'Customers & Assets' },
+  { key: 'onboarding', label: 'Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Customers & Assets' },
+  { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration', group: 'Administration' },
+  { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile', group: 'Administration' },
+  { key: 'compliance', label: 'Compliance', hash: 'compliance', capability: 'compliance', group: 'Administration' },
+  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Commercial' },
+  { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
+  { key: 'audit', label: 'Audit history', hash: 'audit', capability: 'audit', group: 'Administration' },
+  { key: 'team-access', label: 'Team & Access', hash: 'team-access', capability: 'team_access', group: 'Administration' }
 ];
 
 export function providerContextFor(session: Pick<Session, 'providerCapabilities'>, providerId?: string): ProviderCapabilityContext | undefined {
@@ -50,12 +54,18 @@ export function navigationForSession(session: Pick<Session, 'platformAdmin' | 'p
   };
 }
 
+export const providerNavigationGroups: ProviderNavigationGroup[] = ['Overview', 'Operations', 'Customers & Assets', 'Service Programs', 'Workforce', 'Commercial', 'Insights', 'Administration'];
+
+export function groupedProviderNavigation(items: OperationsNavigationItem[]) {
+  return providerNavigationGroups.map((group) => ({ group, items: items.filter((item) => item.group === group) })).filter((entry) => entry.items.length > 0);
+}
+
 export function requiredProviderCapability(section: string): string | undefined {
   return providerItems.find((item) => item.hash === section || (section === 'overview' && item.key === 'overview'))?.capability;
 }
 
 export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string): boolean {
   const navigation = navigationForSession(session, providerId);
-  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : section === 'overview' ? 'requests' : section === 'team-access' ? 'team_access' : section;
+  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : section === 'overview' ? 'requests' : section === 'team-access' ? 'team_access' : section === 'leads' ? 'sales_marketing' : section;
   return navigation.provider.some((item) => item.capability === capability && (item.hash === section || (section === 'jobs' && routeId === 'my-work' && item.hash === 'jobs/my-work')));
 }

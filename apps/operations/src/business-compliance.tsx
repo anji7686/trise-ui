@@ -46,7 +46,6 @@ export function BusinessCompliancePage({ businessId, capabilities }: { businessI
   const [requestPage, setRequestPage] = useState(1); const [versionPage, setVersionPage] = useState(1); const [auditPage, setAuditPage] = useState(1);
   const [requestMeta, setRequestMeta] = useState({ page: 1, per_page: 10, total: 0, total_pages: 1 }); const [versionMeta, setVersionMeta] = useState(requestMeta); const [auditMeta, setAuditMeta] = useState(requestMeta);
   const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [dialog, setDialog] = useState<'legal' | 'gst' | 'request' | 'upload' | 'request-detail' | 'preview' | 'history-detail' | 'lifecycle' | null>(null); const [uploadClassification, setUploadClassification] = useState('BUSINESS_VERIFICATION');
-  const [lifecycleAction, setLifecycleAction] = useState<'restrict' | 'reactivate' | null>(null); const [lifecycleReason, setLifecycleReason] = useState(''); const [restrictionType, setRestrictionType] = useState('TEMPORARY_MAINTENANCE'); const [restrictionEndsAt, setRestrictionEndsAt] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PlatformComplianceRequest | null>(null); const [selectedHistory, setSelectedHistory] = useState<BusinessHistoryVersion | BusinessAuditEvent | null>(null); const [preview, setPreview] = useState<{ name: string; mediaType: string; url: string } | null>(null); const [replaceDocument, setReplaceDocument] = useState<BusinessDocument | null>(null);
   const [legal, setLegal] = useState({ legal_name: '', business_constitution_code: '', incorporation_or_commencement_date: '', state_or_union_territory: '', reason: '' });
   const [gst, setGst] = useState({ canonical_registration_id: '', gstin: '', registration_category: 'REGISTERED', state_or_union_territory: '', effective_from: new Date().toISOString().slice(0, 10), effective_to: '' });
@@ -74,7 +73,6 @@ export function BusinessCompliancePage({ businessId, capabilities }: { businessI
       setRequests(result.data); setRequestMeta(result.meta); setRequestPage(1); setDialog(null); setSelectedRequest(null);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   }
-  async function submitLifecycle(event: FormEvent) { event.preventDefault(); if (!lifecycleAction || lifecycleReason.trim().length < 3 || !business) return; setBusy(true); setError(''); try { await operationsData.transitionPlatformBusiness(businessId, lifecycleAction, { expected_revision: summary?.revision || 0, reason: lifecycleReason.trim(), ...(lifecycleAction === 'restrict' ? { restriction_type: restrictionType, ...(restrictionEndsAt ? { restriction_ends_at: new Date(restrictionEndsAt).toISOString() } : {}) } : {}) }, crypto.randomUUID()); setDialog(null); setLifecycleAction(null); setLifecycleReason(''); setRestrictionEndsAt(''); await loadBusiness(); } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); } }
   async function showPreview(document: BusinessDocument) {
     if (!canInlinePreview(document) || !document.attributes.current_version_id) return;
     setError('');

@@ -13,6 +13,12 @@ test('Platform billing exposes the guided invoice route and inline PDF preview',
   await expect(page.getByPlaceholder('Search by provider, Business or plan name')).toBeVisible();
   await page.locator('.invoice-subscription-choice').first().click();
   await page.getByRole('button', { name: 'Continue to recipient details', exact: true }).click();
+  await expect(page.getByText('Loading saved billing context…', { exact: true })).toHaveCount(0, { timeout: 10000 });
+  await page.getByLabel('Legal/billing name', { exact: true }).fill('TRISE Demo Billing Recipient');
+  await page.getByLabel('Billing address', { exact: true }).fill('1 Demo Billing Street');
+  await page.getByLabel('State / UT', { exact: false }).selectOption({ label: 'Karnataka' });
+  await page.getByRole('button', { name: 'Save billing context', exact: true }).click();
+  await expect(page.getByText('Billing context saved.', { exact: false })).toBeVisible({ timeout: 10000 });
   const dueAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const dueAtValue = dueAt.toISOString().slice(0, 16);
   await page.locator('input[type="datetime-local"]').fill(dueAtValue);

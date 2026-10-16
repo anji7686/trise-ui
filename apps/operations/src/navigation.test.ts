@@ -11,14 +11,14 @@ describe('Operations capability navigation', () => {
   });
 
   it.each([
-    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'requests', 'bookings', 'jobs', 'workforce', 'audit'], ['overview', 'requests', 'bookings', 'jobs', 'customers', 'onboarding', 'configuration', 'business-profile', 'workforce', 'audit']],
+    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects'], ['overview', 'leads', 'quotations', 'projects', 'requests', 'bookings', 'jobs', 'customers', 'onboarding', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'workforce', 'audit', 'team-access']],
     ['operations', ['requests', 'workforce', 'audit'], ['overview', 'requests', 'workforce', 'audit']],
     ['dispatcher', ['bookings', 'jobs'], ['bookings', 'jobs']],
     ['agent', ['my_work'], ['my-work']]
   ])('%s receives only capabilities returned for the selected context', (_name, capabilities, expectedKeys) => {
     const navigation = navigationForSession({ platformAdmin: false, providerCapabilities: [context(capabilities)] }, 'provider-1');
     expect(navigation.provider.map((item) => item.key)).toEqual(expectedKeys);
-    expect(navigation.provider.some((item) => item.key === 'quotations')).toBe(false);
+    expect(navigation.provider.some((item) => item.key === 'quotations')).toBe(_name === 'provider admin');
   });
 
   it('does not show provider or platform navigation without server capabilities', () => {
@@ -45,6 +45,11 @@ describe('Operations capability navigation', () => {
   it('keeps business profile restricted to the returned provider capability', () => {
     expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['requests'])] }, 'provider-1').provider.some((item) => item.key === 'business-profile')).toBe(false);
     expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['business_profile'])] }, 'provider-1').provider.map((item) => item.key)).toEqual(['business-profile']);
+  });
+
+  it('allows the leads route from the sales marketing capability', () => {
+    const session = { platformAdmin: false, providerCapabilities: [context(['sales_marketing'])] };
+    expect(providerRouteAllowed(session, 'provider-1', 'leads')).toBe(true);
   });
 
   it('guards deep links against the selected provider context', () => {

@@ -4,21 +4,21 @@ import { configuredAccount, localSignIn } from './local-auth';
 test.use({ trace: 'retain-on-failure', video: 'off' });
 
 test('Platform reviewer can assign and decide a pending compliance request', async ({ page, evidence }) => {
-  await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
-  await page.goto('/#platform/compliance');
+  const session = await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
+  const apiBase = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3001/api/v1';
+  const queueResponse = await page.request.get(`${apiBase}/platform/compliance`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
+  expect(queueResponse.ok()).toBeTruthy();
+  const queue = await queueResponse.json() as { data: Array<{ id: string; attributes: { submitted_by_user_id?: string | null; status: string } }> };
+  const candidate = queue.data.find((item) => ['SUBMITTED', 'IN_REVIEW'].includes(item.attributes.status) && item.attributes.submitted_by_user_id !== session.user.id);
+  if (!candidate) {
+    test.skip(true, 'No synthetic pending compliance request is eligible for a different platform reviewer in this development database.');
+    return;
+  }
+  await page.goto(`/#platform/compliance?request=${candidate.id}`);
   await expect(page.getByRole('heading', { name: 'Approval Inbox', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
 
-  const pendingRows = page.locator('button.approval-request-row');
-  try {
-    await expect(pendingRows.first()).toBeVisible({ timeout: 10_000 });
-  } catch {
-    test.skip(true, 'The synthetic pending compliance fixture has already been decided in this development database.');
-    return;
-  }
-  const pendingRow = pendingRows.first();
-  await pendingRow.click();
-  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /Business Registration|DEMO_BROWSER_BUSINESS_REGISTRATION/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2 }).filter({ hasText: /Business legal identity|Business Registration|DEMO_BROWSER_BUSINESS_REGISTRATION/i }).first()).toBeVisible();
 
   const assignSelect = page.getByLabel('Authorized reviewer');
   if (await assignSelect.count()) {
@@ -28,7 +28,8 @@ test('Platform reviewer can assign and decide a pending compliance request', asy
     await page.getByLabel('Assignment reason', { exact: true }).fill('Synthetic browser assignment');
     const assignmentResponse = page.waitForResponse((response) => response.url().includes('/platform/compliance/') && response.url().endsWith('/assign') && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Assign', exact: true }).click();
-    expect((await assignmentResponse).status()).toBe(200);
+    const assignmentResult = await assignmentResponse;
+    expect(assignmentResult.status()).toBe(200);
   }
 
   const decision = page.getByRole('combobox', { name: 'Decision', exact: true });
@@ -37,7 +38,8 @@ test('Platform reviewer can assign and decide a pending compliance request', asy
   await page.getByLabel('Decision reason', { exact: true }).fill('Synthetic browser approval');
   const decisionResponse = page.waitForResponse((response) => response.url().includes('/platform/compliance/') && response.url().endsWith('/decision') && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Record decision', exact: true }).click();
-  expect((await decisionResponse).status()).toBe(200);
+  const decisionResult = await decisionResponse;
+  expect(decisionResult.status()).toBe(200);
   expect(evidence.exceptions).toEqual([]);
   expect(evidence.responses.filter(response => response.status >= 500)).toEqual([]);
 });

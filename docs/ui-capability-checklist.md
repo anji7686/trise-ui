@@ -29,7 +29,7 @@ This checklist distinguishes route/transport implementation from workflow eviden
 | Customer quotations and notifications | IMPLEMENTED BUT UNVERIFIED | Mutation handlers preserve revisions/idempotency; customer-authorized populated approval/read-reload evidence still requires a customer session. |
 | Customer coverage | PARTIAL | Authorized list reads exist; populated entitlement/allowance fixture and browser evidence are missing. |
 | Customer documents | PARTIAL | Read/download UI accepts authorized finalized versions; private storage remains required and malware scanning is disabled by platform policy. |
-| Operations appointments/capacity | IMPLEMENTED BUT UNVERIFIED | Existing API wiring is present; populated confirmation/reschedule browser evidence is incomplete. |
+| Operations appointments/capacity | IMPLEMENTED | Provider list/calendar/detail/create/confirm/reschedule/cancel controls preserve requested-window semantics; authenticated provider list/calendar/create-dialog and readable-window checks passed; mutation success remains unexecuted to avoid changing demo data. |
 | Operations jobs/assignment | PARTIAL | Dispatcher controls exist, but assignment requires a valid working-calendar binding and an authenticated eligible agent. |
 | Agent execution | BLOCKED BY EXACT DEPENDENCY | Checklist/session/proof/parts controls exist; the seeded Agent identity is not linked and the operator cannot impersonate that actor. |
 | Configuration administration | PARTIAL | Typed adapters cover the accepted registry; lookup-dependent types with no authorized lookup operation remain blocked and independent reviewer browser evidence is pending. |
@@ -46,7 +46,7 @@ This checklist distinguishes route/transport implementation from workflow eviden
 
 The Operations header now uses one account/workspace menu for the authorized provider selector, language, appearance, self-profile editing, and sign-out. The selected provider remains visible in the workspace context panel. Provider switching reloads through the existing session-storage/context invalidation path; it does not grant or infer roles. There is no separate Operations profile route; the account panel reuses the approved `/me` self-profile flow.
 
-The current Operations layout pass adds a compact 232px desktop sidebar, 64px header, route-specific titles for `/#overview`, `/#bookings`, `/#jobs`, `/#quotations`, `/#configuration`, `/#workforce`, and `/#audit`, responsive mobile navigation, and a self-profile editor inside the account panel using `GET /me` and `PATCH /me`. Workforce permission failures now show a forbidden state without presenting Retry as the primary action. Jobs now has the list/detail/assignment/evidence split described above; appointments, requests, quotations, workforce, and configuration still need the same focused list/detail refinement without new API contracts.
+The current Operations layout pass adds a compact 232px desktop sidebar, 64px header, route-specific titles for `/#overview`, `/#bookings`, `/#jobs`, `/#quotations`, `/#configuration`, `/#workforce`, and `/#audit`, responsive mobile navigation, and a self-profile editor inside the account panel using `GET /me` and `PATCH /me`. Workforce permission failures now show a forbidden state without presenting Retry as the primary action. Provider Jobs now has contextual Overview/Assignment/Execution/Evidence/History tabs and an assignment drawer; provider requests and appointments use focused list/detail workflows without new API contracts. Authenticated provider browser evidence remains pending when the local API is unavailable; signed-out desktop and narrow-width secure-workspace renders were smoke-tested.
 
 ## Menu purpose and field coverage
 
@@ -121,7 +121,7 @@ membership contexts and scoped role permissions documented in
 
 | Area | List route | Detail route | Actions | Pagination | Tests | Browser |
 |---|---|---|---|---|---|---|
-| Jobs | `#jobs` | `#jobs/<job-id>` | Assignment form, visit creation, execution panel, notes, parts, My work accept/decline | Existing bounded job collection; next/previous cursor controls remain limited by the job adapter | Typecheck/build; existing transport tests | Pending browser tooling/authenticated verification |
+| Jobs | `#jobs` | `#jobs/<job-id>` | Contextual Overview/Assignment/Execution/Evidence/History tabs, assignment drawer, visit creation, execution panel, notes, parts, My work accept/decline | Existing bounded job collection; next/previous cursor controls remain limited by the job adapter | Typecheck/build; existing transport tests | Authenticated provider Jobs/detail tabs/drawer and narrow-width overflow verified; My Work hidden when server capability is absent |
 | Appointments | `#bookings` | `#bookings/<booking-id>` | Confirm and reschedule with revision/idempotency; cancellation is not exposed because no approved UI operation is present in the current adapter | Server `page.next` plus bounded previous cursor history | Typecheck/build; existing transport tests | Pending |
 | Requests | `#requests` | `#requests/<request-id>` | Read-only authorized detail; no additional lifecycle command is exposed by the current Operations adapter | Server cursor links | Typecheck/build | Pending |
 | Quotations | `#quotations` | `#quotations/<quotation-id>` | Read-only provider detail; customer approval/rejection remains in the Customer flow; provider draft mutation is not yet wired in this screen | Server cursor links | Typecheck/build | Pending |
@@ -488,3 +488,36 @@ not changed.
 - [x] Platform Approval correction requests expose structured common fields while preserving the compatibility payload editor; Business legal identity, GST and registration/brand entry are structured.
 - [ ] Remove the compatibility payload editor after the API publishes complete field-level requirement schemas.
 - [ ] Production-only expiry scheduling, external notification delivery, strict CLEAN malware scanning and broader legal-variant authorization review remain `PRODUCTION_PENDING`.
+
+## Provider Operations AI criteria
+
+- Make changes only to provider Operations screens and provider-scoped shared components.
+- Treat Platform Administration screens, routes, navigation, permissions, styling, and behavior as frozen.
+- Do not change backend contracts, database schema, generated API types, tenant isolation, revisions, or security controls without explicit approval.
+- Do not invent totals, relationships, statuses, permissions, assignments, or successful business actions.
+- Use server-returned authorization and lifecycle transitions as the source of truth.
+- Every batch must include a Platform Administration non-regression check.
+
+## Elevator sales and installation workstream — ELP-01
+
+- [x] Audited existing provider UI, Rails models/routes/services, OpenAPI,
+  checked-in schema and live local PostgreSQL catalog before proposing physical
+  design.
+- [x] Confirmed provider Operations UI can reuse Customer/ServiceLocation,
+  Asset, Quotation, ServiceCase/ServiceStage, ServiceJob, Document,
+  MaintenanceContract and Warranty sources.
+- [x] Recorded missing Lead, Site Survey/Requirement Revision,
+  Material/Shipment, Provider-to-Customer Payment, and persisted Inspection
+  sources in the architecture audit.
+- [x] Recorded that Platform Administration, Customer application boundaries,
+  existing Service Jobs/My Work and existing AMC workflows remain protected.
+- [x] ELP-01 server catalogue is implemented with disabled, elevator-operation-
+  scoped marketing role templates and server-derived `sales_marketing`
+  capability metadata. The Provider navigation is capability-gated; no active
+  marketing authority has been granted to a development browser identity.
+- [ ] ELP-02 — Add Provider-only Leads, site survey, and requirements screens
+  using the server capability projection and the existing Operations visual
+  primitives. API integration and UI implementation are present. Focused API
+  verification passes 2 runs / 10 assertions; the full UI suite, typecheck,
+  lint, builds, bundle budget and diff checks pass. Authenticated browser
+  evidence remains pending until an approved local marketing role is assigned.
