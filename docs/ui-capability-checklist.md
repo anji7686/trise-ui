@@ -1,5 +1,17 @@
 # UI capability checklist
 
+## Service-provider design pack crosswalk
+
+The authoritative 52-row design/form crosswalk is maintained at
+`docs/implementation/service-provider-design-coverage.csv`. This checklist
+continues to distinguish route/transport implementation from persisted action
+evidence and authenticated visual verification.
+
+Batch 0 baseline: 12 screen PNGs, 40 form PNGs, 56-page master PDF, 40-page
+form PDF and 41-page stage-gated architecture PDF located and inventoried.
+Visual status for this design pack is `BLOCKED_BROWSER_RUNTIME` until an
+approved authenticated provider browser session is available.
+
 
 This matrix records the current frontend state against implemented API contracts. “Implemented” means a route and typed transport exist; browser verification remains separate.
 

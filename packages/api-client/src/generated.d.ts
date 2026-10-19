@@ -38,6 +38,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/provider/access/members/{membershipId}/effective-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain a Provider Member's Effective Grants
+         * @description Returns server-computed active role grants for one membership in the selected Provider. Resource, lifecycle, qualification, finance and other mandatory policies remain independent authorization gates.
+         */
+        get: operations["GetProviderMemberEffectivePermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/self/effective-permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain the Current Provider Member's Effective Grants
+         * @description Returns effective provider role grants only for the authenticated user in the explicitly selected Provider. It does not reveal other memberships; resource, lifecycle, qualification, finance and other mandatory policies remain independent authorization gates.
+         */
+        get: operations["GetProviderSelfEffectivePermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/provider/access/members/{membershipId}/roles": {
         parameters: {
             query?: never;
@@ -153,6 +193,40 @@ export interface paths {
         put?: never;
         /** Create Provider Custom Role */
         post: operations["CreateProviderCustomRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/roles/templates/adoption-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Provider-local role template adoption */
+        post: operations["PreviewProviderRoleTemplateAdoption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider/access/roles/templates/adopt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adopt a published role template into Provider-local version history */
+        post: operations["AdoptProviderRoleTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3109,6 +3183,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/marketing-leads/{leadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete an unreferenced new Provider lead
+         * @description Only a new, unreferenced lead can be soft-deleted. The operation requires an expected revision and reason, retains the record and audit history, and hides it from active lead reads.
+         */
+        delete: operations["DeleteUnreferencedMarketingLead"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/service-requests": {
         parameters: {
             query?: never;
@@ -3385,7 +3479,7 @@ export interface paths {
         };
         /**
          * List Service Visit
-         * @description Customer through own relationship; Agent only through assigned/authorized work and minimum fields; provider staff by explicit permission.
+         * @description Customer through own relationship; Agent only through assigned/authorized work and minimum fields; provider staff with SERVICE_JOB_VIEW in current provider scope. This is read-only and does not grant execution or QA actions.
          */
         get: operations["ListServiceVisit"];
         put?: never;
@@ -3589,7 +3683,7 @@ export interface paths {
         };
         /**
          * List Part Usage
-         * @description Assigned or explicitly authorized Agent in the selected provider engagement, with action permission; provider operations require explicit permission.
+         * @description Assigned or explicitly authorized Agent in the selected provider engagement, with action permission; provider role-governed readers require SERVICE_JOB_VIEW in the selected provider scope. Role-governed responses omit authorized cost snapshots; operations and part-record mutations remain separately authorized.
          */
         get: operations["ListPartUsage"];
         put?: never;
@@ -3638,7 +3732,7 @@ export interface paths {
         };
         /**
          * List Work Note
-         * @description Assigned or explicitly authorized Agent in the selected provider engagement, with action permission; provider operations require explicit permission.
+         * @description Assigned or explicitly authorized Agent in the selected provider engagement, with action permission; provider role-governed readers require SERVICE_JOB_VIEW in the selected provider scope. Internal notes remain subject to provider membership and job-view scope; note creation is separately authorized.
          */
         get: operations["ListWorkNote"];
         put?: never;
@@ -4763,9 +4857,35 @@ export interface paths {
         put?: never;
         /**
          * Approve Quotation
-         * @description Customer with approval authority for the quotation relationship; provider delegated approver only with explicit grant.
+         * @description Customer or customer-relationship approver records acceptance of the exact quotation revision after an APPROVED Provider review exists for that exact revision. Provider review is recorded separately at provider-reviews.
          */
         post: operations["ApproveQuotation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/provider-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List Provider Quotation Reviews
+         * @description Review decisions for the exact revisions of a quotation, scoped to its Service Provider.
+         */
+        get: operations["ListProviderQuotationReviews"];
+        put?: never;
+        /**
+         * Record Provider Quotation Review
+         * @description Records one immutable Provider approval/rejection for the exact issued quotation revision; it does not accept the quotation on behalf of the customer.
+         */
+        post: operations["RecordProviderQuotationReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4785,7 +4905,7 @@ export interface paths {
         put?: never;
         /**
          * Reject Quotation
-         * @description Customer with approval authority for the quotation relationship; provider delegated approver only with explicit grant.
+         * @description Customer or customer-relationship authority records rejection. Provider internal review/rejection is recorded separately at provider-reviews.
          */
         post: operations["RejectQuotation"];
         delete?: never;
@@ -8452,6 +8572,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/service-cases/{caseId}/quality-findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListServiceCaseQualityFindings"];
+        put?: never;
+        post: operations["CreateServiceCaseQualityFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quality-findings/{findingId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TransitionServiceCaseQualityFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/change-orders/{changeOrderId}/transitions": {
         parameters: {
             query?: never;
@@ -9723,6 +9875,47 @@ export interface components {
             data: components["schemas"]["AccessMember"][];
             page?: components["schemas"]["Page"];
         };
+        ProviderEffectivePermissionPreview: {
+            data: {
+                id: components["schemas"]["Id"];
+                /** @constant */
+                type: "provider-effective-permissions";
+                attributes: {
+                    provider_id: components["schemas"]["Id"];
+                    membership_status: string;
+                    /** @enum {string} */
+                    access_mode: "LEGACY_CONTEXT" | "ROLE_GOVERNED";
+                    membership_revision: number;
+                    membership_active: boolean;
+                    role_assignments: {
+                        id: components["schemas"]["Id"];
+                        name: string;
+                        /** @enum {string} */
+                        role_type: "default" | "custom";
+                        version: number;
+                    }[];
+                    permissions: {
+                        code: string;
+                        category: string;
+                        module: string;
+                        action: string;
+                        description: string;
+                        protected: boolean;
+                        /** @description Effective role grant only; not a final resource authorization decision. */
+                        grant_effective: boolean;
+                        /** @enum {string|null} */
+                        resource_scope: "OWN" | "TEAM" | "PROVIDER" | "CUSTOMER" | null;
+                        source_roles: {
+                            id: components["schemas"]["Id"];
+                            name: string;
+                            /** @enum {string} */
+                            role_type: "default" | "custom";
+                        }[];
+                        additional_policy: string | null;
+                    }[];
+                };
+            };
+        };
         MemberRoleReplacement: {
             expected_revision: number;
             role_ids: components["schemas"]["Id"][];
@@ -9779,7 +9972,35 @@ export interface components {
                 /** Format: date-time */
                 updated_at: string;
                 active_assignment_count: number;
+                template_source: null | {
+                    role_id: components["schemas"]["Id"];
+                    version: number;
+                    name: string;
+                };
                 reviews: components["schemas"]["AccessReview"][];
+            };
+        };
+        ProviderRoleTemplateAdoptionPreview: {
+            data: {
+                template_role_id: components["schemas"]["Id"];
+                template_name: string;
+                template_version: number;
+                provider_role_id: components["schemas"]["Id"] | null;
+                provider_role_revision: number | null;
+                name: string;
+                description: string;
+                permissions: {
+                    [key: string]: boolean;
+                };
+                permission_scopes: {
+                    [key: string]: "OWN" | "TEAM" | "CUSTOMER" | "PROVIDER";
+                };
+                added: string[];
+                removed: string[];
+                conflicts: string[];
+                source_provider_role_id: components["schemas"]["Id"] | null;
+                previous_template_role_id: components["schemas"]["Id"] | null;
+                can_adopt: boolean;
             };
         };
         AccessRoleCollection: {
@@ -11029,6 +11250,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             provider_id: components["schemas"]["Id"];
+            display_name: string;
             status: string;
             revision: components["schemas"]["Revision"];
         };
@@ -11867,11 +12089,22 @@ export interface components {
         MaintenanceContractCollection: {
             data: components["schemas"]["MaintenanceContract"][];
             page: components["schemas"]["Page"];
+            summary: components["schemas"]["MaintenanceContractSummary"];
+        };
+        MaintenanceContractSummary: {
+            active_contracts: number;
+            preventive_visits_due: number;
+            renewals_due_this_month: number;
+            covered_assets: number;
         };
         ContractAssetScopeAttributes: {
             /** Format: date-time */
             created_at: string;
             provider_id: components["schemas"]["Id"];
+            asset_id: components["schemas"]["Id"];
+            asset_display_name: string | null;
+            /** @enum {string} */
+            status: "active" | "ended" | "suspended";
             /** Format: date-time */
             effective_from: string;
             effective_to: string | null;
@@ -12052,7 +12285,10 @@ export interface components {
         QuotationAttributes: {
             /** Format: date-time */
             created_at: string;
+            /** Format: date-time */
+            updated_at: string;
             provider_id: components["schemas"]["Id"];
+            quotation_number: string;
             /** @enum {string} */
             status: "draft" | "issued" | "approved" | "rejected" | "expired" | "cancelled";
             currency: string;
@@ -12060,6 +12296,14 @@ export interface components {
             /** @description Decimal serialized without binary floating-point loss. */
             total: string;
             revision: components["schemas"]["Revision"];
+            provider_review?: {
+                /** @enum {string} */
+                decision: "approved" | "rejected";
+                quotation_revision: components["schemas"]["Revision"];
+                /** Format: date-time */
+                decided_at: string;
+                reason?: string | null;
+            } | null;
             commercial_party_roles: components["schemas"]["CommercialPartySelection"];
             commercial_party_snapshot_present: boolean;
         };
@@ -12103,6 +12347,32 @@ export interface components {
         };
         QuotationApprovalCollection: {
             data: components["schemas"]["QuotationApproval"][];
+            page: components["schemas"]["Page"];
+        };
+        QuotationProviderReviewAttributes: {
+            /** Format: date-time */
+            created_at: string;
+            provider_id: components["schemas"]["Id"];
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            quotation_revision: components["schemas"]["Revision"];
+            /** Format: date-time */
+            decided_at: string;
+            reason?: string | null;
+        };
+        /** @description Immutable provider review of the referenced quotation revision; does not represent customer acceptance. */
+        QuotationProviderReview: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "quotation-provider-reviews";
+            attributes: components["schemas"]["QuotationProviderReviewAttributes"];
+            relationships: {
+                quotation?: components["schemas"]["ResourceLink"];
+                reviewer?: components["schemas"]["ResourceLink"];
+            };
+        };
+        QuotationProviderReviewCollection: {
+            data: components["schemas"]["QuotationProviderReview"][];
             page: components["schemas"]["Page"];
         };
         NotificationEventAttributes: {
@@ -13035,8 +13305,15 @@ export interface components {
                 recorded_by?: components["schemas"]["ResourceLink"];
             };
         };
-        /** @description Approve/reject the exact revision; authority must include quotation approval for this customer relationship. */
+        /** @description Customer acceptance or rejection of the exact revision; acceptance requires an APPROVED Provider review for the same revision. */
         QuotationDecision: {
+            expected_revision: components["schemas"]["Revision"];
+            reason?: string;
+        };
+        /** @description Provider internal review only. REJECTED requires a reason. Does not record customer acceptance. */
+        ProviderQuotationReviewDecision: {
+            /** @enum {string} */
+            decision: "APPROVED" | "REJECTED";
             expected_revision: components["schemas"]["Revision"];
             reason?: string;
         };
@@ -14941,6 +15218,30 @@ export interface components {
             evidence_ids?: string[];
             reason?: string;
         };
+        Batch47QualityFinding: {
+            /** Format: uuid */
+            asset_id?: string | null;
+            /** Format: uuid */
+            service_job_id?: string | null;
+            /** Format: uuid */
+            service_stage_id?: string | null;
+            /** @enum {string} */
+            severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+            title: string;
+            description: string;
+            corrective_action: string;
+            evidence_ids?: string[];
+            /** Format: uuid */
+            assigned_to_user_id?: string | null;
+            /** Format: date-time */
+            detected_at?: string | null;
+        };
+        Batch47QualityFindingTransition: components["schemas"]["Batch47Revision"] & {
+            /** @enum {string} */
+            transition: "RECTIFICATION_IN_PROGRESS" | "READY_FOR_REINSPECTION" | "REINSPECTION_FAILED" | "RESOLVED" | "CANCELLED";
+            evidence_ids?: string[];
+            resolution_notes?: string | null;
+        };
         Batch47Custody: {
             /** Format: uuid */
             case_id: string;
@@ -15198,6 +15499,7 @@ export interface components {
         Batch47appointmentId: string;
         Batch47caseId: string;
         Batch47stageId: string;
+        Batch47findingId: string;
         Batch47changeOrderId: string;
         Batch47shipmentId: string;
         Batch47paymentId: string;
@@ -15285,6 +15587,16 @@ export interface components {
         Batch47StageTransition: {
             content: {
                 "application/json": components["schemas"]["Batch47StageTransition"];
+            };
+        };
+        Batch47QualityFinding: {
+            content: {
+                "application/json": components["schemas"]["Batch47QualityFinding"];
+            };
+        };
+        Batch47QualityFindingTransition: {
+            content: {
+                "application/json": components["schemas"]["Batch47QualityFindingTransition"];
             };
         };
         Batch47Custody: {
@@ -15418,6 +15730,61 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    GetProviderMemberEffectivePermissions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                membershipId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-computed role grants and additional policy gates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderEffectivePermissionPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetProviderSelfEffectivePermissions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-computed grants for the current Provider membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderEffectivePermissionPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     ReplaceProviderMemberRoles: {
         parameters: {
             query?: never;
@@ -15462,6 +15829,10 @@ export interface operations {
                 /** @description Mutually exclusive with page[after]. */
                 "page[before]"?: components["parameters"]["PageBefore"];
                 "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Provider-scoped substring search over role name and description. */
+                q?: string;
+                /** @description Filter provider-eligible roles by enabled state. */
+                "filter[enabled]"?: "true" | "false";
             };
             header: {
                 /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
@@ -15525,8 +15896,6 @@ export interface operations {
             header: {
                 /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
                 "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
-                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
             cookie?: never;
@@ -15700,6 +16069,81 @@ export interface operations {
         };
         responses: {
             /** @description Authorized result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRole"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    PreviewProviderRoleTemplateAdoption: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    template_role_id: components["schemas"]["Id"];
+                    provider_role_id?: components["schemas"]["Id"];
+                    expected_revision?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Adoption diff and conflicts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderRoleTemplateAdoptionPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    AdoptProviderRoleTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    template_role_id: components["schemas"]["Id"];
+                    expected_template_version: number;
+                    provider_role_id?: components["schemas"]["Id"];
+                    expected_revision?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Provider-local role revision */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -21414,6 +21858,40 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    DeleteUnreferencedMarketingLead: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Lead soft-deleted; record and audit history retained. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     ListServiceRequest: {
         parameters: {
             query?: {
@@ -21626,6 +22104,10 @@ export interface operations {
                 "filter[asset_id]"?: components["schemas"]["Id"][];
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[status]"?: string[];
+                /** @description Inclusive ISO-8601 lower bound for requested appointment start. Must be supplied together with starts_at_lt; bounded ranges may not exceed 31 days. Provider authorization is applied before the range filter. */
+                "filter[starts_at_gte]"?: string;
+                /** @description Exclusive ISO-8601 upper bound for requested appointment start. Must be supplied together with starts_at_gte; bounded ranges may not exceed 31 days. Provider authorization is applied before the range filter. */
+                "filter[starts_at_lt]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][gte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -24062,6 +24544,12 @@ export interface operations {
                 "filter[customer_relationship_id]"?: components["schemas"]["Id"][];
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[status]"?: string[];
+                /** @description Provider-authorized search across contract number and customer display name. */
+                "filter[q]"?: string;
+                /** @description Filter contracts expiring on or after this date. */
+                "filter[expires_after]"?: string;
+                /** @description Filter contracts expiring before the day after this date. */
+                "filter[expires_before]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][gte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -25287,6 +25775,76 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListProviderQuotationReviews: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped review history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationProviderReviewCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    RecordProviderQuotationReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderQuotationReviewDecision"];
+            };
+        };
+        responses: {
+            /** @description Immutable Provider review decision. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationProviderReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     RejectQuotation: {
         parameters: {
             query?: never;
@@ -26470,6 +27028,10 @@ export interface operations {
                 "filter[classification]"?: string[];
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[status]"?: string[];
+                /** @description Exact audit action code filter. Repeat for OR within this field; filters are always restricted to the selected provider before matching. */
+                "filter[action]"?: string[];
+                /** @description Exact allowlisted audit resource kind filter. Unsupported kinds return 422. Repeat for OR within this field. */
+                "filter[resource_kind]"?: string[];
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][gte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -32495,6 +33057,48 @@ export interface operations {
         requestBody: components["requestBodies"]["Batch47ChangeOrder"];
         responses: {
             201: components["responses"]["Batch47Created"];
+        };
+    };
+    ListServiceCaseQualityFindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateServiceCaseQualityFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47QualityFinding"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    TransitionServiceCaseQualityFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                findingId: components["parameters"]["Batch47findingId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47QualityFindingTransition"];
+        responses: {
+            200: components["responses"]["Batch47Ok"];
         };
     };
     TransitionServiceCaseChangeOrder: {

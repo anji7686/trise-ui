@@ -28,7 +28,7 @@ async function selectProvider(page: Page, providerId: string) {
     await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   }
   await expect(page.getByRole('button', { name: 'Open account menu', exact: true })).toBeVisible();
-  await page.getByRole('complementary', { name: 'Operations navigation', exact: true }).getByRole('button', { name: 'Team & Access', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Operations navigation', exact: true }).getByRole('button', { name: 'Teams & Roles', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Team & Access', exact: true })).toBeVisible();
   await expect(page.getByText('Loading members…', { exact: true })).toHaveCount(0);
 }
@@ -44,11 +44,20 @@ test('approved accounts expose only their existing access workspaces', async ({ 
   for (const [index, line] of accounts.entries()) {
     const [email, secret] = line.split(': ');
     await page.goto('/');
-    await page.getByRole('combobox', { name: 'Test email', exact: true }).fill(email);
+    const emailControl = page.getByRole('combobox', { name: 'Test email', exact: true });
+    const quickMode = await emailControl.evaluate((element) => element.tagName === 'SELECT');
+    if (quickMode) {
+      await emailControl.selectOption(email);
+    } else {
+      await emailControl.fill(email);
+    }
     await paceLocalSignIn();
-    await page.getByLabel('Local secret', { exact: true }).fill(secret);
-    const signedIn = page.waitForResponse(response => response.url().endsWith('/session/development') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Sign in locally', exact: true }).click();
+    if (!quickMode) await page.getByLabel('Local secret', { exact: true }).fill(secret);
+    const signedIn = page.waitForResponse(response => {
+      const pathname = new URL(response.url()).pathname;
+      return ['/api/v1/session/development', '/api/v1/session/development/quick'].includes(pathname) && response.request().method() === 'POST';
+    });
+    await page.getByRole('button', { name: quickMode ? 'Sign in as selected account' : 'Sign in locally', exact: true }).click();
     const response = await signedIn;
     expect(response.status()).toBe(200);
     const { user } = await response.json();
@@ -248,11 +257,11 @@ test('platform publication and provider multiple-role workflows persist with aud
     await page.getByRole('navigation', { name: 'Team & Access tabs', exact: true }).getByRole('button', { name: 'Members', exact: true }).click();
     const memberRow = page.getByRole('row').filter({ hasText: configuredAccount('OPERATOR') });
     await memberRow.getByRole('button', { name: 'Manage Roles', exact: true }).click();
-    const picker = page.getByRole('dialog', { name: 'Manage Roles', exact: true });
+    const picker = page.getByRole('region', { name: 'Assign roles', exact: true });
     for (const name of customNames) await picker.getByRole('checkbox', { name, exact: true }).check();
     await picker.getByRole('checkbox', { name: `${defaultName} · Platform default`, exact: true }).check();
     await screenshot(page, testInfo, 'multiple-role-picker');
-    await command(page, `/provider/access/members/${memberId}/roles`, 'PUT', () => picker.getByRole('button', { name: 'Save', exact: true }).click());
+    await command(page, `/provider/access/members/${memberId}/roles`, 'PUT', () => picker.getByRole('button', { name: 'Save assignments', exact: true }).click());
     for (const name of [...customNames, defaultName]) await expect(memberRow.getByText(name, { exact: true })).toBeVisible();
     await page.reload();
     for (const name of [...customNames, defaultName]) await expect(page.getByRole('row').filter({ hasText: configuredAccount('OPERATOR') }).getByText(name, { exact: true })).toBeVisible();

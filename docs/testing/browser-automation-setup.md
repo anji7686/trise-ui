@@ -17,7 +17,12 @@ processes confirmed those ports and Rails on 3000. Ports are observations, not
 fixed assumptions: Playwright reads app ports from package scripts and API URL
 from Vite development settings or `.env.example`. Override with
 `TRISE_E2E_CUSTOMER_URL`, `TRISE_E2E_OPERATIONS_URL`, `TRISE_E2E_API_URL`.
-Only localhost origins are accepted. Tests reuse running servers and never start,
+Playwright also loads `.env.e2e.local` after shell values; its non-`VITE_`
+values are used only by the test process and are never exposed to production
+Vite builds. Copy `.env.e2e.example` to `.env.e2e.local`; the local file is
+Git-ignored and must contain only approved local test identities. Authenticated
+role variables are validated before authenticated projects start, with no
+silent skip when a required fixture is missing. Only localhost origins are accepted. Tests reuse running servers and never start,
 reset or seed a database automatically.
 
 Existing `.local-browser` had Playwright 1.64.0 and a standalone verification
@@ -51,6 +56,44 @@ Run the existing `dev:customer`, `dev:operations` and Rails development commands
 only if servers are absent. Config uses Playwright’s standard cache unless `PLAYWRIGHT_BROWSERS_PATH` is
 explicitly set. To use the workspace cache, set the same variable for both
 installation and test execution. Chromium sandbox is explicitly enabled; no authentication or authorization checks are disabled.
+
+## Critical visual workflow coverage
+
+`tests/e2e/critical-visual-workflows.spec.ts` captures authenticated Customer,
+Global Admin and Provider Admin workflows. The existing six viewport projects
+run the suite at desktop 1440×900, tablet 820×1180 and mobile 390×844 for both
+apps; role-specific tests are filtered to the application they exercise. The
+suite captures Customer home/assets/projects, Global Admin platform overview
+and roles, and Provider Admin overview/team access/workforce views.
+
+When the authenticated projects run, every failed test retains a screenshot,
+trace and video. The visual suite also attaches successful workflow screenshots
+to the Playwright report. Artifacts can contain rendered private test data, so
+keep `test-results/` and `playwright-report/` local and inspect before sharing.
+
+Run from a normal Mac terminal after starting Rails and both Vite servers:
+
+```sh
+cd /Users/anjanreddy/wrk/trise/trise-ui
+export PATH="/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:$PATH"
+cp .env.e2e.example .env.e2e.local
+# Fill only approved local role emails in .env.e2e.local.
+export TRISE_E2E_DEVELOPMENT_SIGN_IN=true
+npm run test:e2e:typecheck
+npx playwright test tests/e2e/critical-visual-workflows.spec.ts --workers=1 --retries=0 --reporter=list,html
+npm run test:e2e:report
+```
+
+Run one viewport explicitly when diagnosing a responsive issue:
+
+```sh
+npx playwright test tests/e2e/critical-visual-workflows.spec.ts --project=operations-mobile --workers=1 --retries=0
+npx playwright test tests/e2e/critical-visual-workflows.spec.ts --project=operations-tablet --workers=1 --retries=0
+npx playwright test tests/e2e/critical-visual-workflows.spec.ts --project=operations-desktop --workers=1 --retries=0
+```
+
+These commands are pending actual browser rendering in the restricted Codex
+environment; no screenshot or visual pass is claimed here.
 
 ## Evidence and privacy
 

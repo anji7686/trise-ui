@@ -137,8 +137,19 @@ test('Business detail Change Request publishes v2 and preserves approved v1', as
 
   await page.goto(`/#platform/businesses/${businessId}?tab=history`);
   await expect(page.getByRole('button', { name: 'Approved versions', exact: true })).toBeVisible();
-  await expect(page.getByText('v1', { exact: true })).toBeVisible();
-  await expect(page.getByText('v2', { exact: true })).toBeVisible();
+  const approvedVersionRows: string[] = [];
+  for (let pageNumber = 1; pageNumber <= 10; pageNumber += 1) {
+    const rows = await page.locator('table tbody tr').allInnerTexts();
+    approvedVersionRows.push(...rows.filter(row => /Business Trade Name/i.test(row)));
+    const next = page.getByRole('button', { name: 'Next', exact: true });
+    if (await next.isDisabled()) break;
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes('/platform/businesses/') && response.url().includes('/compliance-history?kind=versions')),
+      next.click()
+    ]);
+  }
+  expect(approvedVersionRows.some(row => /\bv1\b/.test(row))).toBe(true);
+  expect(approvedVersionRows.some(row => /\bv2\b/.test(row))).toBe(true);
   expect(evidence.exceptions).toEqual([]);
   expect(evidence.responses.filter(response => response.status >= 500)).toEqual([]);
 });

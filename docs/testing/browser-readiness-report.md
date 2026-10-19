@@ -1,3 +1,38 @@
+## Agent screen visual review — 17 October 2026
+
+The supplied Operations capture was reviewed against the current `Jobs` / `My Work`
+implementation and the Agent application contract. The screen is functionally
+structured around authorized assignments, server-confirmed accept/decline, visits,
+state transitions and execution evidence. The current visual issue is information
+density: the page presents a very long stack of similarly weighted rows, with weak
+separation between queue metadata and execution actions. This makes the Agent's next
+action difficult to scan and pushes the meaningful execution controls far below the
+page fold.
+
+Recommended design direction: keep the existing API and authorization boundaries,
+but reshape My Work into a focused operational queue. Add a compact summary strip for
+today's assignment counts, a single search/status/priority filter row, and queue rows
+with a stronger left-to-right hierarchy: status/priority marker, job and site summary,
+schedule/SLA metadata, then one primary next-action button. Keep accept/decline as
+the proposed-assignment action pair; move visit, transition and evidence controls
+into an expanded row or detail drawer. Use the UBold List/Tables and Task Details
+patterns already indexed by the UI governance, adapted to TRISE labels and API data.
+On narrow screens, stack metadata above actions and keep the primary action sticky or
+adjacent to the assignment header; do not expose customer, location, SLA or emergency
+details unless returned and authorized by the API.
+
+Fresh terminal Playwright launch establishment was attempted with:
+
+`TRISE_E2E_DEVELOPMENT_SIGN_IN=true npx playwright test tests/e2e/public.spec.ts --project=operations-desktop --workers=1 --retries=0 --reporter=list`
+
+Chromium launched and then exited before page creation with `SIGTRAP`; the repository
+configuration still has `chromiumSandbox: true`, and no bypass flags or Codex Browser
+integration were used. The preserved raw Playwright error context is
+`test-results/public-signed-out-screen-p-01e58-flows-and-fits-the-viewport-operations-desktop/error-context.md`.
+No Agent navigation, screenshot, responsive check, console/request diagnostics or
+authenticated workflow result is claimed. Browser acceptance for this review is
+**BLOCKED**.
+
 ## Invoice browser and central-tax verification — 15 October 2026
 
 Real host-managed Chromium startup passed the signed-out Operations smoke (**1/1**)
@@ -1713,4 +1748,39 @@ The original Codex-sandbox Mach/Crashpad failure remains historical environment
 evidence. Real Chromium now starts successfully outside that sandbox. Development
 document fixtures correctly report `Not Scanned`; no malware-scanning safeguard was
 disabled.
+
+## Current visual-verification harness — 17 October 2026
+
+Added `tests/e2e/critical-visual-workflows.spec.ts` for authenticated Customer,
+Global Admin and Provider Admin workflows. It runs through the existing desktop
+(1440×900), tablet (820×1180) and mobile (390×844) projects and captures
+workflow screenshots. The suite uses securely configured role emails and the
+private API development-sign-in secrets file; no credentials, tokens or cookies
+are committed to this repository.
+
+The suite is statically validated (`npm run test:e2e:typecheck`) and discovers
+18 viewport/role test entries. It has not been executed in this restricted
+Codex environment because Chromium launch remains blocked by the preserved
+macOS Mach-port/Crashpad permission failure. Visual verification is **PENDING**,
+not passed. Failed tests are configured to retain screenshots, traces and
+videos; successful workflow screenshots are attached to the Playwright report.
+
+Normal-terminal execution subsequently confirmed Chromium can launch. The first
+18-test run did not reach authenticated pages: 9 role/workflow cases failed at
+the local-auth helper because the running app exposed the quick-sign-in
+`select[name="email"]` while the helper expected a password input. The helper
+now supports both quick-account selection and password-based local sign-in.
+That run is an application-test failure, not a browser-runtime failure; visual
+verification remains pending until the corrected suite completes.
+
+Normal-terminal command:
+
+```sh
+cd /Users/anjanreddy/wrk/trise/trise-ui
+export PATH="/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:$PATH"
+export TRISE_E2E_DEVELOPMENT_SIGN_IN=true
+npm run test:e2e:typecheck
+npx playwright test tests/e2e/critical-visual-workflows.spec.ts --workers=1 --retries=0 --reporter=list,html
+npm run test:e2e:report
+```
 

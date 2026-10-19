@@ -1,4 +1,4 @@
-.jobs-page,
+.jobs-page { max-width: none; }
 .job-detail { max-width: 1100px; }
 .page-toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1rem; }
 .page-toolbar h2 { margin: 0; font-size: 1.55rem; }
@@ -16,9 +16,23 @@
 .job-list-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border, #dce3ec); border-radius: .75rem; background: var(--surface, #fff); }
 .job-list-row h3 { margin: .35rem 0; font-size: 1rem; }
 .job-list-row p { margin: 0; color: var(--text-secondary, #526176); }
+.job-register-scroll { width:100%; overflow-x:auto; border:1px solid #d8e2ef; border-radius:9px; background:#fff; }
+.job-register { width:100%; min-width:760px; border-collapse:collapse; text-align:left; font-size:.86rem; }
+.job-register th { padding:12px 10px; border-bottom:1px solid #dce5f0; background:#f5f8fc; color:#405775; font-weight:700; white-space:nowrap; }
+.job-register td { padding:11px 10px; border-bottom:1px solid #e8edf4; color:#354b68; }
+.job-register tbody tr:hover { background:#f3f8ff; }
+.job-register tbody tr.is-selected { background:#eaf3ff; }
+.job-register tbody tr:last-child td { border-bottom:0; }
+.job-register td strong { color:#243b5a; }
+.job-reference { color:#1764ba; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .detail-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: .8rem; }
 .detail-section { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border, #dce3ec); border-radius: .75rem; background: var(--surface, #fff); }
 .detail-section h3 { margin: 0 0 .8rem; font-size: 1.1rem; }
+.execution-visit-gate { display:flex; align-items:center; gap:.8rem; padding:1rem; border:1px dashed #b9cbe1; border-radius:.65rem; background:linear-gradient(110deg,#f3f8ff,#fff); color:#294261; }
+.execution-visit-gate-icon { display:grid; flex:none; place-items:center; width:2.5rem; height:2.5rem; border-radius:.65rem; background:#e5efff; color:#1764ba; }
+.execution-visit-gate strong { display:block; font-size:.92rem; }
+.execution-visit-gate p { margin:.25rem 0 0; color:#61748d; font-size:.84rem; line-height:1.45; }
+.execution-visit-gate > .status { flex:none; margin-left:auto; }
 .detail-section dl { display: grid; grid-template-columns: minmax(170px, .4fr) 1fr; gap: .55rem 1rem; margin: 0; }
 .detail-section dt { color: var(--text-secondary, #526176); }
 .detail-section dd { margin: 0; }
@@ -26,9 +40,34 @@
 .task-form h4 { margin: 0; font-size: 1rem; }
 .field-hint { margin: -.35rem 0 0; color: var(--text-secondary, #526176); font-size: .9rem; }
 .action-footer { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
-.evidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.evidence-grid .task-form { max-width: none; padding: 1rem; border: 1px solid var(--border, #dce3ec); border-radius: .65rem; }
+.evidence-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+.evidence-heading h3 { margin:0; }
+.evidence-heading p { margin:.35rem 0 0; color:var(--text-secondary,#526176); }
+.evidence-actions,.evidence-dialog-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.55rem; }
+.evidence-dialog-actions { margin-top:.35rem; padding-top:.8rem; border-top:1px solid var(--border,#dce3ec); }
+.assignment-form-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.55rem; padding-top:.8rem; border-top:1px solid var(--border,#dce3ec); }
 .evidence-list { display: grid; gap: .45rem; margin-top: 1rem; }
 .evidence-list p { display: flex; gap: .6rem; align-items: center; margin: 0; padding: .65rem; border-bottom: 1px solid var(--border, #dce3ec); }
+.execution-workspace { margin-top: .85rem; border: 1px solid #d8e2ef; border-radius: .7rem; background: #f6f9fd; overflow: hidden; }
+.execution-workspace > summary { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; color: #19365f; background: #edf4ff; font-weight: 750; cursor: pointer; }
+.execution-workspace > summary span { color: #5c718e; font-size: .82rem; font-weight: 550; }
+.execution-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); align-items: start; gap: .8rem; padding: .8rem; }
+.execution-support-column { display: grid; gap: .8rem; }
+.execution-card { display: grid; gap: .65rem; min-width: 0; padding: .85rem; border: 1px solid #dce5f0; border-radius: .6rem; background: #fff; }
+.execution-card h4 { margin: 0; color: #19365f; font-size: .98rem; }
+.execution-card p { margin: .2rem 0 0; color: #667891; font-size: .82rem; }
+.execution-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: .6rem; }
+.execution-card .inline-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.execution-card .inline-actions select { flex: 1 1 210px; min-height: 2.4rem; border: 1px solid #d4dfec; border-radius: .45rem; padding: .5rem; background: #fff; color: inherit; }
+.execution-record { display: grid; gap: .55rem; padding-top: .7rem; border-top: 1px solid #e7edf5; }
+.execution-check-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, .55fr); align-items: center; gap: .65rem; padding: .45rem .15rem; border-bottom: 1px solid #edf1f6; color: #344b69; font-size: .86rem; }
+.execution-check-item input { min-width: 0; min-height: 2.25rem; padding: .4rem .55rem; border: 1px solid #d4dfec; border-radius: .4rem; }
+.execution-card > label { display: grid; gap: .3rem; color: #405775; font-size: .84rem; font-weight: 650; }
+.execution-card > label input, .execution-card > label textarea { box-sizing: border-box; width: 100%; min-height: 2.35rem; border: 1px solid #d4dfec; border-radius: .4rem; padding: .5rem .6rem; color: inherit; font: inherit; }
+.execution-card > label textarea { resize: vertical; }
+.execution-empty { padding: .55rem .65rem; border-radius: .4rem; background: #f3f7fc; }
+.execution-card .session-row { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.execution-card .session-row > span { flex: 1 1 120px; color: #405775; }
 .page-error { padding: 1rem; border: 1px solid #d99; border-radius: .75rem; background: color-mix(in srgb, #c33 8%, var(--surface, #fff)); }
-@media (max-width: 700px) { .page-toolbar, .job-list-row { align-items: stretch; flex-direction: column; } .filter-toolbar, .evidence-grid { grid-template-columns: 1fr; } .tab-switcher { align-self: flex-start; } .detail-section dl { grid-template-columns: 1fr; gap: .2rem; } .detail-section dt { margin-top: .45rem; } }
+@media (max-width: 850px) { .execution-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .page-toolbar, .job-list-row { align-items: stretch; flex-direction: column; } .filter-toolbar { grid-template-columns: 1fr; } .evidence-heading { flex-direction:column; } .evidence-actions,.evidence-dialog-actions,.assignment-form-actions { justify-content:stretch; } .evidence-actions button,.evidence-dialog-actions button,.assignment-form-actions button { flex:1 1 100%; } .tab-switcher { align-self: flex-start; } .detail-section dl { grid-template-columns: 1fr; gap: .2rem; } .detail-section dt { margin-top: .45rem; } .execution-visit-gate { align-items:flex-start; flex-wrap:wrap; } .execution-visit-gate > .status { margin-left:3.3rem; } .job-register-scroll { overflow:visible; border:0; background:transparent; } .job-register,.job-register tbody { display:grid; width:100%; min-width:0; gap:.65rem; } .job-register thead { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; } .job-register tbody tr { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.7rem .85rem; padding:.8rem; border:1px solid #d8e2ef; border-radius:.65rem; background:#fff; } .job-register td { min-width:0; padding:0; border:0; overflow-wrap:anywhere; font-size:.8rem; } .job-register td::before { display:block; margin-bottom:.2rem; color:#61748d; font-size:.65rem; font-weight:700; content:attr(data-label); } .job-register td[data-label="Title / service"] { grid-column:1/-1; grid-row:1; } .job-register td[data-label="Job No."] { grid-column:1/-1; } .job-register td[data-label="Action"] { display:flex; align-items:flex-end; } .job-register td[data-label="Action"] button { width:100%; } .execution-workspace > summary { align-items: flex-start; flex-direction: column; gap: .25rem; } .execution-grid { padding: .55rem; } .execution-card .inline-actions select { flex-basis: 100%; } }

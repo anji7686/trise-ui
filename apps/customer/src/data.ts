@@ -11,6 +11,7 @@ export type BookingAttributes = { summary: string; status: string; revision: num
 export type ServiceRequestAttributes = { summary: string; description?: string; status: string; revision: number; created_at: string };
 export type RequestAttributes = { summary: string; description?: string; status: string; revision: number; created_at: string };
 export type ServiceJobAttributes = { summary?: string; status: string; revision: number; scheduled_window?: { start_at?: string; end_at?: string; timezone_name?: string } };
+export type InstallationProjectAttributes = { title: string; status: string; revision: number; project_classification_key?: string | null; progress_percent: number; stage_count: number; completed_stage_count: number; project_assets?: Array<{ id: string; display_name: string; role: string; status: string }>; unit_progress?: Array<{ asset_id: string; stage_count: number; completed_stage_count: number; progress_percent: number }>; stages?: Array<{ id: string; code: string; title: string; status: string; mandatory: boolean; asset_id?: string | null }> };
 export type NotificationAttributes = { category: string; title: string; body: string; read_at?: string | null };
 export type QuotationLine = { description: string; quantity: string; unit_price: string; amount: string };
 export type QuotationAttributes = { status: string; currency: string; lines: QuotationLine[]; total: string; revision: number };
@@ -25,6 +26,9 @@ export function buildBookingPayload(input: { summary: string; customerRelationsh
 }
 
 const query = (path: string, providerId?: string) => apiClient.request(path, {}, { providerId });
+function normalizeCollection<T>(payload: { data: Array<Resource<T> | { data: Resource<T> }>; page?: Collection<T>['page'] }): Collection<T> {
+  return { ...payload, data: payload.data.map((item) => 'data' in item ? item.data : item) };
+}
 export const customerData = {
   me: () => apiClient.request<Resource<UserAttributes>>('/me'),
   updateMe: (body: Record<string, unknown>) => apiClient.request<Resource<UserAttributes>>('/me', { method: 'PATCH', body: JSON.stringify(body) }),
@@ -38,8 +42,9 @@ export const customerData = {
   request: (providerId: string, id: string) => query(`/service-requests/${encodeURIComponent(id)}`, providerId) as Promise<Resource<ServiceRequestAttributes>>,
   bookings: (providerId: string) => query('/service-bookings?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<BookingAttributes>>,
   jobs: (providerId: string) => query('/service-jobs?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<ServiceJobAttributes>>,
+  installationProjects: async (providerId: string) => normalizeCollection<InstallationProjectAttributes>(await query('/service-cases?page[limit]=25&sort=-created_at,id', providerId) as { data: Array<Resource<InstallationProjectAttributes> | { data: Resource<InstallationProjectAttributes> }>; page?: Collection<InstallationProjectAttributes>['page'] }),
   notifications: (providerId: string) => query('/notifications?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<NotificationAttributes>>,
-  markNotificationRead: (providerId: string, id: string) => apiClient.request<Resource<NotificationAttributes>>(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }, { providerId }),
+  markNotificationRead: (providerId: string, id: string, key: string) => apiClient.request<Resource<NotificationAttributes>>(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', headers: { 'Idempotency-Key': key } }, { providerId }),
   quotations: (providerId: string) => query('/quotations?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<QuotationAttributes>>,
   quotation: (providerId: string, id: string) => query(`/quotations/${encodeURIComponent(id)}`, providerId) as Promise<Resource<QuotationAttributes>>,
   approveQuotation: (providerId: string, id: string, expectedRevision: number, key: string) => apiClient.request<Resource<QuotationAttributes>>(`/quotations/${encodeURIComponent(id)}/approve`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expected_revision: expectedRevision }) }, { providerId }),

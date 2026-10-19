@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { localSignIn, localSignOut } from './local-auth';
+import { configuredAccount, localSignIn, localSignOut } from './local-auth';
 
 test.use({ trace: 'on', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -31,7 +31,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   test.setTimeout(240_000);
   const reference = `CONTINUOUS-${Date.now()}`;
 
-  const customer = await localSignIn(page, 'anji7686@gmail.com');
+  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
   const customerHeaders = { Authorization: `Bearer ${customer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const customerRelationships = await page.request.get(`${api}/customer-relationships?page[limit]=1`, { headers: customerHeaders });
   expect(customerRelationships.ok()).toBeTruthy();
@@ -47,7 +47,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const serviceLocation = await serviceLocationLookup.json() as { id: string };
   await localSignOut(page);
 
-  const executive = await localSignIn(page, 'marketingexecutive@demotrise.in');
+  const executive = await localSignIn(page, configuredAccount('MARKETING_EXECUTIVE'));
   const executiveProvider = executive.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId && entry.capabilities.includes('sales_marketing'));
   expect(executiveProvider).toBeTruthy();
   await selectProvider(page);
@@ -84,7 +84,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   await expect(page.getByRole('status')).toContainText('Requirement revision captured by the server.');
   await localSignOut(page);
 
-  const manager = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   await selectProvider(page);
   await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
   const leadSelect = page.locator('select[name="lead_id"]');
@@ -117,13 +117,19 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   expect(quotation.attributes.status).toBe('issued');
   await localSignOut(page);
 
-  const acceptingCustomer = await localSignIn(page, 'anji7686@gmail.com');
+  const quotationReviewer = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const reviewerHeaders = { Authorization: `Bearer ${quotationReviewer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const providerReview = await page.request.post(`${api}/quotations/${quotation.id}/provider-reviews`, { headers: { ...reviewerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { decision: 'APPROVED', expected_revision: Number(quotation.attributes.revision) } });
+  if (providerReview.status() !== 201) throw new Error(`provider quotation review failed: ${providerReview.status()} ${await providerReview.text()}`);
+  await localSignOut(page);
+
+  const acceptingCustomer = await localSignIn(page, configuredAccount('CUSTOMER'));
   const acceptingCustomerHeaders = { Authorization: `Bearer ${acceptingCustomer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const acceptance = await page.request.post(`${api}/quotations/${quotation.id}/approve`, { headers: { ...acceptingCustomerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: quotation.attributes.revision, reason: 'Customer accepted exact quotation revision' } });
   if (!acceptance.ok()) throw new Error(`customer quotation acceptance failed: ${acceptance.status()} ${await acceptance.text()}`);
   await localSignOut(page);
 
-  const assetAdministrator = await localSignIn(page, 'liftriseorg@gmail.com');
+  const assetAdministrator = await localSignIn(page, configuredAccount('ASSET_ADMINISTRATOR'));
   const assetHeaders = { Authorization: `Bearer ${assetAdministrator.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const existingAssets = await page.request.get(`${api}/assets?page[limit]=1`, { headers: assetHeaders });
   expect(existingAssets.ok()).toBeTruthy();
@@ -137,7 +143,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const continuousAsset = (await createdAsset.json()) as { id: string };
   await localSignOut(page);
 
-  const conversionManager = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const conversionManager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const conversionHeaders = { Authorization: `Bearer ${conversionManager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const acceptedQuotationResponse = await page.request.get(`${api}/quotations/${quotation.id}`, { headers: conversionHeaders });
   expect(acceptedQuotationResponse.ok()).toBeTruthy();
@@ -152,7 +158,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const project = projectPayload.data.map((item: { data?: unknown }) => item.data || item).find((item: { attributes: { source_quotation_id?: string } }) => item.attributes.source_quotation_id === quotation.id) as { id: string; attributes: { title: string } };
   expect(project).toBeTruthy();
   await localSignOut(page);
-  const operationsAdministrator = await localSignIn(page, 'liftriseorg@gmail.com');
+  const operationsAdministrator = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const operationsHeaders = { Authorization: `Bearer ${operationsAdministrator.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   await selectProvider(page);
   await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
@@ -205,7 +211,6 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const sourceJobPayload = await sourceJobs.json();
   const sourceJob = (sourceJobPayload.data.map((item: { data?: unknown }) => item.data || item)[0]) as { relationships?: { service_type?: { id: string } } };
   expect(sourceJob.relationships?.service_type?.id).toBeTruthy();
-  const jobSummary = `Installation execution — ${project.attributes.title}`;
   await page.getByRole('button', { name: 'Create installation job', exact: true }).click();
   const jobDialog = page.getByRole('dialog', { name: 'Create installation job', exact: true });
   await jobDialog.locator('select').first().selectOption(sourceJob.relationships!.service_type!.id);
@@ -225,21 +230,24 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   expect(assignment.status()).toBe(201);
 
   await localSignOut(page);
-  const technician = await localSignIn(page, 'demo.elevator.agent1@trise.local');
+  const technician = await localSignIn(page, configuredAccount('AGENT'));
   expect(technician.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId)?.capabilities).toContain('my_work');
   await selectProvider(page);
   await page.goto('/#/jobs');
   await page.getByRole('button', { name: 'My Work', exact: true }).click();
-  const workRow = page.locator('article.job-list-row').filter({ hasText: jobSummary });
+  const workRow = page.locator(`article.job-list-row[data-job-id="${installationJobId}"]`);
   await expect(workRow).toBeVisible();
   const acceptAssignment = workRow.getByRole('button', { name: 'Accept assignment', exact: true });
   if (await acceptAssignment.isVisible().catch(() => false)) await acceptAssignment.click();
   await workRow.getByRole('button', { name: 'Open visit', exact: true }).click();
+  await expect(workRow.getByText(/Visit .* ·/)).toBeVisible({ timeout: 20_000 });
   await workRow.getByRole('button', { name: 'Schedule', exact: true }).click();
   await workRow.getByRole('button', { name: 'Start travel', exact: true }).click();
   await workRow.getByRole('button', { name: 'Check in', exact: true }).click();
   await workRow.getByRole('button', { name: 'Start service', exact: true }).click();
-  await workRow.getByText('Checklist and work session', { exact: true }).click();
+  await expect(workRow.getByRole('heading', { name: 'Service checklist', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(workRow.getByRole('heading', { name: 'Service report', exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('agent-job-execution-workspace.png'), fullPage: true });
   await workRow.getByRole('button', { name: 'Finish session', exact: true }).first().click();
   await expect(workRow.getByText('Work session ended by the server', { exact: true })).toBeVisible();
   await workRow.getByRole('button', { name: 'Complete', exact: true }).click();
@@ -326,6 +334,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const maintenanceAccept = maintenanceRow.getByRole('button', { name: 'Accept assignment', exact: true });
   if (await maintenanceAccept.isVisible().catch(() => false)) await maintenanceAccept.click();
   await maintenanceRow.getByRole('button', { name: 'Open visit', exact: true }).click();
+  await expect(maintenanceRow.getByText(/Visit .* ·/)).toBeVisible({ timeout: 20_000 });
   await expect(maintenanceRow.getByRole('button', { name: 'Schedule', exact: true })).toBeEnabled({ timeout: 20_000 });
   await maintenanceRow.getByRole('button', { name: 'Schedule', exact: true }).click();
   await expect.poll(async () => {
@@ -347,6 +356,8 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   if (afterTravel.attributes.status !== 'ON_THE_WAY') throw new Error(`preventive travel transition did not persist: ${JSON.stringify(afterTravel)}\nUI state:\n${await maintenanceRow.innerText()}`);
   await page.reload();
   await page.getByRole('button', { name: 'My Work', exact: true }).click();
+  await maintenanceRow.getByRole('button', { name: 'Open visit', exact: true }).click();
+  await expect(maintenanceRow.getByText(/Visit .* ·/)).toBeVisible({ timeout: 20_000 });
   await expect(maintenanceRow.getByRole('button', { name: 'Check in', exact: true })).toBeEnabled({ timeout: 20_000 });
   await maintenanceRow.getByRole('button', { name: 'Check in', exact: true }).click();
   await expect.poll(async () => {
@@ -356,9 +367,12 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   }, { timeout: 20_000 }).toBe('ARRIVED');
   await page.reload();
   await page.getByRole('button', { name: 'My Work', exact: true }).click();
+  await maintenanceRow.getByRole('button', { name: 'Open visit', exact: true }).click();
+  await expect(maintenanceRow.getByText(/Visit .* ·/)).toBeVisible({ timeout: 20_000 });
   await expect(maintenanceRow.getByRole('button', { name: 'Start service', exact: true })).toBeEnabled({ timeout: 20_000 });
   await maintenanceRow.getByRole('button', { name: 'Start service', exact: true }).click();
-  await maintenanceRow.getByText('Checklist and work session', { exact: true }).click();
+  await expect(maintenanceRow.getByRole('heading', { name: 'Service checklist', exact: true })).toBeVisible();
+  await expect(maintenanceRow.getByRole('heading', { name: 'Service report', exact: true })).toBeVisible();
   await maintenanceRow.getByRole('button', { name: 'Start work session', exact: true }).click();
   const maintenanceFinish = maintenanceRow.getByRole('button', { name: 'Finish session', exact: true }).first();
   try {

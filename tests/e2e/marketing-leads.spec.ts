@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { localSignIn, localSignOut } from './local-auth';
+import { configuredAccount, localSignIn, localSignOut } from './local-auth';
 
 test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -14,17 +14,24 @@ async function selectLiftRiseProvider(page: import('playwright/test').Page, prov
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
 }
 
+async function openLeads(page: import('playwright/test').Page) {
+  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  const leads = navigation.getByRole('button', { name: 'Leads & Surveys', exact: true });
+  if (!await leads.isVisible()) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await leads.click();
+}
+
 test('Field Marketing Executive captures a lead and Marketing Manager reviews it', async ({ page, evidence }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
   const reference = `BROWSER-${Date.now()}`;
 
-  const executiveSession = await localSignIn(page, 'marketingexecutive@demotrise.in');
+  const executiveSession = await localSignIn(page, configuredAccount('MARKETING_EXECUTIVE'));
   const provider = executiveSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
     entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('sales_marketing'));
   expect(provider).toBeTruthy();
   await selectLiftRiseProvider(page, provider!.provider_id);
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Leads & Surveys', exact: true }).click();
+  await openLeads(page);
   await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'New lead', exact: true }).click();
@@ -36,14 +43,19 @@ test('Field Marketing Executive captures a lead and Marketing Manager reviews it
   await page.getByRole('button', { name: 'Create lead', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Lead created by the server.');
   await expect(page.getByRole('heading', { name: 'Synthetic Lift Modernization', exact: true })).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('lead-overview.png'), fullPage: true });
 
-  await page.getByText('Follow-up activity', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Activity', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('lead-activity.png'), fullPage: true });
   await page.getByLabel('Activity type', { exact: true }).fill('CALL');
   await page.getByLabel('Notes', { exact: true }).fill('Synthetic browser follow-up');
   await page.getByRole('button', { name: 'Log follow-up', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Follow-up recorded by the server.');
 
-  await page.getByText('Site survey', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Site Survey', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
   await page.getByLabel('Survey date', { exact: true }).fill(new Date().toISOString().slice(0, 10));
   await page.getByLabel('Elevators', { exact: true }).fill('2');
   await page.getByLabel('Floors', { exact: true }).fill('8');
@@ -51,16 +63,21 @@ test('Field Marketing Executive captures a lead and Marketing Manager reviews it
   await page.getByLabel('Shaft width (mm)', { exact: true }).fill('1800');
   await page.getByRole('button', { name: 'Submit survey', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Site survey submitted by the server.');
+  await page.screenshot({ path: info.outputPath('lead-site-survey.png'), fullPage: true });
 
-  await page.getByText('Requirements revision', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Requirements', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
   await page.getByLabel('Capacity (kg)', { exact: true }).fill('680');
   await page.getByLabel('Stops', { exact: true }).fill('8');
   await page.getByLabel('Lift type', { exact: true }).fill('Passenger');
   await page.getByRole('button', { name: 'Capture requirements', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Requirement revision captured by the server.');
-  await page.getByText('Survey evidence', { exact: true }).click();
+  await page.screenshot({ path: info.outputPath('lead-requirements.png'), fullPage: true });
+  await page.getByRole('tab', { name: 'Attachments', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
   const evidenceInput = page.getByLabel('PDF, PNG, JPEG, XLS or XLSX', { exact: true });
   await expect(evidenceInput).toBeVisible();
+  await page.screenshot({ path: info.outputPath('lead-attachments.png'), fullPage: true });
   if (process.env.TRISE_E2E_STORAGE === 'true') {
     await evidenceInput.setInputFiles({ name: 'survey-evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 synthetic survey evidence') });
     await page.getByRole('button', { name: 'Upload evidence', exact: true }).click();
@@ -75,14 +92,15 @@ test('Field Marketing Executive captures a lead and Marketing Manager reviews it
   await page.screenshot({ path: `/tmp/trise-marketing-lead-${reference}-executive.png`, fullPage: true });
 
   await localSignOut(page);
-  const managerSession = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const managerSession = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const managerProvider = managerSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
     entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('sales_marketing'));
   expect(managerProvider).toBeTruthy();
   await selectLiftRiseProvider(page, managerProvider!.provider_id);
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Leads & Surveys', exact: true }).click();
+  await openLeads(page);
   await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: new RegExp(`Synthetic Lift Modernization.*${reference}`) })).toBeVisible();
+  const createdLead = page.getByRole('row').filter({ hasText: reference });
+  await expect(createdLead.getByRole('button', { name: 'Synthetic Lift Modernization', exact: true })).toBeVisible();
   await page.screenshot({ path: `/tmp/trise-marketing-lead-${reference}-manager.png`, fullPage: true });
   await localSignOut(page);
 

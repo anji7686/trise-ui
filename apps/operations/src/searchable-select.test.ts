@@ -25,9 +25,14 @@ describe('Operations lookup policy', () => {
 describe('Operations semantic status presentation', () => {
   it('distinguishes positive, pending, failed and historical records', () => {
     expect(statusTone('VERIFIED')).toBe('success');
+    expect(statusTone('Enabled')).toBe('success');
+    expect(statusTone('Review approved')).toBe('success');
     expect(statusTone('pending_review')).toBe('warning');
+    expect(statusTone('Under review')).toBe('warning');
     expect(statusTone('Corrections Requested')).toBe('warning');
     expect(statusTone('Suspended')).toBe('danger');
+    expect(statusTone('Disabled')).toBe('danger');
+    expect(statusTone('Draft')).toBe('info');
     expect(statusTone('Scheduled')).toBe('info');
     expect(statusTone('Ended')).toBe('neutral');
     expect(statusTone('Not Configured')).toBe('neutral');

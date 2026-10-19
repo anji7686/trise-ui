@@ -20,23 +20,25 @@ export const platformNavigation: OperationsNavigationItem[] = [
 ];
 
 const providerItems: OperationsNavigationItem[] = [
-  { key: 'overview', label: 'Overview', hash: 'overview', capability: 'requests', group: 'Overview' },
-  { key: 'leads', label: 'Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Commercial' },
-  { key: 'quotations', label: 'Quotations', hash: 'quotations', capability: 'quotations', group: 'Commercial' },
-  { key: 'projects', label: 'Installation Projects', hash: 'projects', capability: 'projects', group: 'Operations' },
-  { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Operations' },
-  { key: 'bookings', label: 'Bookings & Appointments', hash: 'bookings', capability: 'bookings', group: 'Operations' },
+  { key: 'overview', label: 'Dashboard', hash: 'overview', capability: 'requests', group: 'Overview' },
+  { key: 'leads', label: 'Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Operations' },
+  { key: 'quotations', label: 'Quotations & Orders', hash: 'quotations', capability: 'quotations', group: 'Operations' },
+  { key: 'projects', label: 'Projects & Stages', hash: 'projects', capability: 'projects', group: 'Operations' },
+  { key: 'requests', label: 'Requests', hash: 'requests', capability: 'requests', group: 'Operations' },
+  { key: 'bookings', label: 'Appointments', hash: 'bookings', capability: 'bookings', group: 'Operations' },
   { key: 'jobs', label: 'Jobs', hash: 'jobs', capability: 'jobs', group: 'Operations' },
   { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Operations' },
   { key: 'customers', label: 'Customers & Assets', hash: 'customers', capability: 'customers', group: 'Customers & Assets' },
   { key: 'onboarding', label: 'Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Customers & Assets' },
+  { key: 'amc', label: 'AMC', hash: 'amc', capability: 'projects', group: 'Service Programs' },
+  { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
+  { key: 'reports', label: 'Reports', hash: 'reports', capability: 'workforce', group: 'Insights' },
   { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration', group: 'Administration' },
   { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile', group: 'Administration' },
   { key: 'compliance', label: 'Compliance', hash: 'compliance', capability: 'compliance', group: 'Administration' },
-  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Commercial' },
-  { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
-  { key: 'audit', label: 'Audit history', hash: 'audit', capability: 'audit', group: 'Administration' },
-  { key: 'team-access', label: 'Team & Access', hash: 'team-access', capability: 'team_access', group: 'Administration' }
+  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Administration' },
+  { key: 'audit', label: 'Audit Logs', hash: 'audit', capability: 'audit', group: 'Administration' },
+  { key: 'team-access', label: 'Teams & Roles', hash: 'team-access', capability: 'team_access', group: 'Administration' }
 ];
 
 export function providerContextFor(session: Pick<Session, 'providerCapabilities'>, providerId?: string): ProviderCapabilityContext | undefined {
@@ -66,6 +68,6 @@ export function requiredProviderCapability(section: string): string | undefined 
 
 export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string): boolean {
   const navigation = navigationForSession(session, providerId);
-  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : section === 'overview' ? 'requests' : section === 'team-access' ? 'team_access' : section === 'leads' ? 'sales_marketing' : section;
+  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : requiredProviderCapability(section) || section;
   return navigation.provider.some((item) => item.capability === capability && (item.hash === section || (section === 'jobs' && routeId === 'my-work' && item.hash === 'jobs/my-work')));
 }

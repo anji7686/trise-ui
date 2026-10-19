@@ -3,7 +3,7 @@ import { apiClient, type ApiClient } from '@trise/api-client';
 
 export type ProviderCapabilityContext = { providerId: string; displayName: string; capabilities: string[] };
 export type Session = { userId: string; displayName: string; locale: string | null; revision: number; providerId?: string; platformAdmin?: boolean; platformCapabilities?: string[]; providerCapabilities: ProviderCapabilityContext[] };
-type AuthContextValue = { session: Session | null; loading: boolean; error: string | null; signInWithGoogleIdentityToken: (identityToken: string) => Promise<void>; signInForDevelopment: (email: string, secret: string) => Promise<void>; signOut: () => Promise<void>; setProvider: (providerId?: string) => void; refreshCurrentUser: () => Promise<void> };
+type AuthContextValue = { session: Session | null; loading: boolean; error: string | null; signInWithGoogleIdentityToken: (identityToken: string) => Promise<void>; signInForDevelopment: (email: string, secret: string) => Promise<void>; signInForDevelopmentQuick: (email: string) => Promise<void>; signOut: () => Promise<void>; setProvider: (providerId?: string) => void; refreshCurrentUser: () => Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 type GoogleIdentityResponse = { credential?: string };
 type GoogleAccounts = { id: { initialize: (options: { client_id: string; callback: (response: GoogleIdentityResponse) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string>) => void } };
@@ -84,6 +84,21 @@ export function AuthProvider({ children, client = apiClient }: { children: React
       throw cause;
     } finally { setLoading(false); }
   }, [client]);
+  const signInForDevelopmentQuick = useCallback(async (email: string) => {
+    if (!import.meta.env.DEV || import.meta.env.VITE_DEVELOPMENT_SIGN_IN !== 'true' || import.meta.env.VITE_DEVELOPMENT_QUICK_SIGN_IN !== 'true') throw new Error('Local quick sign-in is unavailable');
+    setLoading(true); setError(null);
+    client.clearSession();
+    try {
+      const body = await client.request<{ access_token: string; user: ApiUser }>('/session/development/quick', { method: 'POST', body: JSON.stringify({ email, client_type: 'web' }) });
+      client.setAccessToken(body.access_token);
+      setSession(sessionFromApiUser(body.user));
+    } catch (cause) {
+      client.clearSession(); setSession(null);
+      const status = (cause as { status?: number }).status;
+      setError(status === 429 ? 'Too many sign-in attempts. Wait a minute and retry.' : status === 401 ? 'Local quick sign-in was rejected. Choose an approved account.' : 'Local quick sign-in is unavailable. Check the development API configuration.');
+      throw cause;
+    } finally { setLoading(false); }
+  }, [client]);
   useEffect(() => { void loadCurrentUser(); }, [loadCurrentUser]);
   const signInWithGoogleIdentityToken = useCallback(async (identityToken: string) => {
     setLoading(true); setError(null);
@@ -108,11 +123,12 @@ export function AuthProvider({ children, client = apiClient }: { children: React
       return { ...current, providerId };
     });
   }, [client]);
-  const value = useMemo(() => ({ session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signOut, refreshCurrentUser: loadCurrentUser, setProvider }), [session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signOut, loadCurrentUser, setProvider]);
+  const value = useMemo(() => ({ session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signInForDevelopmentQuick, signOut, refreshCurrentUser: loadCurrentUser, setProvider }), [session, loading, error, signInWithGoogleIdentityToken, signInForDevelopment, signInForDevelopmentQuick, signOut, loadCurrentUser, setProvider]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('AuthProvider is required'); return value; }
+export function useOptionalAuth() { return useContext(AuthContext); }
 
 export function GoogleSignInButton() {
   return <><GoogleIdentityButton />{DevelopmentSignInForm && <Suspense fallback={<p role="status">Loading local sign-in…</p>}><DevelopmentSignInForm /></Suspense>}</>;

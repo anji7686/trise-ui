@@ -22,10 +22,25 @@ describe('customer mutation contracts', () => {
   it('uses stable command headers for quotation decisions and notification reads', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'q-1' } }), { status: 200 }));
     await customerData.approveQuotation('provider-1', 'quotation-1', 3, 'retry-key');
-    await customerData.markNotificationRead('provider-1', 'notification-1');
+  await customerData.markNotificationRead('provider-1', 'notification-1', 'read-key');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('retry-key');
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ expected_revision: 3 });
     expect(fetchMock.mock.calls[1][0]).toContain('/notifications/notification-1/read');
+  });
+});
+
+describe('customer installation project reads', () => {
+  it('normalizes wrapped JSON:API collection resources', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        { data: { type: 'service-cases', id: 'case-1', attributes: { title: 'Lift A', status: 'OPEN' } } },
+        { type: 'service-cases', id: 'case-2', attributes: { title: 'Lift B', status: 'OPEN' } }
+      ]
+    }), { status: 200 }));
+
+    const result = await customerData.installationProjects('provider-1');
+    expect(result.data.map((item) => item.id)).toEqual(['case-1', 'case-2']);
+    expect(result.data[0].attributes.title).toBe('Lift A');
   });
 });

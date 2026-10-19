@@ -6,7 +6,7 @@ test.use({ trace: 'retain-on-failure', video: 'off' });
 test('Platform reviewer can open the synthetic Business compliance workspace', async ({ page, evidence }) => {
   await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
   await page.goto('/#platform/businesses');
-  await expect(page.getByRole('heading', { name: 'Business directory', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Business Operations', exact: true })).toBeVisible();
 
   const firstBusiness = page.getByRole('row').nth(1);
   await expect(firstBusiness).toBeVisible();
@@ -19,7 +19,7 @@ test('Platform reviewer can open the synthetic Business compliance workspace', a
   await expect(page.getByRole('heading', { name: 'Documents', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Upload supporting document', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Upload supporting document', exact: true }).click();
-  const fileInput = page.locator('input[type="file"]').first();
+  const fileInput = page.getByRole('dialog').locator('input[type="file"]').first();
   await fileInput.setInputFiles('tests/e2e/fixtures/synthetic-asset-approval.pdf');
   const createResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/platform/businesses/') && response.url().endsWith('/documents'));
   await page.getByRole('button', { name: 'Upload document', exact: true }).click();

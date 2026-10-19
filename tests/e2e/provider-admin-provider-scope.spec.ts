@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures';
-import { localSignIn, localSignOut } from './local-auth';
+import { configuredAccount, localSignIn, localSignOut } from './local-auth';
 
 test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
 test('Provider Administrator receives all provider workspace access without Platform Administration', async ({ page }) => {
-  const session = await localSignIn(page, 'liftriseorg@gmail.com');
+  const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   expect(session.user.attributes.platform_admin).not.toBe(true);
   const provider = session.user.attributes.provider_capabilities.find((entry: { display_name: string; provider_id: string; capabilities: string[] }) =>
     entry.display_name === 'Lift Rise Elevators — Demo Operations');
@@ -19,15 +19,18 @@ test('Provider Administrator receives all provider workspace access without Plat
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   const providerSelect = menu.getByRole('combobox', { name: 'Provider', exact: true });
   await providerSelect.selectOption(provider!.provider_id);
+  await expect(providerSelect).toHaveValue(provider!.provider_id);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('trise-operations-provider'))).toBe(provider!.provider_id);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
 
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  for (const label of ['Leads & Surveys', 'Quotations', 'Installation Projects', 'Customers & Assets', 'Business profile', 'Team & Access']) {
+  await navigation.getByText('Administration', { exact: true }).click();
+  for (const label of ['Leads & Surveys', 'Quotations & Orders', 'Projects & Stages', 'Customers & Assets', 'Business profile', 'Teams & Roles']) {
     await expect(navigation.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
   await navigation.getByRole('button', { name: 'Business profile', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Business profile', exact: true })).toBeVisible();
-  await navigation.getByRole('button', { name: 'Team & Access', exact: true }).click();
+  await navigation.getByRole('button', { name: 'Teams & Roles', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Team & Access', exact: true })).toBeVisible();
   await page.goto('/#/platform/roles');
   await expect(page.getByRole('status').filter({ hasText: 'Platform administration is restricted' })).toBeVisible();

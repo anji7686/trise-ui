@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from '@trise/ui';
 
-export function OperationsDialog({ title, children, onClose, busy = false }: { title: string; children: ReactNode; onClose: () => void; busy?: boolean }) {
+export function OperationsDialog({ title, children, onClose, busy = false, className }: { title: string; children: ReactNode; onClose: () => void; busy?: boolean; className?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
   const close = useRef(onClose); close.current = onClose;
@@ -11,7 +11,7 @@ export function OperationsDialog({ title, children, onClose, busy = false }: { t
     element?.showModal();
     return () => { element?.close(); trigger?.focus(); };
   }, []);
-  return <dialog ref={dialog} className="operations-dialog" aria-labelledby={heading} onKeyDown={event => {
+  return <dialog ref={dialog} className={`operations-dialog${className ? ` ${className}` : ''}`} aria-labelledby={heading} onKeyDown={event => {
     if (event.key !== 'Tab') return;
     const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]')].filter(element => element.getClientRects().length > 0);
     const first = controls[0]; const last = controls.at(-1);

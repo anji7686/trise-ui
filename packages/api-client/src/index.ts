@@ -17,10 +17,13 @@ export class ApiClient {
   }
 
   async requestBlob(path: string, init: RequestInit = {}, context: RequestContext = {}): Promise<Blob> {
+    const requestEpoch = this.contextEpoch;
     const headers = new Headers(init.headers);
-    headers.set('Accept', 'application/pdf');
+    headers.set('Accept', 'application/octet-stream, application/json');
+    if (context.providerId) headers.set('X-TRISE-Provider-Id', context.providerId);
     if (this.accessToken) headers.set('Authorization', `Bearer ${this.accessToken}`);
     const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers, signal: context.signal, credentials: 'include' });
+    if (requestEpoch !== this.contextEpoch) throw { status: 409, code: 'context_changed', message: 'Request context changed before the response completed' } satisfies ApiError;
     if (response.status === 401 && !path.startsWith('/session/')) {
       const token = await this.refresh();
       if (token) return this.requestBlob(path, init, context);

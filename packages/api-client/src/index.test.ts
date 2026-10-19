@@ -4,6 +4,17 @@ import { ApiClient } from './index';
 describe('API authentication boundary', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it('keeps blob requests provider-scoped and rejects a response after provider context changes', async () => {
+    let resolveResponse!: (response: Response) => void;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise((resolve) => { resolveResponse = resolve; }));
+    const client = new ApiClient('http://127.0.0.1:3000/api/v1');
+    const pending = client.requestBlob('/providers/report-exports/export-1/download', {}, { providerId: 'provider-a' });
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('X-TRISE-Provider-Id')).toBe('provider-a');
+    client.changeContext();
+    resolveResponse(new Response('file-bytes', { status: 200 }));
+    await expect(pending).rejects.toMatchObject({ code: 'context_changed' });
+  });
+
   it('coordinates one web refresh for concurrent unauthorized requests', async () => {
     Object.defineProperty(globalThis, 'document', { configurable: true, value: { cookie: 'trise_csrf=csrf-token' } });
     const fetchMock = vi.spyOn(globalThis, 'fetch')

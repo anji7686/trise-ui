@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { localSignIn, localSignOut } from './local-auth';
+import { configuredAccount, localSignIn, localSignOut } from './local-auth';
 
 test.use({ trace: 'on', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -7,7 +7,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
   const reference = `QUOTE-BROWSER-${Date.now()}`;
-  const session = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const session = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const provider = session.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
     entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('quotations'));
   expect(provider).toBeTruthy();
@@ -27,8 +27,9 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await page.getByRole('button', { name: 'Create lead', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Lead created by the server.');
 
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Quotations', exact: true })).toBeVisible();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
   const leadSelect = page.locator('select[name="lead_id"]');
   const leadOption = leadSelect.locator('option').filter({ hasText: new RegExp(`Browser quotation opportunity · ${reference}`) });
   await leadSelect.selectOption((await leadOption.getAttribute('value'))!);
@@ -39,9 +40,10 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Quotation issued; approval remains a separate protected workflow.');
-  await page.getByLabel('Notes', { exact: true }).fill('Customer requested a revised commercial offer.');
+  await expect(page.getByRole('status')).toContainText('Quotation issued; awaiting Provider review before customer acceptance.');
   await page.getByRole('button', { name: 'Record negotiation', exact: true }).click();
+  await page.getByLabel('Notes', { exact: true }).fill('Customer requested a revised commercial offer.');
+  await page.getByRole('dialog', { name: 'Record negotiation', exact: true }).getByRole('button', { name: 'Record negotiation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Negotiation event recorded in immutable history.');
   await page.screenshot({ path: `/tmp/trise-marketing-quotation-${reference}.png`, fullPage: true });
   await localSignOut(page);
@@ -54,22 +56,34 @@ test('approved quotation converts to an installation project from the Manager wo
   test.setTimeout(120_000);
   const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-  const customer = await localSignIn(page, 'anji7686@gmail.com');
-  const customerHeaders = { Authorization: `Bearer ${customer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const customerRelationshipsResponse = await page.request.get(`${api}/customer-relationships?page[limit]=1`, { headers: customerHeaders });
-  expect(customerRelationshipsResponse.ok()).toBeTruthy();
-  const customerRelationship = (await customerRelationshipsResponse.json()).data[0];
+  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
+  const customerName = customer.user.attributes.display_name;
   await localSignOut(page);
-  const manager = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const relationshipReader = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const customerRelationshipsResponse = await page.request.get(`${api}/customer-relationships?page[limit]=100`, { headers: { Authorization: `Bearer ${relationshipReader.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
+  expect(customerRelationshipsResponse.ok()).toBeTruthy();
+  const relationshipPayload = await customerRelationshipsResponse.json();
+  const customerRelationship = relationshipPayload.data.find((row: { attributes: { display_name: string; status: string } }) => row.attributes.display_name === customerName && row.attributes.status === 'ACTIVE');
+  expect(customerRelationship).toBeTruthy();
+  await localSignOut(page);
+  const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const relationship = customerRelationship;
+  const leadResponse = await page.request.post(`${api}/marketing-leads`, {
+    headers: { ...managerHeaders, 'Idempotency-Key': crypto.randomUUID() },
+    data: { reference_code: `BROWSER-CONVERT-${Date.now()}`, source: 'BROWSER', title: 'Team-scoped conversion lead', prospect_name: 'Browser conversion prospect', customer_relationship_id: relationship.id }
+  });
+  if (leadResponse.status() !== 201) throw new Error(`conversion lead setup failed: ${await leadResponse.text()}`);
+  const leadPayload = await leadResponse.json();
+  const lead = leadPayload.data?.data || leadPayload.data || leadPayload;
   const quotationResponse = await page.request.post(`${api}/quotations`, {
     headers: { ...managerHeaders, 'Idempotency-Key': crypto.randomUUID() },
-    data: { customer_relationship_id: relationship.id, purpose: 'INSTALLATION', currency: 'INR', lines: [{ description: 'Browser conversion lift', quantity: 1, unit_price: 125000, amount: 125000 }] }
+    data: { customer_relationship_id: relationship.id, lead_id: lead.id, purpose: 'INSTALLATION', currency: 'INR', lines: [{ description: 'Browser conversion lift', quantity: 1, unit_price: 125000, amount: 125000 }] }
   });
   if (quotationResponse.status() !== 201) throw new Error(`quotation setup failed: ${await quotationResponse.text()}`);
   const quotationPayload = await quotationResponse.json();
   const quotation = quotationPayload.data?.data || quotationPayload.data || quotationPayload;
+  const quotationLabel = String(quotation.attributes.quotation_number || quotation.id);
   const issueResponse = await page.request.post(`${api}/quotations/${quotation.id}/transitions`, {
     headers: { ...managerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { action: 'issue', expected_revision: quotation.attributes.revision }
   });
@@ -78,7 +92,21 @@ test('approved quotation converts to an installation project from the Manager wo
   const issued = issuedPayload.data?.data || issuedPayload.data || issuedPayload;
 
   await localSignOut(page);
-  const acceptedCustomer = await localSignIn(page, 'anji7686@gmail.com');
+  const reviewer = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const reviewerProvider = reviewer.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId);
+  expect(reviewerProvider?.capabilities).toContain('quotations');
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await page.getByRole('button', { name: quotationLabel, exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Internal approval is required');
+  await page.getByRole('button', { name: 'Approve revision', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Approve quotation revision', exact: true }).getByRole('button', { name: 'Approve revision', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Provider review approved for this exact quotation revision');
+  await localSignOut(page);
+
+  const acceptedCustomer = await localSignIn(page, configuredAccount('CUSTOMER'));
   const acceptedCustomerHeaders = { Authorization: `Bearer ${acceptedCustomer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const approvalResponse = await page.request.post(`${api}/quotations/${quotation.id}/approve`, {
     headers: { ...acceptedCustomerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: issued.attributes.revision }
@@ -86,20 +114,22 @@ test('approved quotation converts to an installation project from the Manager wo
   if (!approvalResponse.ok()) throw new Error(`quotation approval setup failed: ${await approvalResponse.text()}`);
   await localSignOut(page);
 
-  const managerSession = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const managerSession = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const managerProvider = managerSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId);
   expect(managerProvider?.capabilities).toContain('projects');
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Quotations', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: new RegExp(quotation.id) }).click();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: quotationLabel, exact: true }).click();
   await page.getByRole('button', { name: 'Convert to installation project', exact: true }).click();
   await expect(page).toHaveURL(/#projects$/);
   await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
-  const projectsResponse = await page.request.get(`${api}/service-cases?page[limit]=25`, { headers: { Authorization: `Bearer ${managerSession.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
+  await localSignOut(page);
+  const verifier = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const projectsResponse = await page.request.get(`${api}/service-cases?page[limit]=25`, { headers: { Authorization: `Bearer ${verifier.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
   if (!projectsResponse.ok()) throw new Error(`project list response: ${projectsResponse.status()} ${await projectsResponse.text()}`);
   const projectsPayload = await projectsResponse.json();
   expect(projectsPayload.data.length).toBeGreaterThan(0);
@@ -108,18 +138,19 @@ test('approved quotation converts to an installation project from the Manager wo
   await localSignOut(page);
 });
 
-test('Marketing Manager creates and converts an accepted paid AMC renewal quotation', async ({ page }, info) => {
+test('Provider Administrator creates and converts an accepted paid AMC renewal quotation', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
   const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-  const manager = await localSignIn(page, 'marketingmanager@demotrise.in');
+  const manager = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Quotations', exact: true })).toBeVisible();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Create paid AMC renewal', exact: true }).click();
   const predecessor = page.locator('select[name="predecessor_contract_id"]');
   await expect(predecessor.locator('option').filter({ hasText: 'DEMO-ELEV-AMC-001' })).toHaveCount(1);
   await predecessor.selectOption((await predecessor.locator('option').filter({ hasText: 'DEMO-ELEV-AMC-001' }).getAttribute('value'))!);
@@ -130,7 +161,7 @@ test('Marketing Manager creates and converts an accepted paid AMC renewal quotat
   await page.getByRole('button', { name: 'Create renewal quotation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Paid AMC renewal quotation draft created.');
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Quotation issued; approval remains a separate protected workflow.');
+  await expect(page.getByRole('status')).toContainText('Quotation issued; awaiting Provider review before customer acceptance.');
 
   const quotationsResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers: managerHeaders });
   expect(quotationsResponse.ok()).toBeTruthy();
@@ -139,25 +170,34 @@ test('Marketing Manager creates and converts an accepted paid AMC renewal quotat
     .filter((row: { id: string; attributes: Record<string, unknown> }) => row.attributes.purpose === 'CONTRACT_RENEWAL')
     .sort((left: { attributes: Record<string, unknown> }, right: { attributes: Record<string, unknown> }) => Date.parse(String(right.attributes.created_at || '')) - Date.parse(String(left.attributes.created_at || '')))[0];
   expect(renewal).toBeTruthy();
+  const renewalLabel = String(renewal.attributes.quotation_number || renewal.id);
   const revision = Number(renewal.attributes.revision);
   await localSignOut(page);
 
-  const customer = await localSignIn(page, 'anji7686@gmail.com');
+  const reviewer = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const reviewerHeaders = { Authorization: `Bearer ${reviewer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const providerReview = await page.request.post(`${api}/quotations/${renewal.id}/provider-reviews`, { headers: { ...reviewerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { decision: 'APPROVED', expected_revision: revision } });
+  if (providerReview.status() !== 201) throw new Error(`paid renewal provider review failed: ${providerReview.status()} ${await providerReview.text()}`);
+  await localSignOut(page);
+
+  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
   const customerHeaders = { Authorization: `Bearer ${customer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const acceptance = await page.request.post(`${api}/quotations/${renewal.id}/approve`, { headers: { ...customerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: revision } });
   if (!acceptance.ok()) throw new Error(`paid renewal acceptance failed: ${await acceptance.text()}`);
   await localSignOut(page);
 
-  await localSignIn(page, 'marketingmanager@demotrise.in');
+  await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  await page.getByRole('button', { name: new RegExp(renewal.id) }).click();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await page.getByRole('button', { name: renewalLabel, exact: true }).click();
   await page.getByRole('button', { name: 'Create renewal contract draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Renewal draft contract', { timeout: 30_000 });
   await page.getByRole('button', { name: 'Activate paid AMC renewal', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Paid AMC renewal contract');
+  await expect(page.getByRole('region', { name: 'AMC renewal history', exact: true })).toContainText('Successor');
+  await expect(page.getByRole('region', { name: 'AMC renewal history', exact: true })).toContainText('active');
   const contractsResponse = await page.request.get(`${api}/maintenance-contracts?page[limit]=100`, { headers: managerHeaders });
   if (!contractsResponse.ok()) throw new Error(`renewal contract history response: ${contractsResponse.status()} ${await contractsResponse.text()}`);
   const contracts = await contractsResponse.json();
@@ -167,7 +207,9 @@ test('Marketing Manager creates and converts an accepted paid AMC renewal quotat
   expect(successor.attributes.status).toBe('active');
   expect(successor.relationships?.predecessor?.id).toBe(predecessorContractId);
   await page.reload();
+  await page.getByRole('button', { name: 'Create paid AMC renewal', exact: true }).click();
   await expect(page.locator('select[name="predecessor_contract_id"] option').filter({ hasText: String(successor.attributes.name) })).toHaveCount(1);
+  await page.getByRole('dialog', { name: 'Create paid AMC renewal quotation', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
   await localSignOut(page);
 });
 
@@ -176,18 +218,33 @@ test('Marketing Manager creates a new immutable quotation revision from the work
   test.setTimeout(120_000);
   const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-  const manager = await localSignIn(page, 'marketingmanager@demotrise.in');
-  const headers = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const relationships = await page.request.get(`${api}/customer-relationships?page[limit]=1`, { headers });
+  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
+  const customerName = customer.user.attributes.display_name;
+  await localSignOut(page);
+  const relationshipReader = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const relationships = await page.request.get(`${api}/customer-relationships?page[limit]=100`, { headers: { Authorization: `Bearer ${relationshipReader.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
   expect(relationships.ok()).toBeTruthy();
-  const relationship = (await relationships.json()).data[0];
+  const relationshipPayload = await relationships.json();
+  const relationship = relationshipPayload.data.find((row: { attributes: { display_name: string; status: string } }) => row.attributes.display_name === customerName && row.attributes.status === 'ACTIVE');
+  expect(relationship).toBeTruthy();
+  await localSignOut(page);
+  const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const headers = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const leadResponse = await page.request.post(`${api}/marketing-leads`, {
+    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+    data: { reference_code: `BROWSER-REVISION-${Date.now()}`, source: 'BROWSER', title: 'Team-scoped revision lead', prospect_name: 'Browser revision prospect', customer_relationship_id: relationship.id }
+  });
+  if (leadResponse.status() !== 201) throw new Error(`revision lead setup failed: ${await leadResponse.text()}`);
+  const leadPayload = await leadResponse.json();
+  const lead = leadPayload.data?.data || leadPayload.data || leadPayload;
   const createdResponse = await page.request.post(`${api}/quotations`, {
     headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
-    data: { customer_relationship_id: relationship.id, purpose: 'INSTALLATION', currency: 'INR', lines: [{ description: 'Revision browser lift', quantity: 1, unit_price: 100000, amount: 100000 }] }
+    data: { customer_relationship_id: relationship.id, lead_id: lead.id, purpose: 'INSTALLATION', currency: 'INR', lines: [{ description: 'Revision browser lift', quantity: 1, unit_price: 100000, amount: 100000 }] }
   });
   expect(createdResponse.status()).toBe(201);
   const createdPayload = await createdResponse.json();
   const created = createdPayload.data?.data || createdPayload.data || createdPayload;
+  const createdLabel = String(created.attributes.quotation_number || created.id);
   const issuedResponse = await page.request.post(`${api}/quotations/${created.id}/transitions`, {
     headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { action: 'issue', expected_revision: created.attributes.revision }
   });
@@ -198,12 +255,12 @@ test('Marketing Manager creates a new immutable quotation revision from the work
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Quotations', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: new RegExp(created.id) }).click();
+  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: createdLabel, exact: true }).click();
   await page.getByText('Create revision', { exact: true }).click();
   await page.getByLabel('Total (INR)', { exact: true }).last().fill('125000');
-  await page.getByRole('button', { name: 'Create quotation revision', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Create quotation revision', exact: true }).getByRole('button', { name: 'Create revision', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('New quotation revision created');
   await expect(page.getByText('Status', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('draft', { exact: true }).last()).toBeVisible();

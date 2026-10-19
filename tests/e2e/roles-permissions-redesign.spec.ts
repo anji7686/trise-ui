@@ -8,7 +8,7 @@ test.describe.configure({ mode: 'serial' });
 test('redesigned platform roles directory is compact, responsive and server filtered', async ({ page, evidence }, testInfo) => {
   const evidenceDir = resolve('docs/evidence/roles-permissions-redesign-20261012');
   mkdirSync(evidenceDir, { recursive: true });
-  async function capture(name: string) { const path = resolve(evidenceDir, `${name}.png`); await page.screenshot({ path, fullPage: true }); await testInfo.attach(name, { path, contentType: 'image/png' }); }
+  async function capture(name: string, fullPage = true) { const path = resolve(evidenceDir, `${name}.png`); await page.screenshot({ path, fullPage }); await testInfo.attach(name, { path, contentType: 'image/png' }); }
   await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
   const badResponses: Array<{ url: string; status: number }> = [];
   page.on('response', (response) => { if (response.status() >= 500) badResponses.push({ url: response.url(), status: response.status() }); });
@@ -38,7 +38,17 @@ test('redesigned platform roles directory is compact, responsive and server filt
   expect(page.url()).toContain('q=Provider+Administrator');
 
   await page.getByRole('button', { name: 'Provider Role Settings', exact: true }).click();
-  await expect(page.getByRole('columnheader', { name: 'Custom Role Creation', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Custom Role Policy', exact: true })).toBeVisible();
+  const policyRow = page.locator('.roles-tab-panel tbody tr').first();
+  if (await policyRow.count()) {
+    await policyRow.getByRole('button', { name: /custom roles/i }).click();
+    const confirmation = page.getByRole('dialog', { name: /custom role policy/i });
+    await expect(confirmation).toBeVisible();
+    await expect(confirmation.getByRole('button', { name: /custom roles/i })).toBeVisible();
+    await capture('provider-custom-role-policy-confirmation-1440', false);
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(confirmation).toHaveCount(0);
+  }
   await capture('provider-role-settings-1440');
 
   await page.getByRole('button', { name: 'Permission Delegation', exact: true }).click();

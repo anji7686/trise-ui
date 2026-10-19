@@ -11,8 +11,8 @@ describe('Operations capability navigation', () => {
   });
 
   it.each([
-    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects'], ['overview', 'leads', 'quotations', 'projects', 'requests', 'bookings', 'jobs', 'customers', 'onboarding', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'workforce', 'audit', 'team-access']],
-    ['operations', ['requests', 'workforce', 'audit'], ['overview', 'requests', 'workforce', 'audit']],
+    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects'], ['overview', 'leads', 'quotations', 'projects', 'requests', 'bookings', 'jobs', 'customers', 'onboarding', 'amc', 'workforce', 'reports', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'audit', 'team-access']],
+    ['operations', ['requests', 'workforce', 'audit'], ['overview', 'requests', 'workforce', 'reports', 'audit']],
     ['dispatcher', ['bookings', 'jobs'], ['bookings', 'jobs']],
     ['agent', ['my_work'], ['my-work']]
   ])('%s receives only capabilities returned for the selected context', (_name, capabilities, expectedKeys) => {
@@ -50,6 +50,16 @@ describe('Operations capability navigation', () => {
   it('allows the leads route from the sales marketing capability', () => {
     const session = { platformAdmin: false, providerCapabilities: [context(['sales_marketing'])] };
     expect(providerRouteAllowed(session, 'provider-1', 'leads')).toBe(true);
+  });
+
+  it.each([
+    ['amc', 'projects'],
+    ['reports', 'workforce'],
+    ['team-access', 'team_access'],
+    ['business-profile', 'business_profile']
+  ])('uses the navigation capability for the %s route', (section, capability) => {
+    const session = { platformAdmin: false, providerCapabilities: [context([capability])] };
+    expect(providerRouteAllowed(session, 'provider-1', section)).toBe(true);
   });
 
   it('guards deep links against the selected provider context', () => {

@@ -8,13 +8,15 @@ const configuredEmailsFromBuild = (import.meta.env.VITE_DEVELOPMENT_SIGN_IN_EMAI
   .filter((email: string, index: number, emails: string[]) => email && emails.indexOf(email) === index);
 
 export default function DevelopmentSignInForm() {
-  const { signInForDevelopment } = useAuth();
+  const { signInForDevelopment, signInForDevelopmentQuick } = useAuth();
+  const quickSignInEnabled = import.meta.env.VITE_DEVELOPMENT_QUICK_SIGN_IN === 'true';
   const [email, setEmail] = useState('');
   const [configuredEmails, setConfiguredEmails] = useState(configuredEmailsFromBuild);
   const [secret, setSecret] = useState('');
   const [pending, setPending] = useState(false);
   const [autoSignIn, setAutoSignIn] = useState(false);
   useEffect(() => {
+    if (quickSignInEnabled) return undefined;
     let cancelled = false;
     void apiClient.request<{ data: string[] }>('/session/development/identities')
       .then(body => {
@@ -22,7 +24,7 @@ export default function DevelopmentSignInForm() {
       })
       .catch(() => { /* The build-time list remains a safe local fallback. */ });
     return () => { cancelled = true; };
-  }, []);
+  }, [quickSignInEnabled]);
   async function signIn(selectedEmail: string, localSecret: string) {
     if (pending) return;
     setPending(true);
@@ -32,8 +34,25 @@ export default function DevelopmentSignInForm() {
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (quickSignInEnabled) {
+      if (pending || !email) return;
+      setPending(true);
+      try { await signInForDevelopmentQuick(email.trim()); }
+      catch { /* AuthProvider displays the server failure. */ }
+      finally { setPending(false); }
+      return;
+    }
     await signIn(email, secret);
   }
+  if (quickSignInEnabled) return <form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
+    <strong>Local development sign-in</strong>
+    <p>Choose an approved synthetic account. Password entry is disabled for this local-only convenience.</p>
+    <label style={{ display: 'grid', gap: '0.25rem' }}>Account<select name="email" aria-label="Test email" required value={email} onChange={event => setEmail(event.target.value)} disabled={pending}>
+      <option value="">Choose an account</option>
+      {configuredEmails.map((configuredEmail: string) => <option key={configuredEmail} value={configuredEmail}>{configuredEmail}</option>)}
+    </select></label>
+    <button type="submit" disabled={pending}>{pending ? 'Signing in…' : 'Sign in as selected account'}</button>
+  </form>;
   return <form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
     <strong>Local development sign-in</strong>
     <p>Use your approved test email and local secret.</p>
