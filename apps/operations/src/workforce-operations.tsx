@@ -7,6 +7,7 @@ import {
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
 import { OperationsDialog } from "./operations-dialog";
+import { indiaDateTimeToIso } from "./subscription-support";
 
 const fail = (cause: unknown) =>
   (cause as { message?: string })?.message ||
@@ -120,13 +121,13 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
     try {
       const agentId = String(form.get("agent_id"));
       const startsAt = form.get("starts_at")
-        ? new Date(String(form.get("starts_at"))).toISOString()
+        ? indiaDateTimeToIso(String(form.get("starts_at")))
         : undefined;
       const endsAt = form.get("ends_at")
-        ? new Date(String(form.get("ends_at"))).toISOString()
+        ? indiaDateTimeToIso(String(form.get("ends_at")))
         : undefined;
       const window = startsAt && endsAt
-        ? { starts_at: startsAt, ends_at: endsAt, time_zone: "Asia/Kolkata" }
+        ? { starts_at: startsAt, ends_at: endsAt }
         : undefined;
       if (mode === "agent")
         await operationsData.createAgent(
@@ -171,7 +172,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             proficiency: form.get("proficiency"),
             effective_from: startsAt!,
             effective_to: form.get("effective_to")
-              ? new Date(String(form.get("effective_to"))).toISOString()
+              ? indiaDateTimeToIso(String(form.get("effective_to")))
               : null,
           },
           crypto.randomUUID(),
@@ -186,7 +187,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             credential_reference: form.get("credential_reference"),
             issued_at: form.get("issued_at"),
             expires_at: form.get("expires_at")
-              ? new Date(String(form.get("expires_at"))).toISOString()
+              ? indiaDateTimeToIso(String(form.get("expires_at")))
               : null,
             document_ids: [],
           },

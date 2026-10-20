@@ -10,6 +10,9 @@ export type LocationDraft = {
   city: string;
   district: string;
   state: string;
+  city_code?: string;
+  district_code?: string;
+  state_code?: string;
   pin_code: string;
   latitude: string;
   longitude: string;

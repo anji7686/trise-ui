@@ -16,6 +16,7 @@ import { OperationsStatus as Status } from "./operations-status";
 import { ActionFeedback, EmptyState } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
 import { sha256Hex } from "./provider-document-upload";
+import { indiaDateTimeToIso } from './subscription-support';
 
 const fail = (error: unknown) =>
   (error as { message?: string })?.message ||
@@ -1492,7 +1493,7 @@ function StageDialog({
       await operationsData.createServiceStage(
         providerId,
         caseId,
-        { ...form, prerequisite_stage_ids: form.prerequisite_stage_ids },
+        { ...form, planned_start_at: form.planned_start_at ? indiaDateTimeToIso(form.planned_start_at) : null, planned_end_at: form.planned_end_at ? indiaDateTimeToIso(form.planned_end_at) : null, prerequisite_stage_ids: form.prerequisite_stage_ids },
         uuid(),
       );
       saved();

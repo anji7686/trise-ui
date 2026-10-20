@@ -2,6 +2,8 @@ import type { Collection, PlatformPlan, PlatformPlanVersion, ProviderOperation, 
 
 export type ApplicablePlanChoice = { plan: Resource<PlatformPlan>; version: Resource<PlatformPlanVersion>; matchingOperations: string[] };
 
+export const BUSINESS_TIME_ZONE = 'Asia/Kolkata';
+
 export function applicablePlanChoices(plans: Resource<PlatformPlan>[], operations: ProviderOperation[]): ApplicablePlanChoice[] {
   const operationNames = new Map(operations.map((row) => [row.attributes.business_operation.id, row.attributes.business_operation.name]));
   return plans.flatMap((plan) => (plan.attributes.versions || (plan.attributes.latest_version ? [plan.attributes.latest_version] : []))
@@ -24,8 +26,51 @@ export function mergeProviderHistory(current: ProviderSubscriptionSelfService, r
 }
 
 export function localDateTime(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(date).reduce<Record<string, string>>((result, part) => {
+    if (part.type !== 'literal') result[part.type] = part.value;
+    return result;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+/** Convert a datetime-local value that is explicitly in the business timezone to an instant. */
+export function indiaDateTimeToDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) return new Date(Number.NaN);
+  const [, year, month, day, hour, minute, second = '0'] = match;
+  const utc = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  const date = new Date(utc - (5 * 60 + 30) * 60_000);
+  return localDateTime(date) === value.slice(0, 16) ? date : new Date(Number.NaN);
+}
+
+export function indiaDateTimeToIso(value: string): string {
+  return indiaDateTimeToDate(value).toISOString();
+}
+
+export function formatIndiaDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: BUSINESS_TIME_ZONE, dateStyle: 'medium', timeStyle: 'short'
+  }).format(date);
+}
+
+export function formatIndiaDate(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-IN', { timeZone: BUSINESS_TIME_ZONE, dateStyle: 'medium' }).format(date);
+}
+
+export function formatIndiaTime(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-IN', { timeZone: BUSINESS_TIME_ZONE, timeStyle: 'short', hourCycle: 'h23' }).format(date);
 }
 
 // Follow opaque cursors only; an incomplete catalogue must never look complete.

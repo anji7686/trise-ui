@@ -3,10 +3,11 @@ import { Button } from '@trise/ui';
 import { AdminEmptyState, AdminPageHeader } from './platform-admin-ui';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type PlatformComplianceRequest, type PlatformComplianceRequirement, type PlatformTeamMember } from './data';
+import { formatIndiaDateTime } from './subscription-support';
 
 type DetailTab = 'changes' | 'evidence' | 'activity' | 'details';
 const human = (value?: string | null) => value ? value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'Not available';
-const dateText = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not available';
+const dateText = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not available';
 const errorText = (error: unknown) => (error as { message?: string })?.message || 'The approval request could not be completed.';
 
 export function PlatformApprovalInbox({ capabilities }: { capabilities: string[] }) {

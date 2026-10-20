@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Button, DetailSection, StatePanel } from '@trise/ui';
 import { OperationsDialog } from './operations-dialog';
 import { OperationsStatus as Status } from './operations-status';
-import { applicablePlanChoices, collectPages, localDateTime, RequestGeneration } from './subscription-support';
+import { applicablePlanChoices, collectPages, formatIndiaDateTime, indiaDateTimeToIso, localDateTime, RequestGeneration } from './subscription-support';
 import { useSubscriptionActions } from './use-subscription-actions';
 import { subscriptionNextStep } from './subscription-workflow';
 import { SubscriptionAlerts, SubscriptionTimeline } from './subscription-insights';
@@ -10,7 +10,7 @@ import { operationsData, type PlatformPlan, type PlatformPlanVersion, type Platf
 import { SearchableSelect } from './searchable-select';
 
 const human = (value?: string) => value === 'FOURTEEN_DAYS' ? '14 days' : value ? value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Not available';
-const dateTime = (value?: string | null) => value ? new Date(value).toLocaleString() : 'No fixed end date';
+const dateTime = (value?: string | null) => value ? formatIndiaDateTime(value) : 'No fixed end date';
 const metricLabel = (key: string) => key === 'MANAGED_ASSET_COUNT' ? 'Managed assets' : key === 'AGENT_COUNT' ? 'Active agents' : human(key);
 const errorText = (error: unknown) => (error as { message?: string })?.message || 'Subscription information could not be loaded.';
 
@@ -157,7 +157,7 @@ export function PlatformProviderSubscription({ providerId, capabilities, onboard
     event.preventDefault();
     if (onboarding && selectedChoice?.plan.attributes.onboarding_default) return;
     if (!selectedVersionId) { setError('Select a published plan returned by the API.'); return; }
-    const body = { plan_version_id: selectedVersionId, requested_effective_from: new Date(effectiveFrom).toISOString(), note: onboarding ? 'Selected during provider onboarding' : 'Selected during provider management' };
+    const body = { plan_version_id: selectedVersionId, requested_effective_from: indiaDateTimeToIso(effectiveFrom), note: onboarding ? 'Selected during provider onboarding' : 'Selected during provider management' };
     await run(JSON.stringify([providerId, body]), (key) => operationsData.createPlatformSubscriptionRequest(providerId, body, key), async () => {
       setSelectedVersionId(''); setSearch(''); await load();
     });

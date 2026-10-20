@@ -10,6 +10,7 @@ import {
 import { OperationsStatus as Status } from "./operations-status";
 import { EmptyState } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
+import { formatIndiaDate, formatIndiaDateTime } from "./subscription-support";
 
 const fail = (error: unknown) =>
   (error as { message?: string })?.message ||
@@ -238,7 +239,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
     return asset ? label(asset.attributes) : `Asset ${id.slice(0, 8) || scope.id.slice(0, 8)}`;
   };
   const summary = contracts?.summary;
-  const date = (value: unknown) => value ? new Date(String(value)).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const date = (value: unknown) => value ? formatIndiaDate(String(value)) : "—";
   return (
     <section className="content feature-page">
       <PageHeader
@@ -524,7 +525,6 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
         dimensions: form.getAll("dimensions").map(String),
         measures: form.getAll("measures").map(String),
         filters: {},
-        timezone: String(form.get("timezone") || "Asia/Kolkata"),
       };
       const saved = selected
         ? await operationsData.updateProviderReport(
@@ -588,7 +588,6 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
           report_id: selected.id,
           frequency: String(form.get("frequency")),
           format: String(form.get("format")),
-          timezone: String(form.get("timezone") || "Asia/Kolkata"),
           recipient_emails: String(form.get("recipients"))
             .split(",")
             .map((item) => item.trim())
@@ -759,7 +758,7 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
                     <div><span>Today's appointments</span><strong>{dashboard.attributes.counts.todays_appointments}</strong></div>
                   </div>
                   <div className="reports-panel-divider"><h4>Recent audit activity</h4>
-                    {dashboard.attributes.recent_audit.length ? dashboard.attributes.recent_audit.slice(0, 5).map((entry) => <article className="reports-audit-row" key={entry.id}><Status>{entry.action}</Status><span>{entry.resource_kind || "Operational event"}</span><time>{entry.occurred_at ? new Date(entry.occurred_at).toLocaleString() : "Time not supplied"}</time></article>) : <p className="notice">No recent provider audit activity.</p>}
+                    {dashboard.attributes.recent_audit.length ? dashboard.attributes.recent_audit.slice(0, 5).map((entry) => <article className="reports-audit-row" key={entry.id}><Status>{entry.action}</Status><span>{entry.resource_kind || "Operational event"}</span><time>{entry.occurred_at ? formatIndiaDateTime(entry.occurred_at) : "Time not supplied"}</time></article>) : <p className="notice">No recent provider audit activity.</p>}
                   </div>
                 </section>
               </div>
@@ -864,7 +863,6 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
           <label>Category *<select name="category" defaultValue={read(selected, "category", "PROJECTS")}><option>LEADS</option><option>PROJECTS</option><option>PAYMENTS</option><option>MATERIALS</option><option>SERVICE_REQUESTS</option><option>JOBS</option><option>WORKFORCE</option><option>ASSETS</option><option>AMC</option></select></label>
           <fieldset className="report-allowlist-picker" aria-label="Dimensions"><legend>Dimensions</legend>{[["status", "Status"], ["provider_created_at", "Created date"], ["customer", "Customer"], ["project", "Project"], ["stage", "Stage"], ["technician", "Technician"]].map(([value, title]) => <label key={value}><input type="checkbox" name="dimensions" value={value} defaultChecked={Array.isArray(selected?.attributes.dimensions) ? (selected!.attributes.dimensions as string[]).includes(value) : value === "status" || value === "project"} />{title}</label>)}</fieldset>
           <fieldset className="report-allowlist-picker" aria-label="Measures"><legend>Measures</legend>{[["count", "Record count"], ["amount", "Amount"], ["outstanding", "Outstanding"], ["duration", "Duration"]].map(([value, title]) => <label key={value}><input type="checkbox" name="measures" value={value} defaultChecked={Array.isArray(selected?.attributes.measures) ? (selected!.attributes.measures as string[]).includes(value) : value === "count"} />{title}</label>)}</fieldset>
-          <label>Timezone<input name="timezone" defaultValue={read(selected, "timezone", "Asia/Kolkata")} /></label>
           <div className="reports-actions"><Button type="button" variant="quiet" onClick={() => setReportEditorOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>{selected ? "Update report" : "Save report"}</Button></div>
         </form>
       </OperationsDialog>}
@@ -874,7 +872,6 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
           <label>Frequency<select name="frequency" defaultValue="WEEKLY"><option>DAILY</option><option>WEEKLY</option><option>MONTHLY</option></select></label>
           <label>Format<select name="format" defaultValue="CSV"><option>CSV</option><option>XLSX</option><option>PDF</option></select></label>
           <label>Authorized recipients *<input name="recipients" required placeholder="recipient@example.test" /></label>
-          <label>Timezone<input name="timezone" defaultValue="Asia/Kolkata" /></label>
           <p className="notice">Recipients must be authorized for this provider. Delivery uses an expiring private download link.</p>
           <div className="reports-actions"><Button type="button" variant="quiet" onClick={() => setScheduleEditorOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create schedule</Button></div>
         </form>

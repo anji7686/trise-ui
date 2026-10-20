@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@trise/ui';
+import { formatIndiaDateTime } from './subscription-support';
 
 export function validReviewReason(value: string) { return value.trim().length > 0 && value.trim().length <= 1000; }
 
@@ -31,5 +32,5 @@ export function useReviewReason(scope: string) {
 }
 
 export function EvidenceReviewFeedback({ reviews }: { reviews?: { id: string; decision: string; reason?: string | null; reviewed_at: string }[] }) {
-  return reviews?.length ? <ul className="platform-audit-list">{reviews.map(review => <li key={review.id}><strong>{review.decision.replaceAll('_', ' ')}</strong><p>{review.reason || 'No reason recorded'}</p><time dateTime={review.reviewed_at}>{new Date(review.reviewed_at).toLocaleString()}</time></li>)}</ul> : null;
+  return reviews?.length ? <ul className="platform-audit-list">{reviews.map(review => <li key={review.id}><strong>{review.decision.replaceAll('_', ' ')}</strong><p>{review.reason || 'No reason recorded'}</p><time dateTime={review.reviewed_at}>{formatIndiaDateTime(review.reviewed_at)}</time></li>)}</ul> : null;
 }

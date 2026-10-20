@@ -1,0 +1,17 @@
+{
+  "data": {
+    "status": "AVAILABLE",
+    "maintenance_active": false,
+    "maintenance": null,
+    "checked_at": "1970-01-01T00:00:00.000Z",
+    "timezone": "Asia/Kolkata",
+    "operations": [
+      { "code": "AUTHENTICATION", "name": "Login and session access", "scope": "AUTHENTICATION", "status": "AVAILABLE", "available": true, "message": "Available" },
+      { "code": "READ_OPERATIONS", "name": "View existing operations and records", "scope": "READ_OPERATIONS", "status": "AVAILABLE", "available": true, "message": "Available" },
+      { "code": "SERVICE_OPERATIONS", "name": "Existing service operations", "scope": "SERVICE_OPERATIONS", "status": "AVAILABLE", "available": true, "message": "Available" },
+      { "code": "NEW_ACTIVITY_INTAKE", "name": "New requests, bookings and jobs", "scope": "NEW_ACTIVITY_INTAKE", "status": "AVAILABLE", "available": true, "message": "Available" },
+      { "code": "PLATFORM_ADMINISTRATION", "name": "Platform administration and configuration", "scope": "PLATFORM_ADMINISTRATION", "status": "AVAILABLE", "available": true, "message": "Available" },
+      { "code": "MAINTENANCE_RECOVERY", "name": "Global Administrator maintenance recovery", "scope": "MAINTENANCE_RECOVERY", "status": "AVAILABLE", "available": true, "message": "Available" }
+    ]
+  }
+}

@@ -966,6 +966,20 @@ describe("operations execution contracts", () => {
     );
   });
 
+  it("can request active-only configuration options for operational selectors", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
+
+    await operationsData.configuration("provider-1", "service-types", "ACTIVE");
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/configuration/service-types?page[limit]=25&sort=-created_at,id&filter[status]=ACTIVE",
+    );
+  });
+
   it("keeps property onboarding staged, provider-scoped, and idempotent", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -1115,5 +1129,94 @@ describe("operations execution contracts", () => {
     expect(
       new Headers(fetchMock.mock.calls[3][1]?.headers).get("Idempotency-Key"),
     ).toBe("config-activate-1");
+  });
+
+  it("loads configuration impact previews with the same scoped read contract", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { id: "configuration-1", type: "configuration-impacts", attributes: { total_dependents: 1, active_dependents: 1, provider_adoptions: 2, can_archive: false, warnings: ["active child"] } } }), { status: 200 }),
+    );
+
+    await operationsData.configurationImpact("provider-1", "asset-families", "configuration-1");
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/configuration/asset-families/configuration-1/impact");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-1");
+  });
+
+  it("keeps the platform configuration review inbox out of provider scope", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    );
+
+    await operationsData.configurationReviewInbox();
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/configuration/reviews");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("keeps reference-data administration platform-scoped and idempotent", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      if (init?.method === "POST") return new Response(JSON.stringify({ data: { id: "import-1" } }), { status: 200 });
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+
+    await operationsData.referenceDataImports();
+    await operationsData.submitReferenceDataImportReview("import-1", { reason: "restore" }, "reference-submit-1");
+    await operationsData.approveReferenceDataImportReview("import-1", "review-1", "reference-approve-1");
+    await operationsData.restoreReferenceDataImport("import-1", "review-1", "reference-restore-1");
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/reference-data/admin/imports");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/reference-data/admin/imports/import-1/reviews");
+    expect(String(fetchMock.mock.calls[2][0])).toContain("/reference-data/admin/imports/import-1/reviews/review-1/approve");
+    expect(String(fetchMock.mock.calls[3][0])).toContain("/reference-data/admin/imports/import-1/restore");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ review_id: "review-1" });
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("Idempotency-Key")).toBe("reference-restore-1");
+    expect(new Headers(fetchMock.mock.calls[3][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("supports revoking a reference-data review without provider scope", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "review-1" }), { status: 200 }),
+    );
+
+    await operationsData.revokeReferenceDataImportReview("import-1", "review-1", "cancelled", "reference-revoke-1");
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/reference-data/admin/imports/import-1/reviews/review-1/revoke");
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ reason: "cancelled" });
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Idempotency-Key")).toBe("reference-revoke-1");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("loads the consolidated platform configuration audit without provider scope", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ audit: [], events: [] }), { status: 200 }),
+    );
+
+    await operationsData.configurationAuditInbox();
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/configuration/audit");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("queries canonical India geography without leaking provider scope", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], dataset: { kind: "INDIA_GEOGRAPHY" } }), { status: 200 }),
+    );
+
+    await operationsData.indiaLocations({
+      kind: "CITY",
+      parentCode: "KA-BLR",
+      stateCode: "KA",
+      q: "Bengaluru",
+      limit: 50,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/reference-data/india/locations?");
+    expect(url).toContain("kind=CITY");
+    expect(url).toContain("parent_code=KA-BLR");
+    expect(url).toContain("state_code=KA");
+    expect(url).toContain("q=Bengaluru");
+    expect(url).toContain("limit=50");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
   });
 });

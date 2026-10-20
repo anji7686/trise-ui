@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '@trise/api-client';
 import { operationsData, type Collection, type PlatformPlan, type ProviderOperation, type ProviderSubscriptionSelfService, type Resource } from './data';
-import { applicablePlanChoices, collectPages, localDateTime, mergeProviderHistory, RequestGeneration, SubscriptionCommands } from './subscription-support';
+import { applicablePlanChoices, collectPages, formatIndiaDateTime, formatIndiaTime, indiaDateTimeToIso, localDateTime, mergeProviderHistory, RequestGeneration, SubscriptionCommands } from './subscription-support';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); apiClient.clearSession(); });
 const row = (id: string) => ({ id, type: 'test', attributes: {}, relationships: {} });
@@ -111,10 +111,11 @@ describe('subscription action reliability', () => {
     await commands.run('request', async (key) => { keys.push(key); });
     expect(keys[0]).not.toBe(keys[1]);
   });
-  it('round-trips a local date in India without a UTC shift', () => {
-    vi.stubEnv('TZ', 'Asia/Kolkata');
-    const date = new Date(2026, 9, 10, 23, 45);
+  it('formats and parses business dates in India regardless of browser timezone', () => {
+    const date = new Date('2026-10-10T18:15:00.000Z');
     expect(localDateTime(date)).toBe('2026-10-10T23:45');
-    expect(new Date(localDateTime(date)).getTime()).toBe(date.getTime());
+    expect(indiaDateTimeToIso('2026-10-10T23:45')).toBe('2026-10-10T18:15:00.000Z');
+    expect(formatIndiaDateTime(date)).toContain('10 Oct 2026');
+    expect(formatIndiaTime(date)).toBe('23:45');
   });
 });

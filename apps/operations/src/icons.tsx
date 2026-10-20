@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'send' | 'settings' | 'upload' | 'users' | 'x';
+type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'search' | 'send' | 'settings' | 'shield' | 'upload' | 'users' | 'x';
 
 const paths: Record<IconName, string> = {
   activity: 'M3 12h4l2-8 4 16 2-8h6',
@@ -22,8 +22,10 @@ const paths: Record<IconName, string> = {
   pencil: 'm4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm10-12 3 3',
   plus: 'M12 5v14M5 12h14',
   save: 'M5 4h12l2 2v14H5V4Zm3 0v5h7V4M8 20v-7h8v7',
+  search: 'm21 21-4.4-4.4m0 0A7 7 0 1 0 6.7 6.7a7 7 0 0 0 9.9 9.9Z',
   send: 'm3 11 18-8-8 18-2-7-8-3Zm8 3 4-5',
   settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0-0-8Zm0-5v2m0 14v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M3 12h2m14 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  shield: 'M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z',
   upload: 'M12 16V4m0 0-5 5m5-5 5 5M5 14v6h14v-6',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-7a4 4 0 0 1 0 7.7M22 21v-2a4 4 0 0 0-3-3.9',
   x: 'm6 6 12 12M18 6 6 18'

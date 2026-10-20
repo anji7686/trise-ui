@@ -21,8 +21,8 @@ export type ContractAttributes = { name: string; status: string; version: number
 export type DocumentAttributes = { filename: string; media_type: string; size_bytes: number; checksum: string; classification: string; status: string; scan_state: string; scan_reason?: string | null; scan_recorded_at?: string | null; revision: number; visibility: string };
 export type DocumentVersionAttributes = { version: number; filename: string; media_type: string; size_bytes: number; checksum: string; scan_state: string; scan_reason?: string | null; scan_recorded_at?: string | null };
 
-export function buildBookingPayload(input: { summary: string; customerRelationshipId: string; assetId: string; locationId: string; serviceTypeId: string; startsAt: string; endsAt: string; timeZone: string }) {
-  return { summary: input.summary, customer_relationship_id: input.customerRelationshipId, asset_id: input.assetId, location_id: input.locationId, service_type_id: input.serviceTypeId, requested_window: { starts_at: input.startsAt, ends_at: input.endsAt, time_zone: input.timeZone } };
+export function buildBookingPayload(input: { summary: string; customerRelationshipId: string; assetId: string; locationId: string; serviceTypeId: string; startsAt: string; endsAt: string }) {
+  return { summary: input.summary, customer_relationship_id: input.customerRelationshipId, asset_id: input.assetId, location_id: input.locationId, service_type_id: input.serviceTypeId, requested_window: { starts_at: input.startsAt, ends_at: input.endsAt } };
 }
 
 const query = (path: string, providerId?: string) => apiClient.request(path, {}, { providerId });

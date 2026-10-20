@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Button, DetailSection, StatePanel } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type PlatformProviderAttributes, type PlatformProviderManagerAssignment, type Resource } from './data';
-import { localDateTime } from './subscription-support';
+import { formatIndiaDateTime, indiaDateTimeToDate, indiaDateTimeToIso, localDateTime } from './subscription-support';
 import { useSubscriptionActions } from './use-subscription-actions';
 import { useReviewReason } from './subscription-review';
 import { useScopedRecords } from './use-scoped-records';
@@ -18,8 +18,8 @@ export function ProviderAdminHandoff({ provider, capabilities }: { provider: Res
   const review = useReviewReason(provider.id);
   async function assign(event: FormEvent) {
     event.preventDefault();
-    if (Date.parse(endsAt) <= Date.parse(startsAt)) { setError('The assignment end must be after its start.'); return; }
-    const body = { provider_id: provider.id, user_id: userId.trim(), effective_from: new Date(startsAt).toISOString(), effective_to: new Date(endsAt).toISOString() };
+    if (indiaDateTimeToDate(endsAt).getTime() <= indiaDateTimeToDate(startsAt).getTime()) { setError('The assignment end must be after its start.'); return; }
+    const body = { provider_id: provider.id, user_id: userId.trim(), effective_from: indiaDateTimeToIso(startsAt), effective_to: indiaDateTimeToIso(endsAt) };
     await run(JSON.stringify(['manager-assignment', body]), key => operationsData.createPlatformProviderManagerAssignment(body, key), async () => { setUserId(''); setEndsAt(''); if (canRead) await assignments.load(); });
   }
   async function end(assignment: Resource<PlatformProviderManagerAssignment>) {
@@ -41,7 +41,7 @@ export function ProviderAdminHandoff({ provider, capabilities }: { provider: Res
     {canRead ? <div>
       <h3>Delegated onboarding assignments</h3>
       {assignments.loading && <p role="status">Loading assignments…</p>}
-      <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>User</th><th>Status</th><th>Effective window</th><th>Actions</th></tr></thead><tbody>{assignments.records.map(assignment => <tr key={assignment.id}><td>{assignment.attributes.user_id}</td><td><Status>{assignment.attributes.status}</Status></td><td>{new Date(assignment.attributes.effective_from).toLocaleString()} to {assignment.attributes.effective_to ? new Date(assignment.attributes.effective_to).toLocaleString() : 'No recorded end'}</td><td>{assignment.attributes.status === 'ACTIVE' && capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE') && <Button disabled={busy || assignments.loading} variant="secondary" onClick={() => void end(assignment)}>End assignment</Button>}</td></tr>)}</tbody></table></div>
+      <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>User</th><th>Status</th><th>Effective window</th><th>Actions</th></tr></thead><tbody>{assignments.records.map(assignment => <tr key={assignment.id}><td>{assignment.attributes.user_id}</td><td><Status>{assignment.attributes.status}</Status></td><td>{formatIndiaDateTime(assignment.attributes.effective_from)} to {assignment.attributes.effective_to ? formatIndiaDateTime(assignment.attributes.effective_to) : 'No recorded end'}</td><td>{assignment.attributes.status === 'ACTIVE' && capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE') && <Button disabled={busy || assignments.loading} variant="secondary" onClick={() => void end(assignment)}>End assignment</Button>}</td></tr>)}</tbody></table></div>
       {!assignments.loading && !assignments.error && !assignments.records.length && <p>No delegated onboarding assignments recorded.</p>}
       <p>{assignments.records.length} assignments loaded.</p>
       <Button disabled={busy || assignments.loading} variant="quiet" onClick={() => void assignments.load()}>Refresh assignments</Button>

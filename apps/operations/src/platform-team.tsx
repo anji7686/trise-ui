@@ -3,9 +3,10 @@ import { Button, DetailSection, PageHeader, StatePanel } from '@trise/ui';
 import { operationsData, type PlatformRoleDefinition, type PlatformTeamAudit, type PlatformTeamInvitation, type PlatformTeamMember } from './data';
 import { OperationsStatus as Status } from './operations-status';
 import { OperationsDialog } from './operations-dialog';
+import { formatIndiaDateTime } from './subscription-support';
 
 const key = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const date = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not recorded';
+const date = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not recorded';
 type Page = { next?: string | null; previous?: string | null };
 type LoadState<T> = { data: T; loading: boolean; error: string };
 function message(error: unknown, fallback: string) { return (error as { message?: string }).message || fallback; }

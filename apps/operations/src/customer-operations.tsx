@@ -8,6 +8,8 @@ import {
   type Resource,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
+import { SearchableSelect } from "./searchable-select";
+import { useIndiaGeography } from "./use-india-geography";
 
 const fail = (cause: unknown) =>
   (cause as { message?: string })?.message ||
@@ -69,6 +71,8 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
     null,
   );
   const [editingKind, setEditingKind] = useState<EditKind | null>(null);
+  const [locationForm, setLocationForm] = useState({ address: "", city: "", cityCode: "", district: "", districtCode: "", state: "", stateCode: "" });
+  const locationGeography = useIndiaGeography(locationForm);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -176,6 +180,13 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
     setEditing(null);
     setEditingKind(null);
   };
+  const chooseLocationReference = (key: "state" | "district" | "city", id: string) => {
+    const options = key === "state" ? locationGeography.stateOptions : key === "district" ? locationGeography.districtOptions : locationGeography.cityOptions;
+    const selected = options.find((option) => option.id === id);
+    setLocationForm((current) => ({ ...current, [key]: selected?.label || "", [`${key}Code`]: selected?.id || "", ...(key === "state" ? { district: "", districtCode: "", city: "", cityCode: "" } : key === "district" ? { city: "", cityCode: "" } : {}) }));
+    if (key === "state") { locationGeography.setDistrictSearch(""); locationGeography.setCitySearch(""); }
+    if (key === "district") locationGeography.setCitySearch("");
+  };
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -198,8 +209,8 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
             customer_relationship_id: form.get("customer_relationship_id"),
             classification: form.get("classification"),
             name: form.get("name"),
-            address_lines: [form.get("address")],
-            time_zone: form.get("time_zone"),
+            address_lines: [locationForm.address, locationForm.city, locationForm.district, locationForm.state].map((value) => value.trim()).filter(Boolean),
+            address_references: { country_code: "IN", state_code: locationGeography.stateCode, district_code: locationGeography.districtCode, city_code: locationGeography.cityCode, state: locationForm.state, district: locationForm.district, city: locationForm.city },
           },
           crypto.randomUUID(),
         );
@@ -286,8 +297,8 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
         editing.id,
         {
           name: form.get("name"),
-          address_lines: [form.get("address")],
-          time_zone: form.get("time_zone"),
+          address_lines: [locationForm.address, locationForm.city, locationForm.district, locationForm.state].map((value) => value.trim()).filter(Boolean),
+          address_references: { country_code: "IN", state_code: locationGeography.stateCode, district_code: locationGeography.districtCode, city_code: locationGeography.cityCode, state: locationForm.state, district: locationForm.district, city: locationForm.city },
           expected_revision: revisionOf(editing),
         },
         crypto.randomUUID(),
@@ -330,6 +341,12 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
       onClick={() => {
         setEditing(row);
         setEditingKind(kind);
+        if (kind === "location") {
+          const values = attrs(row);
+          const references = (values.address_references || {}) as Record<string, unknown>;
+          const lines = Array.isArray(values.address_lines) ? values.address_lines.map(String) : [];
+          setLocationForm({ address: lines[0] || "", city: String(references.city || ""), cityCode: String(references.city_code || ""), district: String(references.district || ""), districtCode: String(references.district_code || ""), state: String(references.state || ""), stateCode: String(references.state_code || "") });
+        }
       }}
     >
       {kind === "location" ? "Edit location" : "Edit asset"}
@@ -407,9 +424,11 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
                 <label>
                   Location name *<input name="name" required />
                 </label>
-                <label>
-                  Address *<textarea name="address" required />
-                </label>
+                <label>Country<select value="IN" disabled><option value="IN">India</option></select></label>
+                <label>Address line / locality *<textarea name="address" required value={locationForm.address} onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))} /></label>
+                <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={locationGeography.stateSearch} onSearch={locationGeography.setStateSearch} value={locationGeography.stateCode} onChange={(id) => chooseLocationReference("state", id)} options={locationGeography.stateOptions} placeholder="Select state / UT" required />
+                <SearchableSelect label="District" searchLabel="Search districts in selected state" search={locationGeography.districtSearch} onSearch={locationGeography.setDistrictSearch} value={locationGeography.districtCode} onChange={(id) => chooseLocationReference("district", id)} options={locationGeography.districtOptions} placeholder="Select district" required disabled={!locationGeography.stateCode} />
+                <SearchableSelect label="City" searchLabel="Search cities in selected district" search={locationGeography.citySearch} onSearch={locationGeography.setCitySearch} value={locationGeography.cityCode} onChange={(id) => chooseLocationReference("city", id)} options={locationGeography.cityOptions} placeholder="Select city" required disabled={!locationGeography.districtCode} />
                 <label>
                   Classification
                   <select name="classification">
@@ -417,7 +436,6 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
                     <option>SERVICE_SITE</option>
                   </select>
                 </label>
-                <label>Time zone<input name="time_zone" defaultValue="UTC" placeholder="IANA time zone (for example, Asia/Kolkata)" /></label>
               </>
             )}
             {mode === "asset" && (
@@ -555,22 +573,11 @@ export function CustomerOperations({ providerId, canManage = false }: { provider
                   )}
                 />
               </label>
-              <label>
-                Address *
-                <textarea
-                  name="address"
-                  required
-                  defaultValue={String(editAttributes.address_lines || "")}
-                />
-              </label>
-              <label>
-                Time zone
-                <input
-                  name="time_zone"
-                  defaultValue={String(editAttributes.time_zone || "UTC")}
-                  placeholder="IANA time zone (for example, Asia/Kolkata)"
-                />
-              </label>
+                <label>Country<select value="IN" disabled><option value="IN">India</option></select></label>
+                <label>Address line / locality *<textarea name="address" required value={locationForm.address} onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))} /></label>
+                <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={locationGeography.stateSearch} onSearch={locationGeography.setStateSearch} value={locationGeography.stateCode} onChange={(id) => chooseLocationReference("state", id)} options={locationGeography.stateOptions} placeholder="Select state / UT" required />
+                <SearchableSelect label="District" searchLabel="Search districts in selected state" search={locationGeography.districtSearch} onSearch={locationGeography.setDistrictSearch} value={locationGeography.districtCode} onChange={(id) => chooseLocationReference("district", id)} options={locationGeography.districtOptions} placeholder="Select district" required disabled={!locationGeography.stateCode} />
+                <SearchableSelect label="City" searchLabel="Search cities in selected district" search={locationGeography.citySearch} onSearch={locationGeography.setCitySearch} value={locationGeography.cityCode} onChange={(id) => chooseLocationReference("city", id)} options={locationGeography.cityOptions} placeholder="Select city" required disabled={!locationGeography.districtCode} />
               <div className="provider-form-actions">
                 <Button type="button" variant="secondary" onClick={closeEditor}>
                   Cancel

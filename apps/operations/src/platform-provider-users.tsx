@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@trise/ui';
 import { operationsData, type PageMetadata, type PlatformProviderUserAttributes, type PlatformProviderUserFilters, type PlatformProviderUserSummary, type Resource } from './data';
 import { OperationsDialog } from './operations-dialog';
+import { formatIndiaDateTime } from './subscription-support';
 
 type Props = { capabilities: string[] };
 type Tab = 'users' | 'invitations' | 'access' | 'activity';
 type DrawerTab = 'details' | 'access' | 'roles' | 'activity' | 'invitations';
 const emptySummary: PlatformProviderUserSummary = { total_users: 0, active: 0, pending: 0, inactive: 0 };
-const formatDate = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not recorded';
+const formatDate = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not recorded';
 const listOrEmpty = <T,>(value: T[] | null | undefined): T[] => Array.isArray(value) ? value : [];
 export const normalizePlatformProviderUser = (resource: Resource<PlatformProviderUserAttributes>): Resource<PlatformProviderUserAttributes> => ({
   ...resource,

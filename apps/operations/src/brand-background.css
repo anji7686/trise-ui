@@ -10,6 +10,22 @@
   flex: 0 1 auto;
 }
 
+.wordmark-theme-aware > span {
+  display: block;
+}
+
+.wordmark-theme-aware .wordmark-theme-dark {
+  display: none;
+}
+
+[data-theme="dark"] .wordmark-theme-aware .wordmark-theme-light {
+  display: none;
+}
+
+[data-theme="dark"] .wordmark-theme-aware .wordmark-theme-dark {
+  display: block;
+}
+
 .topbar .wordmark .trise-brand-logo {
   display: block;
   width: clamp(9rem, 22vw, 14rem);

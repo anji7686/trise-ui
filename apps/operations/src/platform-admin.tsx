@@ -17,11 +17,11 @@ import { PlatformSubscriptionsPage } from './platform-subscriptions';
 import { PlatformProviderUsersPage } from './platform-provider-users';
 import { ProviderAdminInviteRecipientPicker, type ProviderAdminInviteRecipient } from './provider-admin-invite-recipient';
 import { PlatformTeamPage } from './platform-team';
+import { formatIndiaDateTime, indiaDateTimeToIso } from './subscription-support';
 import { PlatformTaxesPage } from './platform-taxes';
 import { PlatformApprovalInbox } from './platform-approval-inbox';
 import { PlatformCompliancePage } from './platform-compliance';
 import { BusinessCompliancePage } from './business-compliance';
-import { INDIAN_STATES_AND_UTS } from './india-geography';
 import { RequestGeneration } from './subscription-support';
 import { PlatformProviderSubscription } from './platform-provider-subscription';
 import { collectPages } from './subscription-support';
@@ -30,10 +30,17 @@ import { administratorSetupLabel, onboardingStateLabel, providerDetailAccess, pr
 import { confirmOnboardingNavigation, OnboardingEmptyState, OnboardingErrorSummary, OnboardingFormSection, ProviderOnboardingStepper, useOnboardingUnsavedChanges } from './provider-onboarding-ui';
 import { ProviderOnboardingReviewDashboard } from './provider-onboarding-review';
 import { AdminActionMenu, AdminEmptyState, AdminPageHeader } from './platform-admin-ui';
+import { ConfigurationAdmin, ConfigurationAuditInbox, ConfigurationReviewInbox } from './configuration';
+import { ReferenceDataAdmin } from './reference-data-admin';
+import { PlatformBusinessOperationsPage } from './platform-business-operations';
+import { useIndiaGeography } from './use-india-geography';
+import { ElevatorBusinessConfigurationReference, PlatformConfigurationRegistry } from './platform-configuration-reference';
+import { ProviderOverridesAdmin } from './provider-overrides-admin';
+import { PlatformMaintenancePage } from './platform-maintenance';
 
 const errorText = (error: unknown) => (error as { message?: string })?.message || 'The platform request could not be completed.';
 const go = (hash: string) => { if (confirmOnboardingNavigation()) window.location.hash = hash; };
-const formatDate = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not available';
+const formatDate = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not available';
 const humanStatus = (value?: string) => value ? value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Not submitted';
 const commonOperationalStatus = (value?: string) => value === 'ACTIVE' ? 'ACTIVE' : value === 'CLOSED' ? 'CLOSED' : ['ON_HOLD', 'SUSPENDED'].includes(value || '') ? 'RESTRICTED' : 'BLOCKED';
 const auditLabel = (value: string) => value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -82,7 +89,9 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
   const [contactErrors, setContactErrors] = useState<FieldErrors>({});
   const [locationErrors, setLocationErrors] = useState<FieldErrors>({});
   const [contact, setContact] = useState({ display_name: '', email: '', mobile: '', landline: '', phone: '', designation: 'PRIMARY', responsibility_type: 'BUSINESS_CONTACT', invite_as_provider_admin: false });
-  const [location, setLocation] = useState({ name: '', location_kind: 'REGISTERED_OFFICE', country: 'India', address_line: '', locality: '', city: '', district: '', state: '', pin_code: '', landmark: '', latitude: '', longitude: '' });
+  const [location, setLocation] = useState({ name: '', location_kind: 'REGISTERED_OFFICE', country: 'India', address_line: '', locality: '', city: '', city_code: '', district: '', district_code: '', state: '', state_code: '', pin_code: '', landmark: '', latitude: '', longitude: '' });
+  const geography = useIndiaGeography(location);
+  const { stateOptions, districtOptions, cityOptions, stateSearch, setStateSearch, districtSearch, setDistrictSearch, citySearch, setCitySearch, stateCode: selectedStateCode, districtCode: selectedDistrictCode, cityCode: selectedCityCode } = geography;
   const contactKey = useRef<string | null>(null);
   const locationKey = useRef<string | null>(null);
   const contactInitial = useRef('');
@@ -117,7 +126,7 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
   function editLocation(item: Resource<ProviderOfficeLocationAttributes> | null) {
     locationKey.current = null; setEditingLocation(item); setLocationErrors({}); setLocationDialog(true);
     const address = item?.attributes.address || {};
-    const next = { name: item?.attributes.name || '', location_kind: item?.attributes.location_kind || 'REGISTERED_OFFICE', country: 'India', address_line: address.address_line || '', locality: address.locality || '', city: address.city || '', district: address.district || '', state: address.state || '', pin_code: address.pin_code || '', landmark: address.landmark || '', latitude: item?.attributes.latitude == null ? '' : String(item.attributes.latitude), longitude: item?.attributes.longitude == null ? '' : String(item.attributes.longitude) };
+    const next = { name: item?.attributes.name || '', location_kind: item?.attributes.location_kind || 'REGISTERED_OFFICE', country: 'India', address_line: address.address_line || '', locality: address.locality || '', city: address.city || '', city_code: address.city_code || '', district: address.district || '', district_code: address.district_code || '', state: address.state || '', state_code: address.state_code || '', pin_code: address.pin_code || '', landmark: address.landmark || '', latitude: item?.attributes.latitude == null ? '' : String(item.attributes.latitude), longitude: item?.attributes.longitude == null ? '' : String(item.attributes.longitude) };
     setLocation(next); locationInitial.current = JSON.stringify(next);
   }
   async function endContact(item: Resource<ProviderOnboardingContactAttributes>) {
@@ -141,6 +150,14 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
     locationKey.current = null;
     setLocationErrors((current) => ({ ...current, [key]: '', coordinates: '' }));
     setLocation((current) => ({ ...current, [key]: value }));
+  }
+  function chooseLocationReference(key: 'state' | 'district' | 'city', id: string) {
+    const options = key === 'state' ? stateOptions : key === 'district' ? districtOptions : cityOptions;
+    const selected = options.find((option) => option.id === id);
+    setLocation((current) => ({ ...current, [key]: selected?.label || '', [`${key}_code`]: selected?.id || '', ...(key === 'state' ? { district: '', district_code: '', city: '', city_code: '' } : key === 'district' ? { city: '', city_code: '' } : {}) }));
+    setLocationErrors((current) => ({ ...current, [key]: '', ...(key === 'state' ? { district: '', city: '' } : key === 'district' ? { city: '' } : {}) }));
+    if (key === 'state') { setDistrictSearch(''); setCitySearch(''); }
+    if (key === 'district') setCitySearch('');
   }
   const onboardingDirty = (contactDialog && JSON.stringify(contact) !== contactInitial.current) || (locationDialog && JSON.stringify(location) !== locationInitial.current);
   useOnboardingUnsavedChanges(onboardingDirty);
@@ -175,11 +192,11 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
     const key = stableSubmissionKey(locationKey.current, () => crypto.randomUUID());
     locationKey.current = key;
     try {
-      const body = { name: location.name.trim(), location_kind: location.location_kind, address: { country: 'India', address_line: location.address_line.trim(), locality: location.locality.trim(), city: location.city.trim(), district: location.district.trim(), state: location.state.trim(), pin_code: location.pin_code.trim(), landmark: location.landmark.trim() }, latitude: latitude ?? null, longitude: longitude ?? null };
+      const body = { name: location.name.trim(), location_kind: location.location_kind, address: { country: 'India', country_code: 'IN', address_line: location.address_line.trim(), locality: location.locality.trim(), city: location.city.trim(), city_code: selectedCityCode, district: location.district.trim(), district_code: selectedDistrictCode, state: location.state.trim(), state_code: selectedStateCode, pin_code: location.pin_code.trim(), landmark: location.landmark.trim() }, latitude: latitude ?? null, longitude: longitude ?? null };
       const saved = editingLocation ? await operationsData.updatePlatformOnboardingLocation(providerId, editingLocation.id, { ...body, expected_revision: editingLocation.attributes.revision }, key) : await operationsData.createPlatformOnboardingLocation(providerId, body, key);
       setLocations((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       locationKey.current = null;
-      setLocation({ name: '', location_kind: 'REGISTERED_OFFICE', country: 'India', address_line: '', locality: '', city: '', district: '', state: '', pin_code: '', landmark: '', latitude: '', longitude: '' });
+      setLocation({ name: '', location_kind: 'REGISTERED_OFFICE', country: 'India', address_line: '', locality: '', city: '', city_code: '', district: '', district_code: '', state: '', state_code: '', pin_code: '', landmark: '', latitude: '', longitude: '' });
       setLocationErrors({}); setEditingLocation(null); setLocationDialog(false);
       await load();
     } catch (cause) { setError((cause as { message?: string })?.message || 'Office location could not be saved. Retry will reuse the same request key.'); } finally { locationInFlight.current = false; setBusy(''); }
@@ -208,13 +225,19 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
         <div className="platform-form-actions"><Button type="submit" busy={busy === 'contact'} disabled={Boolean(busy) || ending.busy || paging}><SvgIcon name="plus" size={16} /> {editingContact ? 'Save contact revision' : 'Add contact'}</Button><Button type="button" variant="secondary" disabled={Boolean(busy) || ending.busy} onClick={() => { if (confirmOnboardingNavigation()) { setContactDialog(false); setEditingContact(null); } }}>Cancel</Button></div>
       </form></OperationsDialog>}
       <div className="platform-provider-table-wrap"><table className="platform-provider-table"><caption className="sr-only">Saved provider onboarding contacts</caption><thead><tr><th scope="col">Name</th><th scope="col">Responsibility</th><th scope="col">Designation</th><th scope="col">Contact</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>{contacts.map((item) => <tr key={item.id}><td><strong>{item.attributes.display_name}</strong></td><td>{item.attributes.responsibility_type.replaceAll('_', ' ')}</td><td>{item.attributes.designation}</td><td>{item.attributes.contact_methods.email || item.attributes.contact_methods.phone}</td><td><Status>{item.attributes.status}</Status></td><td>{item.attributes.status === 'ACTIVE' && <div className="platform-form-actions"><Button variant="quiet" disabled={Boolean(busy) || ending.busy || paging} onClick={() => editContact(item)}>Edit</Button><Button variant="quiet" disabled={Boolean(busy) || ending.busy || paging} onClick={() => void endContact(item)}>End contact</Button></div>}</td></tr>)}</tbody></table>{!contacts.length && <OnboardingEmptyState title="No provider contacts yet" description="Contacts support coordination and do not create a provider login or membership." action={<Button variant="quiet" onClick={() => editContact(null)}>Add contact</Button>} />}</div>
-    </DetailSection> : <DetailSection title="Registered and operating offices" description="Enter India office addresses manually. State, District, City and PIN are not populated from a PIN lookup; the PIN is only validated as six digits.">
+    </DetailSection> : <DetailSection title="Registered and operating offices" description="Select country, State/UT, district and city from canonical India reference data. Enter only the premises-specific address details and PIN.">
       <div className="onboarding-list-toolbar"><span>{locations.length} office records loaded</span><Button onClick={() => editLocation(null)} disabled={Boolean(busy) || ending.busy || paging}>New office</Button></div>
       {locationDialog && <OperationsDialog title={editingLocation ? 'Edit office location' : 'New office location'} busy={Boolean(busy)} onClose={() => { if (confirmOnboardingNavigation()) { setLocationDialog(false); setEditingLocation(null); } }}>{error && <OnboardingErrorSummary title="Office details need attention" errors={[error]} />}<form className="platform-form-grid" onSubmit={addLocation}>
         <label>Office name <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required aria-invalid={Boolean(locationErrors.name)} value={location.name} onChange={(event) => changeLocation('name', event.target.value)} /><FieldError message={locationErrors.name} /></label>
         <label>Office type<select disabled={Boolean(busy) || ending.busy || paging} value={location.location_kind} onChange={(event) => changeLocation('location_kind', event.target.value)}><option value="REGISTERED_OFFICE">Registered office</option><option value="OPERATING_OFFICE">Operating office</option></select></label>
         <label>Country<select disabled={Boolean(busy) || ending.busy || paging} value="IN"><option value="IN">India</option></select></label>
-        {([['address_line', 'Address line', false], ['locality', 'Locality / area', false], ['city', 'City', true], ['district', 'District', true], ['state', 'State', true], ['pin_code', 'PIN code', true], ['landmark', 'Landmark', false]] as const).map(([key, label, required]) => <label key={key}>{label}{required && <span aria-hidden="true"> *</span>}{key === 'state' ? <select disabled={Boolean(busy) || ending.busy || paging} required={required} aria-invalid={Boolean(locationErrors[key])} value={location[key]} onChange={(event) => changeLocation(key, event.target.value)}><option value="">Select state / UT</option>{INDIAN_STATES_AND_UTS.map((state) => <option key={state} value={state}>{state}</option>)}</select> : <input disabled={Boolean(busy) || ending.busy || paging} required={required} aria-invalid={Boolean(locationErrors[key])} value={location[key]} onChange={(event) => changeLocation(key, event.target.value)} inputMode={key === 'pin_code' ? 'numeric' : undefined} pattern={key === 'pin_code' ? '[1-9][0-9]{5}' : undefined} maxLength={key === 'pin_code' ? 6 : 200} />}<FieldError message={locationErrors[key]} /></label>)}
+        <label className="admin-form-field--full">Address line<input disabled={Boolean(busy) || ending.busy || paging} value={location.address_line} onChange={(event) => changeLocation('address_line', event.target.value)} maxLength={200} /></label>
+        <label>Locality / area<input disabled={Boolean(busy) || ending.busy || paging} value={location.locality} onChange={(event) => changeLocation('locality', event.target.value)} maxLength={200} /></label>
+        <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={stateSearch} onSearch={setStateSearch} value={selectedStateCode} onChange={(id) => chooseLocationReference('state', id)} options={stateOptions} placeholder="Select state / UT" required disabled={Boolean(busy) || ending.busy || paging} />
+        <SearchableSelect label="District" searchLabel="Search districts in selected state" search={districtSearch} onSearch={setDistrictSearch} value={selectedDistrictCode} onChange={(id) => chooseLocationReference('district', id)} options={districtOptions} placeholder="Select district" required disabled={!selectedStateCode || Boolean(busy) || ending.busy || paging} />
+        <SearchableSelect label="City" searchLabel="Search cities in selected district" search={citySearch} onSearch={setCitySearch} value={selectedCityCode} onChange={(id) => chooseLocationReference('city', id)} options={cityOptions} placeholder="Select city" required disabled={!selectedDistrictCode || Boolean(busy) || ending.busy || paging} />
+        <label>PIN code <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required aria-invalid={Boolean(locationErrors.pin_code)} value={location.pin_code} onChange={(event) => changeLocation('pin_code', event.target.value)} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} /><FieldError message={locationErrors.pin_code} /></label>
+        <label>Landmark<input disabled={Boolean(busy) || ending.busy || paging} value={location.landmark} onChange={(event) => changeLocation('landmark', event.target.value)} maxLength={200} /></label>
         <label>Latitude <span className="platform-muted">(optional)</span><input disabled={Boolean(busy) || ending.busy || paging} inputMode="decimal" aria-invalid={Boolean(locationErrors.latitude || locationErrors.coordinates)} value={location.latitude} onChange={(event) => changeLocation('latitude', event.target.value)} /><FieldError message={locationErrors.latitude} /></label>
         <label>Longitude <span className="platform-muted">(optional)</span><input disabled={Boolean(busy) || ending.busy || paging} inputMode="decimal" aria-invalid={Boolean(locationErrors.longitude || locationErrors.coordinates)} value={location.longitude} onChange={(event) => changeLocation('longitude', event.target.value)} /><FieldError message={locationErrors.longitude} /></label>
         <div className="platform-form-note">Coordinates are kept as office coordinates. They are not replaced with post-office or PIN coordinates.<FieldError message={locationErrors.coordinates} /></div>
@@ -322,7 +345,7 @@ function BusinessDirectory({ capabilities = [] }: { capabilities?: string[] }) {
     setBusinessTransitionBusy(true); setError('');
     try {
       const { business, action } = businessTransition;
-      await operationsData.transitionPlatformBusiness(business.id, action, { expected_revision: business.attributes.revision, reason: businessReason.trim(), ...(action === 'restrict' ? { restriction_type: businessRestrictionType, ...(businessRestrictionEndsAt ? { restriction_ends_at: new Date(businessRestrictionEndsAt).toISOString() } : {}) } : {}) }, crypto.randomUUID());
+      await operationsData.transitionPlatformBusiness(business.id, action, { expected_revision: business.attributes.revision, reason: businessReason.trim(), ...(action === 'restrict' ? { restriction_type: businessRestrictionType, ...(businessRestrictionEndsAt ? { restriction_ends_at: indiaDateTimeToIso(businessRestrictionEndsAt) } : {}) } : {}) }, crypto.randomUUID());
       setBusinessTransition(null); setBusinessReason(''); setBusinessRestrictionEndsAt('');
       await load(appliedQuery);
     } catch (cause) { setError(errorText(cause)); }
@@ -443,6 +466,7 @@ function ProviderForm({ record, compact = false, onClose, onBusyChange, capabili
 
 function PlatformBusinessProfileForm({ providerId, businessId, providerName, providerStatus, profile, onSaved, capabilities, onboardingStates }: { providerId: string; businessId: string; providerName: string; providerStatus: string; profile: ProviderBusinessProfile; onSaved: () => void | Promise<void>; capabilities: string[]; onboardingStates: OnboardingState[] }) {
   const [fields, setFields] = useState({ ...profile.profile, address: { ...(profile.profile.address || {}) } });
+  const geography = useIndiaGeography(fields.address as Record<string, unknown>);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -469,8 +493,15 @@ function PlatformBusinessProfileForm({ providerId, businessId, providerName, pro
   useOnboardingUnsavedChanges(isDirty || operationsDirty);
   const change = (key: string, value: string) => setFields((current) => ({ ...current, [key]: value }));
   const changeAddress = (key: string, value: string) => setFields((current) => ({ ...current, address: { ...(current.address || {}), [key]: value } }));
+  const chooseAddressReference = (key: 'state' | 'district' | 'city', id: string) => {
+    const options = key === 'state' ? geography.stateOptions : key === 'district' ? geography.districtOptions : geography.cityOptions;
+    const selected = options.find((option) => option.id === id);
+    setFields((current) => ({ ...current, address: { ...(current.address || {}), [key]: selected?.label || '', [`${key}_code`]: selected?.id || '', ...(key === 'state' ? { district: '', district_code: '', city: '', city_code: '' } : key === 'district' ? { city: '', city_code: '' } : {}) } }));
+    if (key === 'state') { geography.setDistrictSearch(''); geography.setCitySearch(''); }
+    if (key === 'district') geography.setCitySearch('');
+  };
   const validate = () => !fields.legal_name?.trim() ? 'Legal name is required.' : !fields.address?.city?.trim() ? 'City is required.' : !fields.address?.state?.trim() ? 'State is required.' : !fields.address?.pin_code?.trim() ? 'PIN code is required.' : '';
-  async function persistSave() { setError(''); setMessage(''); if (operationsDirty && isDirty) { setError('Save the business-profile fields and Business Operation in separate steps.'); return; } if (!selectedOperationId) { setError('Select one Business Operation for this provider account.'); return; } setSaving(true); try { if (operationsDirty) { const configured = await operationsData.replacePlatformProviderOperations(providerId, { expected_revision: operationRevision, operations: [{ business_operation_type_id: selectedOperationId, is_primary: true }] }, `platform-provider-operations-${providerId}-${operationRevision}`); setOperationRevision(configured.revision); setInitialOperationId(selectedOperationId); } if (isDirty) { const result = await operationsData.updatePlatformBusinessProfile(providerId, { business_profile: fields, expected_revision: profile.revision }, `platform-business-profile-${providerId}-${profile.revision}`); setMessage(result.data.verification_status === 'NOT_SUBMITTED' && profile.verification_status === 'VERIFIED' ? 'Draft saved. This material change requires a new review.' : 'Business profile draft saved.'); } else if (operationsDirty) setMessage('Business Operation updated for this provider account.'); setConfirmOperationChange(false); await onSaved(); } catch (cause) { setError(errorText(cause)); } finally { setSaving(false); } }
+  async function persistSave() { setError(''); setMessage(''); if (operationsDirty && isDirty) { setError('Save the business-profile fields and Business Operation in separate steps.'); return; } if (!selectedOperationId) { setError('Select one Business Operation for this provider account.'); return; } setSaving(true); try { if (operationsDirty) { const configured = await operationsData.replacePlatformProviderOperations(providerId, { expected_revision: operationRevision, operations: [{ business_operation_type_id: selectedOperationId, is_primary: true }] }, `platform-provider-operations-${providerId}-${operationRevision}`); setOperationRevision(configured.revision); setInitialOperationId(selectedOperationId); } if (isDirty) { const address = { ...(fields.address || {}), country: 'India', country_code: 'IN', ...(geography.stateCode ? { state_code: geography.stateCode } : {}), ...(geography.districtCode ? { district_code: geography.districtCode } : {}), ...(geography.cityCode ? { city_code: geography.cityCode } : {}) }; const result = await operationsData.updatePlatformBusinessProfile(providerId, { business_profile: { ...fields, address }, expected_revision: profile.revision }, `platform-business-profile-${providerId}-${profile.revision}`); setMessage(result.data.verification_status === 'NOT_SUBMITTED' && profile.verification_status === 'VERIFIED' ? 'Draft saved. This material change requires a new review.' : 'Business profile draft saved.'); } else if (operationsDirty) setMessage('Business Operation updated for this provider account.'); setConfirmOperationChange(false); await onSaved(); } catch (cause) { setError(errorText(cause)); } finally { setSaving(false); } }
   async function save(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setError(''); const invalid = validate(); if (invalid) { setError(invalid); return; } if (operationLoading) { setError('Wait for the provider Business Operation to load.'); return; } if (!selectedOperationId) { setError('Select one Business Operation for this provider account.'); return; } if (operationsDirty && isDirty) { setError('Save the business-profile fields and Business Operation in separate steps.'); return; } if (operationsDirty) { setConfirmOperationChange(true); return; } await persistSave(); }
   async function submit() { setError(''); setMessage(''); const invalid = validate(); if (invalid) { setError(invalid); return; } if (!selectedOperationId) { setError('Select one Business Operation for this provider account.'); return; } if (isDirty || operationsDirty) { setError('Save the current draft before submitting it for review.'); return; } setSubmitting(true); try { await operationsData.submitPlatformBusinessProfile(providerId, profile.revision, `platform-business-profile-submit-${providerId}-${profile.revision}`); setMessage('Submitted on behalf of the provider for platform review.'); await onSaved(); } catch (cause) { setError(errorText(cause)); } finally { setSubmitting(false); } }
   async function submitLegalIdentity() { setError(''); setMessage(''); if (!businessId || !legalConstitution || !legalCountry) { setError('Business constitution and country are required.'); return; } if (!fields.legal_name?.trim()) { setError('Legal name is required.'); return; } setLegalSaving(true); try { let request = legalRequest; if (!request) { await operationsData.createPlatformBusinessLegalProfile(businessId, { proposed_values: { legal_name: fields.legal_name.trim(), business_constitution_code: legalConstitution, country_code: legalCountry, ...(legalDate ? { incorporation_or_commencement_date: legalDate } : {}) }, reason: 'Provider onboarding legal identity' }, `platform-business-legal-identity-${businessId}`); const refreshed = await operationsData.platformComplianceRequests(undefined, businessId, { history: true, perPage: 100 }); request = refreshed.data.find((candidate) => candidate.attributes.record.attributes.requirement_code === 'BUSINESS_LEGAL_IDENTITY' && ['DRAFT', 'SUBMITTED', 'IN_REVIEW', 'CORRECTIONS_REQUESTED'].includes(candidate.attributes.status)) || null; }
@@ -502,7 +533,7 @@ function PlatformBusinessProfileForm({ providerId, businessId, providerName, pro
       <OnboardingFormSection title="Business Legal Identity" description="This is the authoritative Business legal identity. Constitution-specific requirements are governed through the canonical Business compliance record; the provider profile below remains a compatibility projection.">
         {canonicalBusiness?.legal_profile?.status === 'APPROVED' ? <dl className="platform-definition-list"><dt>Approval status</dt><dd><Status>{humanStatus(canonicalBusiness.legal_profile.status)}</Status></dd><dt>Legal name</dt><dd>{canonicalBusiness.legal_profile.legal_name}</dd><dt>Constitution</dt><dd>{humanStatus(canonicalBusiness.legal_profile.business_constitution_code)}</dd><dt>Country</dt><dd>{canonicalBusiness.legal_profile.country_code}</dd><dt>Approved revision</dt><dd>{canonicalBusiness.legal_profile.revision}</dd></dl> : <div className="platform-form-grid">
           <label>Business constitution <span aria-hidden="true">*</span><select required value={legalConstitution} onChange={(event) => setLegalConstitution(event.target.value)} disabled={Boolean(legalRequest) || legalSaving}><option value="">Select constitution</option>{['PRIVATE_LIMITED', 'PUBLIC_LIMITED', 'OPC', 'LLP', 'PROPRIETORSHIP', 'PARTNERSHIP', 'SECTION_8', 'REGISTERED_SOCIETY', 'TRUST', 'COOPERATIVE', 'HUF', 'OTHER'].map((value) => <option key={value} value={value}>{humanStatus(value)}</option>)}</select></label>
-          <label>Country <span aria-hidden="true">*</span><input value={legalCountry} onChange={(event) => setLegalCountry(event.target.value.toUpperCase())} maxLength={2} disabled={Boolean(legalRequest) || legalSaving} /></label>
+          <label>Country <span aria-hidden="true">*</span><select value="IN" disabled><option value="IN">India</option></select></label>
           <label>Incorporation / commencement date <span className="field-hint">(if applicable)</span><input type="date" value={legalDate} onChange={(event) => setLegalDate(event.target.value)} disabled={Boolean(legalRequest) || legalSaving} /></label>
           <div className="platform-form-actions"><Button type="button" onClick={() => void submitLegalIdentity()} disabled={legalSaving || Boolean(legalRequest) || canonicalBusiness?.legal_profile?.status === 'APPROVED'}>{legalSaving ? 'Submitting…' : legalRequest ? 'Awaiting review' : 'Submit legal identity for review'}</Button></div>
         </div>}
@@ -513,7 +544,15 @@ function PlatformBusinessProfileForm({ providerId, businessId, providerName, pro
         <label>Tax identifier <span className="field-hint">(optional)</span><input value={fields.tax_identifier || ''} onChange={(event) => change('tax_identifier', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} /></label>
       </OnboardingFormSection>
       <OnboardingFormSection title="Registered address">
-        <div className="platform-form-grid">{[['address_line', 'Address line'], ['locality', 'Locality / area'], ['city', 'City'], ['district', 'District'], ['state', 'State'], ['pin_code', 'PIN code'], ['landmark', 'Landmark']].map(([key, label]) => <label key={key} className={key === 'address_line' ? 'admin-form-field--full' : undefined}>{label}{['city', 'state', 'pin_code'].includes(key) && <span aria-hidden="true"> *</span>}{key === 'state' ? <select required value={String(fields.address?.[key] || '')} onChange={(event) => changeAddress(key, event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW' }><option value="">Select state / UT</option>{INDIAN_STATES_AND_UTS.map((state) => <option key={state} value={state}>{state}</option>)}</select> : <input value={String(fields.address?.[key] || '')} onChange={(event) => changeAddress(key, event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} />}</label>)}</div>
+        <div className="platform-form-grid">
+          <label className="admin-form-field--full">Address line<input value={String(fields.address?.address_line || '')} onChange={(event) => changeAddress('address_line', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
+          <label>Locality / area<input value={String(fields.address?.locality || '')} onChange={(event) => changeAddress('locality', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
+          <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={geography.stateSearch} onSearch={geography.setStateSearch} value={geography.stateCode} onChange={(id) => chooseAddressReference('state', id)} options={geography.stateOptions} placeholder="Select state / UT" required disabled={profile.verification_status === 'PENDING_REVIEW'} />
+          <SearchableSelect label="District" searchLabel="Search districts in selected state" search={geography.districtSearch} onSearch={geography.setDistrictSearch} value={geography.districtCode} onChange={(id) => chooseAddressReference('district', id)} options={geography.districtOptions} placeholder="Select district" required disabled={!geography.stateCode || profile.verification_status === 'PENDING_REVIEW'} />
+          <SearchableSelect label="City" searchLabel="Search cities in selected district" search={geography.citySearch} onSearch={geography.setCitySearch} value={geography.cityCode} onChange={(id) => chooseAddressReference('city', id)} options={geography.cityOptions} placeholder="Select city" required disabled={!geography.districtCode || profile.verification_status === 'PENDING_REVIEW'} />
+          <label>PIN code <span aria-hidden="true">*</span><input value={String(fields.address?.pin_code || '')} onChange={(event) => changeAddress('pin_code', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} /></label>
+          <label>Landmark<input value={String(fields.address?.landmark || '')} onChange={(event) => changeAddress('landmark', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
+        </div>
       </OnboardingFormSection>
       {error && <OnboardingErrorSummary title="Business profile needs attention" errors={[error]} />}
       {message && <p className="platform-form-note" role="status">{message}</p>}
@@ -1148,4 +1187,55 @@ export function PlatformAdminPage({ platformCapabilities = [] }: { platformCapab
   return <section className="platform-page"><PlatformBreadcrumb current="Overview" /><PageHeader eyebrow="Platform administration" title="Provider overview" description="Authoritative provider status summaries and a read-only directory. This view never changes provider workspace context." action={<Button variant="secondary" onClick={() => go('platform/providers')}><SvgIcon name="building" size={16} /> View provider directory</Button>} />{error && <StatePanel title="Provider overview unavailable"><span>{error}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel>}{overview && <ProviderSummaryCards overview={overview} />}<DetailSection title="Provider directory preview" description="Open the directory for search, filters, and bounded pagination."><ProviderTable providers={providers} /></DetailSection></section>;
 }
 
-export function PlatformRoute({ session }: { session: { platformAdmin?: boolean; platformCapabilities?: string[] }; providerId?: string; providerName?: string }) { if (!session.platformAdmin) return <Forbidden />; const hash = normalizePlatformHash(window.location.hash); const path = hash.split('?')[0]; const businessDetailsMatch = path.match(/^#platform\/businesses\/([^/]+)$/); if (businessDetailsMatch) return <BusinessCompliancePage businessId={decodeURIComponent(businessDetailsMatch[1])} capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/compliance')) { const params = new URLSearchParams(hash.split('?')[1] || ''); const businessId = params.get('business_id'); const providerId = params.get('provider_id'); return businessId ? <BusinessCompliancePage businessId={businessId} capabilities={session.platformCapabilities || []} /> : providerId ? <PlatformCompliancePage capabilities={session.platformCapabilities || []} /> : <PlatformApprovalInbox capabilities={session.platformCapabilities || []} />; } if (hash.startsWith('#platform/team')) return <PlatformTeamPage capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/provider-users')) return <PlatformProviderUsersPage capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/roles')) return <PlatformRolesPage capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/plans')) return <PlatformPlansPage capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/taxes')) return <PlatformTaxesPage capabilities={session.platformCapabilities || []} />; if (hash.startsWith('#platform/subscription')) return <PlatformSubscriptionsPage capabilities={session.platformCapabilities || []} />; return <PlatformAdminPage platformCapabilities={session.platformCapabilities} />; }
+export function PlatformRoute({ session }: { session: { userId?: string; platformAdmin?: boolean; platformCapabilities?: string[] }; providerId?: string; providerName?: string }) {
+  if (!session.platformAdmin) return <Forbidden />;
+  const hash = normalizePlatformHash(window.location.hash);
+  const path = hash.split('?')[0];
+  const capabilities = session.platformCapabilities || [];
+  const businessDetailsMatch = path.match(/^#platform\/businesses\/([^/]+)$/);
+  if (businessDetailsMatch) return <BusinessCompliancePage businessId={decodeURIComponent(businessDetailsMatch[1])} capabilities={capabilities} />;
+  if (hash.startsWith('#platform/configuration/reviews')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <ConfigurationReviewInbox platformCapabilities={capabilities} currentUserId={session.userId} />;
+  }
+  if (hash.startsWith('#platform/configuration/audit')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <ConfigurationAuditInbox />;
+  }
+  if (hash.startsWith('#platform/configuration/reference-data')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Reference-data access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <ReferenceDataAdmin platformCapabilities={capabilities} currentUserId={session.userId} />;
+  }
+  if (hash.startsWith('#platform/configuration/elevator')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <ElevatorBusinessConfigurationReference />;
+  }
+  if (hash.startsWith('#platform/configuration/provider-overrides')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <ProviderOverridesAdmin platformCapabilities={capabilities} currentUserId={session.userId} />;
+  }
+  if (hash.startsWith('#platform/business-operations')) {
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Business catalogue access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    return <PlatformBusinessOperationsPage capabilities={capabilities} currentUserId={session.userId} />;
+  }
+  if (hash.startsWith('#platform/maintenance')) {
+    if (!capabilities.includes('PLATFORM_MAINTENANCE_READ')) return <section className="platform-page"><StatePanel title="Maintenance access is restricted"><span>Your platform grant does not include maintenance control read access.</span></StatePanel></section>;
+    return <PlatformMaintenancePage capabilities={capabilities} />;
+  }
+  if (hash.startsWith('#platform/configuration')) {
+    const kind = path.split('/')[2] || 'asset-families';
+    if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) {
+      return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
+    }
+    if (!path.split('/')[2]) return <PlatformConfigurationRegistry />;
+    return <section className="platform-page"><PlatformBreadcrumb current="Business configuration" /><PageHeader eyebrow="Platform administration" title="Business configuration" description="Manage global catalogue definitions. Providers can read and adopt published entries but cannot edit canonical platform rows." /><ConfigurationAdmin providerId="" t={(key) => key} initialKind={kind} platformOnly platformCapabilities={capabilities} /></section>;
+  }
+  if (hash.startsWith('#platform/compliance')) { const params = new URLSearchParams(hash.split('?')[1] || ''); const businessId = params.get('business_id'); const providerId = params.get('provider_id'); return businessId ? <BusinessCompliancePage businessId={businessId} capabilities={capabilities} /> : providerId ? <PlatformCompliancePage capabilities={capabilities} /> : <PlatformApprovalInbox capabilities={capabilities} />; }
+  if (hash.startsWith('#platform/team')) return <PlatformTeamPage capabilities={capabilities} />;
+  if (hash.startsWith('#platform/provider-users')) return <PlatformProviderUsersPage capabilities={capabilities} />;
+  if (hash.startsWith('#platform/roles')) return <PlatformRolesPage capabilities={capabilities} />;
+  if (hash.startsWith('#platform/plans')) return <PlatformPlansPage capabilities={capabilities} />;
+  if (hash.startsWith('#platform/taxes')) return <PlatformTaxesPage capabilities={capabilities} />;
+  if (hash.startsWith('#platform/subscription')) return <PlatformSubscriptionsPage capabilities={capabilities} />;
+  return <PlatformAdminPage platformCapabilities={session.platformCapabilities} />;
+}

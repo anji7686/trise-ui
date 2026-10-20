@@ -5,9 +5,10 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('customer booking contract', () => {
   it('builds a booking request from authorized records without internal request-type identifiers', () => {
-    const payload = buildBookingPayload({ summary: 'Annual service', customerRelationshipId: 'relationship-1', assetId: 'asset-1', locationId: 'location-1', serviceTypeId: 'service-1', startsAt: '2026-09-29T09:00:00.000Z', endsAt: '2026-09-29T10:00:00.000Z', timeZone: 'Asia/Kolkata' });
+    const payload = buildBookingPayload({ summary: 'Annual service', customerRelationshipId: 'relationship-1', assetId: 'asset-1', locationId: 'location-1', serviceTypeId: 'service-1', startsAt: '2026-09-29T09:00:00.000Z', endsAt: '2026-09-29T10:00:00.000Z' });
     expect(payload).toMatchObject({ asset_id: 'asset-1', location_id: 'location-1', service_type_id: 'service-1' });
     expect(payload).not.toHaveProperty('request_type_id');
+    expect(payload.requested_window).not.toHaveProperty('time_zone');
   });
 });
 

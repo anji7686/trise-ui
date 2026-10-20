@@ -1,6 +1,7 @@
 import type { FormEvent, ReactNode } from 'react';
 import { Button, PageHeader } from '@trise/ui';
 import { SvgIcon } from './icons';
+import { formatIndiaDateTime } from './subscription-support';
 
 export type AdminCrumb = { label: string; href?: string };
 
@@ -60,5 +61,5 @@ export function AdminActionMenu({ label = 'More actions', children }: { label?: 
 
 export function AdminAuditTimeline({ rows }: { rows: Array<{ action: string; occurred_at: string; actor_user_id?: string | null }> }) {
   if (!rows.length) return <AdminEmptyState title="No audit records returned" description="The authorized detail response contains no audit events for this record." />;
-  return <ol className="admin-audit-timeline">{rows.map((row, index) => <li key={`${row.action}-${row.occurred_at}-${index}`}><span className="admin-audit-marker" aria-hidden="true" /><div><strong>{row.action.replaceAll('_', ' ')}</strong><small>Actor {row.actor_user_id || 'not supplied'} · {new Date(row.occurred_at).toLocaleString()}</small></div></li>)}</ol>;
+  return <ol className="admin-audit-timeline">{rows.map((row, index) => <li key={`${row.action}-${row.occurred_at}-${index}`}><span className="admin-audit-marker" aria-hidden="true" /><div><strong>{row.action.replaceAll('_', ' ')}</strong><small>Actor {row.actor_user_id || 'not supplied'} · {formatIndiaDateTime(row.occurred_at)}</small></div></li>)}</ol>;
 }

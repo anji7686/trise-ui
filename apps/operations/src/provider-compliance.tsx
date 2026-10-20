@@ -3,7 +3,8 @@ import { Button, DetailSection } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { ProviderDocumentsStep } from './provider-documents';
 import { operationsData, type AvailableBusinessLicence, type GenericAttributes, type PlatformComplianceRequest, type PlatformComplianceRequirement, type ProviderDocument, type ProviderLicenceAuthorization, type ProviderOperatingTerritory } from './data';
-import { INDIA_COUNTRY_CODE, INDIAN_STATES_AND_UTS } from './india-geography';
+import { INDIA_COUNTRY_CODE } from './india-geography';
+import { IndiaStateSelect } from './use-india-geography';
 
 type ResourceLike = { id: string; attributes: GenericAttributes };
 type View = 'overview' | 'requirements' | 'requests' | 'agents' | 'assets' | 'licences' | 'territories' | 'documents' | 'activity';
@@ -11,7 +12,7 @@ type RequestCategory = 'PROVIDER' | 'AGENT' | 'ASSET' | 'LICENCE' | 'TERRITORY';
 const message = (error: unknown) => (error as { message?: string })?.message || 'The compliance request could not be completed.';
 const title = (value: unknown, fallback: string) => String(value || fallback).replaceAll('_', ' ');
 const status = (value: unknown) => String(value || 'NOT_STARTED').replaceAll('_', ' ');
-const date = (value: unknown) => value ? new Date(String(value)).toLocaleDateString() : 'Not supplied';
+const date = (value: unknown) => value ? formatIndiaDate(String(value)) : 'Not supplied';
 const requestLabel = (item: PlatformComplianceRequest) => title(item.attributes.record.attributes.requirement_code, 'Compliance request');
 
 function routeView(): View {
@@ -49,7 +50,7 @@ function RequirementFields({ values, onChange }: { values: Record<string, unknow
   const fields = ['reference', 'holder_name', 'certificate_number', 'valid_from', 'valid_until', 'notes'];
   const jurisdiction = typeof values.jurisdiction === 'object' && values.jurisdiction ? values.jurisdiction as Record<string, string> : {};
   const updateJurisdiction = (key: string, value: string) => onChange({ ...values, jurisdiction: { ...jurisdiction, country_code: INDIA_COUNTRY_CODE, [key]: value } });
-  return <div className="compliance-field-grid"><label>Country<select value={INDIA_COUNTRY_CODE} disabled><option value={INDIA_COUNTRY_CODE}>India</option></select></label><label>State / UT<select value={jurisdiction.state_or_union_territory || ''} onChange={(event) => updateJurisdiction('state_or_union_territory', event.target.value)}><option value="">Select state / UT</option>{INDIAN_STATES_AND_UTS.map((state) => <option key={state} value={state}>{state}</option>)}</select></label>{fields.map((field) => <label key={field}>{title(field, field)}{field === 'notes' ? <textarea rows={3} value={String(values[field] || '')} onChange={(event) => onChange({ ...values, [field]: event.target.value })} /> : <input type={field.includes('from') || field.includes('until') ? 'date' : 'text'} value={String(values[field] || '')} onChange={(event) => onChange({ ...values, [field]: event.target.value })} />}</label>)}</div>;
+  return <div className="compliance-field-grid"><label>Country<select value={INDIA_COUNTRY_CODE} disabled><option value={INDIA_COUNTRY_CODE}>India</option></select></label><IndiaStateSelect value={jurisdiction.state_or_union_territory || ''} onChange={(value) => updateJurisdiction('state_or_union_territory', value)} />{fields.map((field) => <label key={field}>{title(field, field)}{field === 'notes' ? <textarea rows={3} value={String(values[field] || '')} onChange={(event) => onChange({ ...values, [field]: event.target.value })} /> : <input type={field.includes('from') || field.includes('until') ? 'date' : 'text'} value={String(values[field] || '')} onChange={(event) => onChange({ ...values, [field]: event.target.value })} />}</label>)}</div>;
 }
 
 function RequestWizard({ providerId, requirements, agents, assets, licences, documents, onDone, onClose }: { providerId: string; requirements: PlatformComplianceRequirement[]; agents: Array<{ id: string; displayName: string }>; assets: ResourceLike[]; licences: AvailableBusinessLicence[]; documents: ProviderDocument[]; onDone: () => Promise<void>; onClose: () => void }) {
@@ -106,3 +107,4 @@ export function ProviderCompliancePage({ providerId, providerName }: { providerI
     {wizard && <RequestWizard providerId={providerId} requirements={requirements} agents={agents} assets={assets} licences={licences} documents={documents} onDone={async () => { setWizard(false); await load(); go('requests'); }} onClose={() => setWizard(false)} />}
   </section>;
 }
+import { formatIndiaDate } from './subscription-support';

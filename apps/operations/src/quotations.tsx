@@ -94,7 +94,7 @@ export function QuotationsWorkspace({ providerId }: Props) {
         customer_relationship_id: form.get('customer_relationship_id'),
         lead_id: form.get('lead_id') || undefined,
         purpose: 'INSTALLATION',
-        terms: { elevator_units: [{ unit_code: 'LIFT-A' }], materials: [], installation_charges: String(amount), tax_source: 'CANONICAL_PROVIDER_TAX', delivery_terms: 'Provider delivery terms', payment_milestones: [{ code: 'ADVANCE', percentage: 50 }], warranty_terms: 'As accepted in the quotation', included_free_amc: { months: 12, frequency: 'QUARTERLY' }, effective_from: effectiveFrom.toISOString(), effective_to: effectiveTo.toISOString(), timezone_name: 'Asia/Kolkata', exclusions: [], validity_days: 30 },
+        terms: { elevator_units: [{ unit_code: 'LIFT-A' }], materials: [], installation_charges: String(amount), tax_source: 'CANONICAL_PROVIDER_TAX', delivery_terms: 'Provider delivery terms', payment_milestones: [{ code: 'ADVANCE', percentage: 50 }], warranty_terms: 'As accepted in the quotation', included_free_amc: { months: 12, frequency: 'QUARTERLY' }, effective_from: effectiveFrom.toISOString(), effective_to: effectiveTo.toISOString(), exclusions: [], validity_days: 30 },
         currency: 'INR',
         lines: [{ description: form.get('description'), quantity: 1, unit_price: amount, amount }]
       }, crypto.randomUUID());
@@ -155,7 +155,7 @@ export function QuotationsWorkspace({ providerId }: Props) {
       const created = await operationsData.createQuotation(providerId, {
         customer_relationship_id: relationship.id,
         purpose: 'CONTRACT_RENEWAL',
-        terms: { effective_from: `${String(form.get('effective_from'))}T00:00:00Z`, effective_to: `${String(form.get('effective_to'))}T00:00:00Z`, timezone_name: 'Asia/Kolkata', predecessor_contract_id: contract.id, paid_renewal: true, included_free_amc: { months: 0 }, validity_days: 30 },
+        terms: { effective_from: `${String(form.get('effective_from'))}T00:00:00Z`, effective_to: `${String(form.get('effective_to'))}T00:00:00Z`, predecessor_contract_id: contract.id, paid_renewal: true, included_free_amc: { months: 0 }, validity_days: 30 },
         currency: 'INR',
         lines: [{ description: form.get('description'), quantity: 1, unit_price: Number(form.get('amount')), amount: Number(form.get('amount')) }]
       }, crypto.randomUUID());

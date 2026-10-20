@@ -3,11 +3,11 @@ import { Button } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { OnboardingEmptyState, OnboardingReviewSection } from './provider-onboarding-ui';
 import { activationBlocker, lifecycleActions } from './provider-lifecycle';
-import { collectPages } from './subscription-support';
+import { collectPages, formatIndiaDateTime } from './subscription-support';
 import { operationsData, type PlatformPlan, type PlatformProviderAttributes, type PlatformSubscription, type PlatformSubscriptionRequest, type ProviderAdminInvitation, type ProviderBusinessProfile, type ProviderDocument, type ProviderOfficeLocationAttributes, type ProviderOnboardingContactAttributes, type ProviderVerificationReview, type Resource } from './data';
 
 const human = (value?: string | null) => value ? value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'Not available';
-const date = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not recorded';
+const date = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not recorded';
 const open = (route: string) => { window.location.hash = route; };
 
 type ReviewReadiness = {

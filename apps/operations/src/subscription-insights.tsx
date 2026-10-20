@@ -1,6 +1,7 @@
 import { DetailSection } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import type { PlatformSubscription, PlatformSubscriptionChange, PlatformSubscriptionInvoice, PlatformSubscriptionRequest, PlatformUsage, ProviderSubscriptionSelfService, Resource, SubscriptionValidity } from './data';
+import { formatIndiaDateTime } from './subscription-support';
 
 const human = (value: string) => value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 export type SubscriptionMilestone = { id: string; label: string; at: string; status: string; reason?: string | null };
@@ -37,12 +38,12 @@ export function subscriptionAlerts(validity?: SubscriptionValidity, usage?: Plat
 export function SubscriptionAlerts({ validity, usage }: { validity?: SubscriptionValidity; usage?: PlatformUsage | null }) {
   const alerts = subscriptionAlerts(validity, usage);
   if (!alerts.length) return null;
-  return <DetailSection title="Subscription attention" description="Capacity warnings start at 80% of the included limit; expiry warnings cover the next 30 days. These are on-screen reminders."><ul>{alerts.map((alert) => <li key={alert}>{alert}</li>)}</ul>{usage && <p className="platform-muted">Usage observed {new Date(usage.observed_at).toLocaleString()}.</p>}</DetailSection>;
+  return <DetailSection title="Subscription attention" description="Capacity warnings start at 80% of the included limit; expiry warnings cover the next 30 days. These are on-screen reminders."><ul>{alerts.map((alert) => <li key={alert}>{alert}</li>)}</ul>{usage && <p className="platform-muted">Usage observed {formatIndiaDateTime(usage.observed_at)}.</p>}</DetailSection>;
 }
 
 export function SubscriptionHistory({ subscription, requests, changes, invoices }: { subscription: Resource<PlatformSubscription> | null; requests: Resource<PlatformSubscriptionRequest>[]; changes: Resource<PlatformSubscriptionChange>[]; invoices: Resource<PlatformSubscriptionInvoice>[] }) {
   const milestones = subscriptionMilestones(subscription, requests, changes, invoices);
-  return <DetailSection title="Subscription timeline" description="Effective dates, available review decisions, payment evidence, and invoices. Status badges show current record state; effective dates are not submission times. Change and invoice history reflects loaded provider pages; use the separate loading controls for remaining history.">{milestones.length ? <ul className="platform-audit-list">{milestones.map((event) => <li key={event.id}><div><strong>{event.label}</strong><Status>{human(event.status)}</Status></div>{event.reason && <p>{event.reason}</p>}<time dateTime={event.at}>{new Date(event.at).toLocaleString()}</time></li>)}</ul> : <p className="platform-muted">No dated subscription records are available.</p>}</DetailSection>;
+  return <DetailSection title="Subscription timeline" description="Effective dates, available review decisions, payment evidence, and invoices. Status badges show current record state; effective dates are not submission times. Change and invoice history reflects loaded provider pages; use the separate loading controls for remaining history.">{milestones.length ? <ul className="platform-audit-list">{milestones.map((event) => <li key={event.id}><div><strong>{event.label}</strong><Status>{human(event.status)}</Status></div>{event.reason && <p>{event.reason}</p>}<time dateTime={event.at}>{formatIndiaDateTime(event.at)}</time></li>)}</ul> : <p className="platform-muted">No dated subscription records are available.</p>}</DetailSection>;
 }
 
 export function SubscriptionTimeline({ subscription, requests, changes, invoices }: { subscription: Resource<PlatformSubscription> | null; requests: Resource<PlatformSubscriptionRequest>[]; changes: Resource<PlatformSubscriptionChange>[]; invoices: Resource<PlatformSubscriptionInvoice>[] }) {
@@ -50,7 +51,7 @@ export function SubscriptionTimeline({ subscription, requests, changes, invoices
   return <div className="subscription-timeline-dialog-content">
     <p className="platform-muted">Subscription events returned for this provider, ordered by their effective or recorded API date.</p>
     {milestones.length ? <ol className="subscription-timeline">{milestones.map((event) => <li key={event.id}>
-      <time dateTime={event.at}>{new Date(event.at).toLocaleString()}</time>
+      <time dateTime={event.at}>{formatIndiaDateTime(event.at)}</time>
       <span className="subscription-timeline-marker" aria-hidden="true" />
       <div className="subscription-timeline-event"><div><strong>{event.label}</strong><Status>{human(event.status)}</Status></div>{event.reason && <p>{event.reason}</p>}</div>
     </li>)}</ol> : <p className="platform-muted">No dated subscription records were returned.</p>}
@@ -65,5 +66,5 @@ export function ProviderSubscriptionHistory({ summary }: { summary: ProviderSubs
   ];
   if (summary.subscription) events.push({ id: summary.subscription.id, label: 'Subscription effective from', at: summary.subscription.effective_from, status: summary.subscription.status });
   events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-  return <DetailSection title="Subscription timeline" description="Effective and invoice due dates from the provider summary. Badges show current states; these dates do not imply payment or approval occurred at that time. History is limited to the records returned by the API.">{events.length ? <ul className="platform-audit-list">{events.map((event) => <li key={event.id}><div><strong>{event.label}</strong><Status>{human(event.status)}</Status></div>{event.reason && <p>{event.reason}</p>}<time dateTime={event.at}>{new Date(event.at).toLocaleString()}</time></li>)}</ul> : <p>No dated records are available.</p>}</DetailSection>;
+  return <DetailSection title="Subscription timeline" description="Effective and invoice due dates from the provider summary. Badges show current states; these dates do not imply payment or approval occurred at that time. History is limited to the records returned by the API.">{events.length ? <ul className="platform-audit-list">{events.map((event) => <li key={event.id}><div><strong>{event.label}</strong><Status>{human(event.status)}</Status></div>{event.reason && <p>{event.reason}</p>}<time dateTime={event.at}>{formatIndiaDateTime(event.at)}</time></li>)}</ul> : <p>No dated records are available.</p>}</DetailSection>;
 }

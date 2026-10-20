@@ -6,6 +6,7 @@ import {
   type GenericAttributes,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
+import { indiaDateTimeToIso } from './subscription-support';
 
 const failureText = (error: unknown) =>
   (error as { message?: string })?.message ||
@@ -50,12 +51,12 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
     if (filters.from)
       params.set(
         "filter[created_at][gte]",
-        new Date(filters.from).toISOString(),
+        indiaDateTimeToIso(filters.from),
       );
     if (filters.through)
       params.set(
         "filter[created_at][lte]",
-        new Date(filters.through).toISOString(),
+        indiaDateTimeToIso(filters.through),
       );
     let active = true;
     setLoading(true);

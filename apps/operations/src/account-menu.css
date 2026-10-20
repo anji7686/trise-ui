@@ -59,3 +59,7 @@
 .record-card,.detail-card,.form-card { border-radius:.7rem; padding:1rem; }
 .state-forbidden { border-color:#d49a9a; background:color-mix(in srgb,#a33b3b 7%,var(--surface)); }
 @media(max-width:700px){.workspace{padding:0 16px 24px}.topbar{height:60px}.operations-layout{min-height:auto}.workspace-sidebar{padding:8px 0; margin:0 -16px; border-radius:0;}.workspace-sidebar button{min-width:max-content}.operations-main > .heading{display:block;padding:20px 0 12px}.context{margin-top:1rem}.record-grid{grid-template-columns:1fr}.account-menu-anchor{top:.65rem;right:12px;gap:6px}.account-trigger{width:42px;height:42px;padding:.25rem;justify-content:center}.account-trigger-copy{display:none}.account-trigger > svg{display:none}.account-notifications{width:38px;height:38px}.shell-search-suggestions{right:4px}}
+
+[data-theme="dark"] .account-notifications,[data-theme="dark"] .account-provider-chip { border-color:var(--border); background:var(--surface); color:var(--text); box-shadow:0 4px 14px rgba(0,0,0,.2); }
+[data-theme="dark"] .account-provider-chip small { color:var(--secondary); }
+[data-theme="dark"] .account-provider-icon { background:#203753; color:#a9c8f3; }

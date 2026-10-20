@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { Button, DetailSection, PageHeader, StatePanel } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type ProviderAdminInvitation } from './data';
-import { localDateTime } from './subscription-support';
+import { formatIndiaDateTime, indiaDateTimeToDate, indiaDateTimeToIso, localDateTime } from './subscription-support';
 import { useSubscriptionActions } from './use-subscription-actions';
 import { useReviewReason } from './subscription-review';
 import { useScopedRecords } from './use-scoped-records';
 
 export function validInvitationExpiry(value: string, now = Date.now()) {
-  const expiry = Date.parse(value);
+  const businessDate = indiaDateTimeToDate(value);
+  const expiry = Number.isNaN(businessDate.getTime()) ? Date.parse(value) : businessDate.getTime();
   return Number.isFinite(expiry) && expiry > now && expiry <= now + 7 * 24 * 60 * 60 * 1000;
 }
 
@@ -22,7 +23,7 @@ export function ProviderAdminInvitationManager({ providerId }: { providerId: str
     event.preventDefault();
     if (!validInvitationExpiry(expiresAt)) { setError('Choose a future expiry within seven days.'); return; }
     const reason = await review.ask('Invite provider administrator'); if (reason === null) return;
-    const body = { user_id: userId.trim(), expires_at: new Date(expiresAt).toISOString(), reason };
+    const body = { user_id: userId.trim(), expires_at: indiaDateTimeToIso(expiresAt), reason };
     await run(JSON.stringify(['admin-invite', providerId, body]), key => operationsData.createPlatformProviderAdminInvitation(providerId, body, key), async () => { setUserId(''); await list.load(); });
   }
   async function revoke(invitation: ProviderAdminInvitation) {
@@ -40,7 +41,7 @@ export function ProviderAdminInvitationManager({ providerId }: { providerId: str
       <Button type="submit" disabled={list.loading} busy={busy}>Create administrator invitation</Button>
     </form>
     {list.loading && <p role="status">Loading invitations…</p>}
-    <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>User</th><th>Status</th><th>Accept before</th><th>Actions</th></tr></thead><tbody>{list.records.map(row => <tr key={row.id}><td>{row.attributes.target_user_id}</td><td><Status>{row.attributes.status === 'PENDING' && row.attributes.expired ? 'Expired' : row.attributes.status}</Status></td><td>{new Date(row.attributes.expires_at).toLocaleString()}</td><td>{row.attributes.status === 'PENDING' && <Button disabled={busy || list.loading} variant="quiet" onClick={() => void revoke(row)}>Revoke invitation</Button>}</td></tr>)}</tbody></table></div>
+    <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>User</th><th>Status</th><th>Accept before</th><th>Actions</th></tr></thead><tbody>{list.records.map(row => <tr key={row.id}><td>{row.attributes.target_user_id}</td><td><Status>{row.attributes.status === 'PENDING' && row.attributes.expired ? 'Expired' : row.attributes.status}</Status></td><td>{formatIndiaDateTime(row.attributes.expires_at)}</td><td>{row.attributes.status === 'PENDING' && <Button disabled={busy || list.loading} variant="quiet" onClick={() => void revoke(row)}>Revoke invitation</Button>}</td></tr>)}</tbody></table></div>
     {!list.loading && !list.error && !list.records.length && <p>No administrator invitations recorded.</p>}
     <p>{list.records.length} invitations loaded.</p>{list.cursor && <Button disabled={busy} busy={list.loading} onClick={() => void list.loadMore()}>Load more invitations</Button>}
   </DetailSection>;
@@ -57,7 +58,7 @@ export function MyProviderAdminInvitations({ onAccepted }: { onAccepted: () => P
   return <section className="platform-page"><PageHeader eyebrow="My account" title="Administrator invitations" description="Only invitations addressed to your signed-in identity are shown. Acceptance grants provider administrator membership; provider activation remains separate." />
     {(error || list.error) && <StatePanel title="Invitation could not be completed">{error || list.error}<Button disabled={busy || list.loading} onClick={() => void list.load()}>Reload invitations</Button></StatePanel>}
     {list.loading && <p role="status">Loading your invitations…</p>}
-    {list.records.map(row => <DetailSection key={row.id} title={row.attributes.provider_name}><Status>{row.attributes.status === 'PENDING' && row.attributes.expired ? 'Expired' : row.attributes.status}</Status><p>Accept before {new Date(row.attributes.expires_at).toLocaleString()}</p>
+    {list.records.map(row => <DetailSection key={row.id} title={row.attributes.provider_name}><Status>{row.attributes.status === 'PENDING' && row.attributes.expired ? 'Expired' : row.attributes.status}</Status><p>Accept before {formatIndiaDateTime(row.attributes.expires_at)}</p>
       {row.attributes.status === 'PENDING' && !row.attributes.expired && (confirming?.id === row.id ? <div><p>Confirm provider administrator membership for {row.attributes.provider_name}.</p><div className="platform-form-actions"><Button disabled={busy} variant="secondary" onClick={() => setConfirming(null)}>Cancel</Button><Button busy={busy} disabled={list.loading} onClick={() => void accept(row)}>Confirm acceptance</Button></div></div> : <Button disabled={busy || list.loading} onClick={() => setConfirming(row)}>Accept invitation</Button>)}
       {row.attributes.status === 'ACCEPTED' && <p>Membership accepted. Reload the workspace list to check available provider access.</p>}
     </DetailSection>)}

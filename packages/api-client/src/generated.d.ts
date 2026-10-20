@@ -838,6 +838,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reference-data/india/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search India country, state, district, and city reference data
+         * @description Authenticated bounded lookup against the active versioned India geography dataset. Clients store the returned canonical code or ID, not a display name as identity.
+         */
+        get: operations["SearchIndiaGeographyReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform reference-data imports */
+        get: operations["ListReferenceDataImports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports/{importId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a staged reference-data import for review */
+        post: operations["SubmitReferenceDataImportReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports/{importId}/reviews/{reviewId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a reference-data import review */
+        post: operations["ApproveReferenceDataImportReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports/{importId}/reviews/{reviewId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a reference-data import review */
+        post: operations["RevokeReferenceDataImportReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports/{importId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a staged reference-data import */
+        post: operations["RestoreReferenceDataImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/plans": {
         parameters: {
             query?: never;
@@ -5747,6 +5862,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/configuration/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get pending platform configuration reviews */
+        get: operations["GetConfigurationReviewInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/configuration/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get consolidated platform configuration audit history */
+        get: operations["GetConfigurationAuditInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/configuration/{configurationType}": {
         parameters: {
             query?: never;
@@ -5840,6 +5989,46 @@ export interface paths {
          * @description Platform Domain Administrator for platform scope, or authorized provider configuration administrator for selected provider scope; Customer/Agent are read-only consumers of authorized active definitions. Workforce definitions (skills, certification types, schedules/calendars/holidays, leave types, territories and assignment policies) follow ADR-013; provider cannot edit platform references. Validate definition against x-trise-definition-schemas. Active AssignmentPolicy versions are immutable; activation requires review and rejects ambiguous scope priority, invalid hard/ranking clauses or missing required fallbacks.
          */
         post: operations["ArchiveConfiguration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/configuration/{configurationType}/{configurationId}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                configurationType: string;
+                configurationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get configuration dependency and provider impact preview */
+        get: operations["GetConfigurationImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/configuration/{configurationType}/{configurationId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                configurationType: string;
+                configurationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an archived configuration as a new draft */
+        post: operations["RestoreConfigurationAsDraft"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9169,6 +9358,74 @@ export interface paths {
         patch: operations["UpdateBusinessOperationType"];
         trace?: never;
     };
+    "/platform/business-operations/{operationId}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a Business Operation draft for independent review */
+        post: operations["SubmitBusinessOperationTypeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/business-operations/{operationId}/reviews/{reviewId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a Business Operation draft */
+        post: operations["ApproveBusinessOperationTypeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/business-operations/{operationId}/reviews/{reviewId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a pending or approved Business Operation review */
+        post: operations["RevokeBusinessOperationTypeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/business-operations/{operationId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish an approved Business Operation draft */
+        post: operations["PublishBusinessOperationType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/operations/dashboard": {
         parameters: {
             query?: never;
@@ -9218,6 +9475,96 @@ export interface paths {
         /** Set or replace the provider's single Business Operation before activation */
         put: operations["ReplacePlatformProviderOperations"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/configuration-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read provider configuration override draft and active state */
+        get: operations["GetPlatformProviderConfigurationOverride"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Save a validated provider configuration override draft */
+        patch: operations["SavePlatformProviderConfigurationOverride"];
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/configuration-overrides/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a provider configuration override draft for review */
+        post: operations["SubmitPlatformProviderConfigurationOverrideReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/configuration-overrides/reviews/{reviewId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a provider configuration override review */
+        post: operations["ApprovePlatformProviderConfigurationOverrideReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/configuration-overrides/reviews/{reviewId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a pending or approved provider configuration override review */
+        post: operations["RevokePlatformProviderConfigurationOverrideReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/configuration-overrides/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish an approved provider configuration override */
+        post: operations["PublishPlatformProviderConfigurationOverride"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10563,13 +10910,13 @@ export interface components {
             trace_id: components["schemas"]["Id"];
             details?: components["schemas"]["ErrorDetail"][];
         };
-        /** @description End must follow start. Timestamps are UTC RFC3339; time_zone preserves scheduling intent. */
+        /** @description End must follow start. Timestamps are UTC RFC3339; business-facing scheduling uses the server-controlled Asia/Kolkata timezone. */
         TimeWindow: {
             /** Format: date-time */
             starts_at: string;
             /** Format: date-time */
             ends_at: string;
-            time_zone: string;
+            time_zone?: string;
             latitude?: number;
             longitude?: number;
             coordinate_accuracy_m?: number;
@@ -11093,6 +11440,66 @@ export interface components {
             source_published_on?: string | null;
             source_filename?: string | null;
             sha256?: string | null;
+        };
+        IndiaGeographyLookupResponse: {
+            data: components["schemas"]["IndiaGeographyEntry"][];
+            dataset: components["schemas"]["IndiaGeographyDataset"];
+        };
+        IndiaGeographyEntry: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "india-geography-entries";
+            attributes: {
+                /** @enum {string} */
+                kind: "COUNTRY" | "STATE_UT" | "DISTRICT" | "CITY";
+                code: string;
+                name: string;
+                normalized_name: string;
+                parent_code?: string | null;
+                state_code?: string | null;
+                district_code?: string | null;
+                latitude?: number | null;
+                longitude?: number | null;
+                active: boolean;
+            };
+        };
+        IndiaGeographyDataset: {
+            /** @constant */
+            kind: "INDIA_GEOGRAPHY";
+            import_id: components["schemas"]["Id"];
+            /** Format: date-time */
+            retrieved_at: string;
+            source_filename?: string | null;
+            sha256?: string | null;
+        };
+        ReferenceDataImport: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "reference-data-imports";
+            attributes: {
+                /** @enum {string} */
+                dataset_kind: "INDIA_GEOGRAPHY" | "INDIA_PINCODES";
+                /** @enum {string} */
+                status: "STAGED" | "ACTIVE" | "FAILED";
+                source_url?: string | null;
+                source_filename?: string | null;
+                /** Format: date */
+                source_published_on?: string | null;
+                /** Format: date-time */
+                retrieved_at?: string | null;
+                /** Format: date-time */
+                activated_at?: string | null;
+                supersedes_id?: components["schemas"]["Id"] | null;
+                sha256?: string | null;
+                license_reference?: string | null;
+                counts: {
+                    [key: string]: unknown;
+                };
+                review_id?: components["schemas"]["Id"] | null;
+                /** @enum {string|null} */
+                review_status?: "PENDING" | "APPROVED" | "REVOKED" | "CONSUMED" | "null" | null;
+                review_submitted_by_user_id?: components["schemas"]["Id"] | null;
+            };
         };
         ProviderBusinessProfileAddress: {
             /** @constant */
@@ -12885,7 +13292,7 @@ export interface components {
             name: string;
             classification: string;
             address_lines?: string[];
-            time_zone: string;
+            time_zone?: string;
             latitude?: number;
             longitude?: number;
             coordinate_accuracy_m?: number;
@@ -13426,6 +13833,7 @@ export interface components {
             required: boolean;
             /** Format: uuid */
             unit_definition_id?: string | null;
+            unit_code?: string | null;
             validation?: {
                 [key: string]: unknown;
             };
@@ -13446,6 +13854,14 @@ export interface components {
             primary_identifier_strategy?: string | null;
             /** Format: uuid */
             primary_identifier_type_id?: string | null;
+            technology?: string | null;
+            industry_segments?: string[];
+            applications?: string[];
+            standards_references?: string[];
+            safety_critical?: boolean | null;
+            inspection_required?: boolean | null;
+            maintenance_required?: boolean | null;
+            verification_required_before_use?: boolean | null;
             attributes?: components["schemas"]["AssetAttributeConfigurationDefinition"][];
             components?: components["schemas"]["AssetComponentConfigurationDefinition"][];
             /** Format: date-time */
@@ -13478,7 +13894,7 @@ export interface components {
         };
         ConfigurationReviewAttributes: {
             /** @enum {string} */
-            configuration_type: "certification-types" | "working-calendars";
+            configuration_type: "asset-families" | "asset-types" | "asset-definitions" | "service-types" | "checklist-templates" | "notification-triggers" | "notification-policies" | "notification-templates" | "skills" | "certification-types" | "holiday-calendars" | "asset-criticalities" | "service-priorities" | "sla-policies" | "identifier-policies" | "maintenance-policies" | "working-calendars" | "service-territories" | "assignment-policies" | "emergency-rules" | "reference-data-imports";
             configuration_id: components["schemas"]["Id"];
             provider_id?: components["schemas"]["Id"] | null;
             candidate_version: components["schemas"]["Revision"];
@@ -13686,8 +14102,8 @@ export interface components {
         WorkingCalendarDefinition: {
             code: string;
             name: string;
-            /** @description IANA timezone; server validates. Business/site and calendar zones are retained separately. */
-            time_zone: string;
+            /** @description Legacy compatibility field; the server uses Asia/Kolkata. */
+            time_zone?: string;
             /** @description Bounded weekday schedule; each value is an array of local start/end windows. */
             schedule: {
                 monday?: components["schemas"]["WorkingWindow"][];
@@ -15147,7 +15563,7 @@ export interface components {
             service_location_id?: string | null;
             /** Format: uuid */
             service_type_id?: string | null;
-            time_zone: string;
+            time_zone?: string;
             /** Format: date-time */
             effective_from?: string;
         };
@@ -15157,7 +15573,7 @@ export interface components {
             starts_at: string;
             /** Format: date-time */
             ends_at: string;
-            time_zone: string;
+            time_zone?: string;
         };
         Batch47Appointment: components["schemas"]["Batch47AppointmentWindow"] & {
             /** Format: uuid */
@@ -17347,6 +17763,199 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
             503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    SearchIndiaGeographyReference: {
+        parameters: {
+            query?: {
+                q?: string;
+                kind?: "COUNTRY" | "STATE_UT" | "DISTRICT" | "CITY";
+                parent_code?: string;
+                state_code?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active geography matches */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndiaGeographyLookupResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    ListReferenceDataImports: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versioned platform reference-data imports. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReferenceDataImport"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    SubmitReferenceDataImportReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                importId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Pending reference-data review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigurationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ApproveReferenceDataImportReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                importId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved reference-data review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigurationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RevokeReferenceDataImportReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                importId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked reference-data review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigurationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RestoreReferenceDataImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                importId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    review_id: components["schemas"]["Id"];
+                };
+            };
+        };
+        responses: {
+            /** @description Restored active reference-data import. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceDataImport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     ListPlatformPlans: {
@@ -27568,6 +28177,60 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    GetConfigurationReviewInbox: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required for provider configuration. Omission is permitted only for an explicitly authorized platform administrator acting in platform scope, never inferred from resource ID. */
+                "X-TRISE-Provider-Id"?: components["parameters"]["ConfigurationProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending global configuration reviews. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ConfigurationReview"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetConfigurationAuditInbox: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform-scoped configuration audit and events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        audit: Record<string, never>[];
+                        events: Record<string, never>[];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     ListConfiguration: {
         parameters: {
             query?: {
@@ -27802,6 +28465,87 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    GetConfigurationImpact: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required for provider configuration. Omission is permitted only for an explicitly authorized platform administrator acting in platform scope, never inferred from resource ID. */
+                "X-TRISE-Provider-Id"?: components["parameters"]["ConfigurationProviderContext"];
+            };
+            path: {
+                configurationType: string;
+                configurationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read-only impact preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            id?: components["schemas"]["Id"];
+                            /** @example configuration-impacts */
+                            type?: string;
+                            attributes?: {
+                                kind: string;
+                                total_dependents: number;
+                                active_dependents: number;
+                                provider_adoptions: number;
+                                can_archive: boolean;
+                                warnings: string[];
+                            };
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    RestoreConfigurationAsDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required for provider configuration. Omission is permitted only for an explicitly authorized platform administrator acting in platform scope, never inferred from resource ID. */
+                "X-TRISE-Provider-Id"?: components["parameters"]["ConfigurationProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                configurationType: string;
+                configurationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description New draft successor created from the archived configuration. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Configuration"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     CreateConfigurationReview: {
@@ -30569,7 +31313,7 @@ export interface operations {
             query: {
                 from: string;
                 until: string;
-                time_zone: string;
+                time_zone?: string;
                 /** @description Optional authorized job demand for capacity calculation; does not grant job access. */
                 job_id?: components["schemas"]["Id"];
             };
@@ -34171,6 +34915,116 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    SubmitBusinessOperationTypeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Review submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ApproveBusinessOperationTypeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RevokeBusinessOperationTypeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Review revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    PublishBusinessOperationType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    review_id: components["schemas"]["Id"];
+                };
+            };
+        };
+        responses: {
+            /** @description Published catalogue entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     GetProviderOperationsDashboard: {
         parameters: {
             query?: never;
@@ -34316,6 +35170,168 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    GetPlatformProviderConfigurationOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider configuration override */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    SavePlatformProviderConfigurationOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    configuration: Record<string, never>;
+                };
+            };
+        };
+        responses: {
+            /** @description Draft saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SubmitPlatformProviderConfigurationOverrideReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Review submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    ApprovePlatformProviderConfigurationOverrideReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    RevokePlatformProviderConfigurationOverrideReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+                reviewId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Review revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    PublishPlatformProviderConfigurationOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: components["schemas"]["Revision"];
+                    review_id: components["schemas"]["Id"];
+                };
+            };
+        };
+        responses: {
+            /** @description Published provider configuration override */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     GetPlatformTaxDashboard: {
