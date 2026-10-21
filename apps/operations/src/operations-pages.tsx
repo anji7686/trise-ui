@@ -14,23 +14,274 @@ import { MarketingLeads } from './marketing-leads';
 import { QuotationsWorkspace } from './quotations';
 import { ProviderPrograms, ReportsWorkspace } from './provider-programs';
 import { WorkforceOperations } from './workforce-operations';
+import { ProviderWorkIntakeWorkspace } from './provider-work-intake';
 import { navigationForSession } from './navigation';
-import { formatIndiaDate, formatIndiaDateTime, formatIndiaTime, indiaDateTimeToDate, indiaDateTimeToIso, localDateTime } from './subscription-support';
 import './operations-pages.css';
 
 type T = (key: string) => string;
-type Section = 'team-access' | 'leads' | 'requests' | 'bookings' | 'quotations' | 'projects' | 'amc' | 'reports' | 'configuration' | 'workforce' | 'audit' | 'compliance' | 'platform' | 'admin-invitations';
+type Section = 'team-access' | 'work-intake' | 'leads' | 'requests' | 'bookings' | 'quotations' | 'projects' | 'amc' | 'reports' | 'configuration' | 'workforce' | 'audit' | 'compliance' | 'platform' | 'admin-invitations';
 export type OperationsRoute = { section: Section; id?: string; kind?: string };
 const fail = (error: unknown) => (error as { message?: string })?.message || 'The request could not be completed.';
 const go = (path: string) => { window.location.hash = path; };
 function Frame({ title, description, children, action }: { title: string; description: string; children: ReactNode; action?: ReactNode }) { return <section className="content feature-page"><PageHeader title={title} description={description} action={action} />{children}</section>; }
 function Failure({ error }: { error: string }) { const forbidden = /forbidden|unauthorized|permission|access denied/i.test(error); return <div className="feature-error" role="alert"><strong>{forbidden ? "You don't have access to this area in the selected workspace." : error}</strong>{!forbidden && <Button variant="secondary" onClick={() => window.location.reload()}>Retry</Button>}</div>; }
-function readableWindow(window?: { starts_at?: string; ends_at?: string; time_zone?: string } | null) { if (!window?.starts_at || !window.ends_at) return 'Schedule not supplied'; const start = new Date(window.starts_at); const end = new Date(window.ends_at); if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Schedule unavailable'; return `${formatIndiaDateTime(start)} – ${formatIndiaTime(end)} (India time)`; }
+function readableWindow(window?: { starts_at?: string; ends_at?: string; time_zone?: string } | null) { if (!window?.starts_at || !window.ends_at) return 'Schedule not supplied'; const start = new Date(window.starts_at); const end = new Date(window.ends_at); if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Schedule unavailable'; const locale = document.documentElement.lang || 'en-IN'; return `${start.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: window.time_zone || undefined })} – ${end.toLocaleTimeString(locale, { timeStyle: 'short', timeZone: window.time_zone || undefined })} (${window.time_zone || 'provider timezone'})`; }
 
 function recordLabel(item: Resource<GenericAttributes>) { const attributes = item.attributes; return String(attributes.display_name || attributes.name || attributes.title || attributes.code || attributes.summary || 'Authorized record'); }
-function RequestForm({ providerId, requestTypeOptions, close, saved }: { providerId: string; requestTypeOptions: string[]; close: () => void; saved: (item: Resource<RequestAttributes>) => void }) { const [form, setForm] = useState({ summary: '', description: '', customer_relationship_id: '', service_type_id: '', request_type_id: '', asset_id: '', location_id: '' }); const [relationships, setRelationships] = useState<Collection<GenericAttributes> | null>(null); const [serviceTypes, setServiceTypes] = useState<Collection<GenericAttributes> | null>(null); const [assets, setAssets] = useState<Collection<GenericAttributes> | null>(null); const [locations, setLocations] = useState<Collection<GenericAttributes> | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); useEffect(() => { Promise.all([operationsData.customerRelationships(providerId), operationsData.configuration(providerId, 'service-types', 'ACTIVE'), operationsData.assets(providerId), operationsData.locations(providerId)]).then(([relationshipResult, typeResult, assetResult, locationResult]) => { setRelationships(relationshipResult); setServiceTypes(typeResult); setAssets(assetResult); setLocations(locationResult); }).catch((cause) => setError(fail(cause))); }, [providerId]); async function submit(event: React.FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { const body = Object.fromEntries(Object.entries(form).filter(([, value]) => value.trim())); saved(await operationsData.createRequest(providerId, body, crypto.randomUUID())); close(); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } } const ready = Boolean(form.customer_relationship_id && form.service_type_id && form.request_type_id); const options = (items: Collection<GenericAttributes> | null) => items?.data || []; return <OperationsDialog title="Create service request" busy={busy} onClose={close}><form className="provider-form service-request-create-form" onSubmit={(event) => void submit(event)}><label>Issue title *<input required value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} /></label><label className="service-request-description-field">Description<textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label><label>Customer relationship *<select required value={form.customer_relationship_id} onChange={(event) => setForm({ ...form, customer_relationship_id: event.target.value })}><option value="">Select an authorized customer relationship</option>{options(relationships).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Service type *<select required value={form.service_type_id} onChange={(event) => setForm({ ...form, service_type_id: event.target.value })}><option value="">Select an authorized service type</option>{options(serviceTypes).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Request type *<select required value={form.request_type_id} onChange={(event) => setForm({ ...form, request_type_id: event.target.value })}><option value="">Select a server-returned request type</option>{requestTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label>Asset (optional)<select value={form.asset_id} onChange={(event) => setForm({ ...form, asset_id: event.target.value })}><option value="">No asset selected</option>{options(assets).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Service location (optional)<select value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}><option value="">Use customer relationship location</option>{options(locations).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label>{error && <Failure error={error} />}{!requestTypeOptions.length && <p className="notice">Request type options are not published by the current API, so creation remains unavailable until the server returns an authorized option.</p>}<div className="provider-form-actions"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit" busy={busy} disabled={!ready}>Create request</Button></div></form></OperationsDialog>; }
+function RequestForm({ providerId, requestTypeOptions, close, saved }: { providerId: string; requestTypeOptions: string[]; close: () => void; saved: (item: Resource<RequestAttributes>) => void }) { const [form, setForm] = useState({ summary: '', description: '', customer_relationship_id: '', service_type_id: '', request_type_id: '', asset_id: '', location_id: '' }); const [relationships, setRelationships] = useState<Collection<GenericAttributes> | null>(null); const [serviceTypes, setServiceTypes] = useState<Collection<GenericAttributes> | null>(null); const [assets, setAssets] = useState<Collection<GenericAttributes> | null>(null); const [locations, setLocations] = useState<Collection<GenericAttributes> | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); useEffect(() => { Promise.all([operationsData.customerRelationships(providerId), operationsData.configuration(providerId, 'service-types'), operationsData.assets(providerId), operationsData.locations(providerId)]).then(([relationshipResult, typeResult, assetResult, locationResult]) => { setRelationships(relationshipResult); setServiceTypes(typeResult); setAssets(assetResult); setLocations(locationResult); }).catch((cause) => setError(fail(cause))); }, [providerId]); async function submit(event: React.FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { const body = Object.fromEntries(Object.entries(form).filter(([, value]) => value.trim())); saved(await operationsData.createRequest(providerId, body, crypto.randomUUID())); close(); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } } const ready = Boolean(form.customer_relationship_id && form.service_type_id && form.request_type_id); const options = (items: Collection<GenericAttributes> | null) => items?.data || []; return <OperationsDialog title="Create service request" busy={busy} onClose={close}><form className="provider-form service-request-create-form" onSubmit={(event) => void submit(event)}><label>Issue title *<input required value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} /></label><label className="service-request-description-field">Description<textarea rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label><label>Customer relationship *<select required value={form.customer_relationship_id} onChange={(event) => setForm({ ...form, customer_relationship_id: event.target.value })}><option value="">Select an authorized customer relationship</option>{options(relationships).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Service type *<select required value={form.service_type_id} onChange={(event) => setForm({ ...form, service_type_id: event.target.value })}><option value="">Select an authorized service type</option>{options(serviceTypes).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Request type *<select required value={form.request_type_id} onChange={(event) => setForm({ ...form, request_type_id: event.target.value })}><option value="">Select a server-returned request type</option>{requestTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label>Asset (optional)<select value={form.asset_id} onChange={(event) => setForm({ ...form, asset_id: event.target.value })}><option value="">No asset selected</option>{options(assets).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label><label>Service location (optional)<select value={form.location_id} onChange={(event) => setForm({ ...form, location_id: event.target.value })}><option value="">Use customer relationship location</option>{options(locations).map((item) => <option key={item.id} value={item.id}>{recordLabel(item)}</option>)}</select></label>{error && <Failure error={error} />}{!requestTypeOptions.length && <p className="notice">Request type options are not published by the current API, so creation remains unavailable until the server returns an authorized option.</p>}<div className="provider-form-actions"><Button type="button" variant="secondary" onClick={close}>Cancel</Button><Button type="submit" busy={busy} disabled={!ready}>Create request</Button></div></form></OperationsDialog>; }
 
-function RequestDetail({ providerId, id, back, canEdit = false }: { providerId: string; id: string; back: () => void; canEdit?: boolean }) { const [item, setItem] = useState<Resource<RequestAttributes> | null>(null); const [routing, setRouting] = useState<Collection<ContactRoutingAttributes> | null>(null); const [edit, setEdit] = useState(false); const [purpose, setPurpose] = useState('SITE_ACCESS'); const [summary, setSummary] = useState(''); const [description, setDescription] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState(''); useEffect(() => { Promise.all([operationsData.request(providerId, id), operationsData.contactRouting(providerId, id)]).then(([request, contacts]) => { setItem(request); setSummary(request.attributes.summary); setDescription(request.attributes.description || ''); setRouting(contacts); }).catch((cause) => setError(fail(cause))); }, [providerId, id]); async function save() { if (!item || !canEdit) return; setBusy(true); try { const next = await operationsData.updateRequest(providerId, id, { summary, description, expected_revision: item.attributes.revision }, crypto.randomUUID()); setItem(next); setEdit(false); setMessage('Request updated by the server.'); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } } async function transition(key: string) { if (!item) return; setBusy(true); try { const next = await operationsData.transitionRequest(providerId, id, { transition: key, expected_revision: item.attributes.revision, effective_at: new Date().toISOString() }, crypto.randomUUID()); setItem(next); setMessage(`Transition ${key} accepted by the server.`); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } } async function resolveContact() { if (!item) return; setBusy(true); try { const result = await operationsData.resolveContact(providerId, { request_id: id, purpose, effective_at: new Date().toISOString() }, crypto.randomUUID()); setRouting((current) => current ? { ...current, data: [result, ...current.data] } : { data: [result] }); setMessage('Contact resolution recorded as evidence only.'); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } } if (!item) return <Frame title="Request detail" description="Authorized service request">{error ? <Failure error={error} /> : <p className="notice">Loading request…</p>}</Frame>; return <Frame title={item.attributes.summary} description="Review the request and server-authorized next actions."><button className="text-button" onClick={back}><SvgIcon name="arrow-left" size={16} /> Requests</button>{error && <Failure error={error} />}{message && <ActionFeedback>{message}</ActionFeedback>}<section className="feature-detail"><WorkspaceTabs label="Request detail" activeId={edit ? 'edit' : 'overview'} onChange={(tab) => setEdit(canEdit && tab === 'edit')} tabs={[{ id: 'overview', label: 'Overview' }, { id: 'contact', label: 'Contact' }, { id: 'activity', label: 'Activity' }, ...(canEdit ? [{ id: 'edit', label: 'Edit' }] : [])]} />{edit ? <form className="provider-form" onSubmit={(event) => { event.preventDefault(); void save(); }}><label>Summary<input value={summary} onChange={(event) => setSummary(event.target.value)} /></label><label>Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setEdit(false)}>Cancel</Button><Button type="submit" busy={busy}>Save changes</Button></div></form> : <><Status>{item.attributes.status}</Status><p>{item.attributes.description || 'No description supplied.'}</p><dl><dt>Created</dt><dd>{formatIndiaDateTime(item.attributes.created_at)}</dd><dt>Revision</dt><dd>{item.attributes.revision}</dd><dt>Allowed transitions</dt><dd>{item.attributes.allowed_transitions?.length ? item.attributes.allowed_transitions.map((allowed) => <Button key={allowed.key || allowed.transition} variant="secondary" disabled={busy} onClick={() => void transition(allowed.key || allowed.transition || '')}>{allowed.label || allowed.key || allowed.transition}</Button>) : 'No transition actions returned by the server.'}</dd></dl><section className="detail-card"><h3>Contact resolution</h3><p className="notice">Resolution records do not confirm an appointment or dispatch an agent.</p><label>Purpose<select value={purpose} onChange={(event) => setPurpose(event.target.value)}><option value="SITE_ACCESS">Site access</option><option value="APPOINTMENT_COORDINATION">Appointment coordination</option><option value="MAINTENANCE_COORDINATION">Maintenance coordination</option></select></label><Button busy={busy} onClick={() => void resolveContact()}>Resolve authorized contact</Button>{routing?.data.map((contact) => <article className="record-card" key={contact.id}><Status>{contact.attributes.outcome}</Status><strong>{contact.attributes.purpose}</strong><span>{contact.attributes.reason || 'Authorized routing result.'}</span></article>)}</section></>}</section></Frame>; }
+function RequestDetail({
+  providerId,
+  id,
+  back,
+  canEdit = false,
+}: {
+  providerId: string;
+  id: string;
+  back: () => void;
+  canEdit?: boolean;
+}) {
+  const [item, setItem] = useState<Resource<RequestAttributes> | null>(null);
+  const [routing, setRouting] =
+    useState<Collection<ContactRoutingAttributes> | null>(null);
+  const [edit, setEdit] = useState(false);
+  const [purpose, setPurpose] = useState("SITE_ACCESS");
+  const [summary, setSummary] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [routingError, setRoutingError] = useState("");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    setError("");
+    setRoutingError("");
+    setItem(null);
+    setRouting(null);
+    operationsData
+      .request(providerId, id)
+      .then((request) => {
+        setItem(request);
+        setSummary(request.attributes.summary);
+        setDescription(request.attributes.description || "");
+        void operationsData
+          .contactRouting(providerId, id)
+          .then(setRouting)
+          .catch(() => {
+            setRouting(null);
+            setRoutingError(
+              "Contact routing is unavailable for this request in the selected provider context.",
+            );
+          });
+      })
+      .catch((cause) => setError(fail(cause)));
+  }, [providerId, id]);
+  async function save() {
+    if (!item || !canEdit) return;
+    setBusy(true);
+    try {
+      const next = await operationsData.updateRequest(
+        providerId,
+        id,
+        { summary, description, expected_revision: item.attributes.revision },
+        crypto.randomUUID(),
+      );
+      setItem(next);
+      setEdit(false);
+      setMessage("Request updated by the server.");
+    } catch (cause) {
+      setError(fail(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function transition(key: string) {
+    if (!item) return;
+    setBusy(true);
+    try {
+      const next = await operationsData.transitionRequest(
+        providerId,
+        id,
+        {
+          transition: key,
+          expected_revision: item.attributes.revision,
+          effective_at: new Date().toISOString(),
+        },
+        crypto.randomUUID(),
+      );
+      setItem(next);
+      setMessage(`Transition ${key} accepted by the server.`);
+    } catch (cause) {
+      setError(fail(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function resolveContact() {
+    if (!item) return;
+    setBusy(true);
+    try {
+      const result = await operationsData.resolveContact(
+        providerId,
+        { request_id: id, purpose, effective_at: new Date().toISOString() },
+        crypto.randomUUID(),
+      );
+      setRouting((current) =>
+        current
+          ? { ...current, data: [result, ...current.data] }
+          : { data: [result] },
+      );
+      setMessage("Contact resolution recorded as evidence only.");
+    } catch (cause) {
+      setError(fail(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!item)
+    return (
+      <Frame title="Request detail" description="Authorized service request">
+        {error ? (
+          <Failure error={error} />
+        ) : (
+          <p className="notice">Loading request…</p>
+        )}
+      </Frame>
+    );
+  return (
+    <Frame
+      title={item.attributes.summary}
+      description="Review the request and server-authorized next actions."
+    >
+      <button className="text-button" onClick={back}>
+        <SvgIcon name="arrow-left" size={16} /> Requests
+      </button>
+      {error && <Failure error={error} />}
+      {message && <ActionFeedback>{message}</ActionFeedback>}
+      <section className="feature-detail">
+        <WorkspaceTabs
+          label="Request detail"
+          activeId={edit ? "edit" : "overview"}
+          onChange={(tab) => setEdit(canEdit && tab === "edit")}
+          tabs={[
+            { id: "overview", label: "Overview" },
+            { id: "contact", label: "Contact" },
+            { id: "activity", label: "Activity" },
+            ...(canEdit ? [{ id: "edit", label: "Edit" }] : []),
+          ]}
+        />
+        {edit ? (
+          <form
+            className="provider-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void save();
+            }}
+          >
+            <label>
+              Summary
+              <input
+                value={summary}
+                onChange={(event) => setSummary(event.target.value)}
+              />
+            </label>
+            <label>
+              Description
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </label>
+            <div className="provider-form-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEdit(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" busy={busy}>
+                Save changes
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <Status>{item.attributes.status}</Status>
+            <p>{item.attributes.description || "No description supplied."}</p>
+            <dl>
+              <dt>Created</dt>
+              <dd>{new Date(item.attributes.created_at).toLocaleString()}</dd>
+              <dt>Revision</dt>
+              <dd>{item.attributes.revision}</dd>
+              <dt>Allowed transitions</dt>
+              <dd>
+                {item.attributes.allowed_transitions?.length
+                  ? item.attributes.allowed_transitions.map((allowed) => (
+                      <Button
+                        key={allowed.key || allowed.transition}
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          void transition(
+                            allowed.key || allowed.transition || "",
+                          )
+                        }
+                      >
+                        {allowed.label || allowed.key || allowed.transition}
+                      </Button>
+                    ))
+                  : "No transition actions returned by the server."}
+              </dd>
+            </dl>
+            <section className="detail-card">
+              <h3>Contact resolution</h3>
+              {routingError ? (
+                <p className="notice" role="status">
+                  {routingError}
+                </p>
+              ) : (
+                <>
+                  <p className="notice">
+                    Resolution records do not confirm an appointment or dispatch
+                    an agent.
+                  </p>
+                  <label>
+                    Purpose
+                    <select
+                      value={purpose}
+                      onChange={(event) => setPurpose(event.target.value)}
+                    >
+                      <option value="SITE_ACCESS">Site access</option>
+                      <option value="APPOINTMENT_COORDINATION">
+                        Appointment coordination
+                      </option>
+                      <option value="MAINTENANCE_COORDINATION">
+                        Maintenance coordination
+                      </option>
+                    </select>
+                  </label>
+                  <Button busy={busy} onClick={() => void resolveContact()}>
+                    Resolve authorized contact
+                  </Button>
+                  {routing?.data.map((contact) => (
+                    <article className="record-card" key={contact.id}>
+                      <Status>{contact.attributes.outcome}</Status>
+                      <strong>{contact.attributes.purpose}</strong>
+                      <span>
+                        {contact.attributes.reason ||
+                          "Authorized routing result."}
+                      </span>
+                    </article>
+                  ))}
+                </>
+              )}
+            </section>
+          </>
+        )}
+      </section>
+    </Frame>
+  );
+}
 
 function RequestSummaryPanel({ providerId, item, openDetails }: { providerId: string; item: Resource<RequestAttributes> | null; openDetails: (id: string) => void }) {
   const [detail, setDetail] = useState<Resource<RequestAttributes> | null>(null);
@@ -58,7 +309,7 @@ function RequestSummaryPanel({ providerId, item, openDetails }: { providerId: st
     {!detail && !error && <p className="notice">Loading request details…</p>}
     {detail && <>
       <p className="service-request-description">{detail.attributes.description || 'No description supplied.'}</p>
-      <dl className="service-request-facts"><dt>Request ID</dt><dd>{detail.id}</dd><dt>Created</dt><dd>{formatIndiaDateTime(detail.attributes.created_at)}</dd><dt>Revision</dt><dd>{detail.attributes.revision}</dd><dt>Request type</dt><dd>{detail.attributes.request_type_id || 'Not specified'}</dd></dl>
+      <dl className="service-request-facts"><dt>Request ID</dt><dd>{detail.id}</dd><dt>Created</dt><dd>{new Date(detail.attributes.created_at).toLocaleString()}</dd><dt>Revision</dt><dd>{detail.attributes.revision}</dd><dt>Request type</dt><dd>{detail.attributes.request_type_id || 'Not specified'}</dd></dl>
       <div className="service-request-panel-actions">{detail.attributes.allowed_transitions?.some((action) => action.key || action.transition) && <Button variant="secondary" onClick={() => setActionOpen(true)}>Update status</Button>}<Button onClick={() => openDetails(detail.id)}>Open full details</Button></div>
     </>}
   </aside>{actionOpen && detail && <OperationsDialog title="Update request status" busy={busy} onClose={() => setActionOpen(false)}><p className="notice">Only lifecycle transitions returned by the server are available.</p><div className="request-transition-list">{detail.attributes.allowed_transitions?.filter((action) => action.key || action.transition).map((action) => <Button key={action.key || action.transition} variant="secondary" disabled={busy} onClick={() => void transition(action.key || action.transition || '')}>{action.label || action.key || action.transition}</Button>)}</div></OperationsDialog>}</>;
@@ -69,22 +320,22 @@ function RequestSummaryPanel({ providerId, item, openDetails }: { providerId: st
 function RequestsWorkspace({ providerId, route }: { providerId: string; route: OperationsRoute }) { const [items, setItems] = useState<Collection<RequestAttributes> | null>(null); const [query, setQuery] = useState(''); const [status, setStatus] = useState(''); const [create, setCreate] = useState(false); const [error, setError] = useState(''); useEffect(() => { operationsData.requests(providerId).then(setItems).catch((cause) => setError(fail(cause))); }, [providerId]); if (route.id) return <RequestDetail providerId={providerId} id={route.id} back={() => go('requests')} />; const filtered = items?.data.filter((item) => (!status || item.attributes.status === status) && (!query || `${item.id} ${item.attributes.summary} ${item.attributes.description || ''}`.toLowerCase().includes(query.toLowerCase()))) || []; return <Frame title="Service Requests" description="Triage provider-authorized requests without conflating contact resolution, booking, or dispatch." action={<Button onClick={() => setCreate(true)}>Create request</Button>}>{error && <Failure error={error} />}{!items && !error && <p className="notice">Loading authorized requests…</p>}{items && <><FilterToolbar resultLabel={`Showing ${filtered.length} of ${items.data.length} loaded records`}><label>Search loaded page<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Request ID or issue" /></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option>{[...new Set(items.data.map((item) => item.attributes.status))].map((value) => <option key={value} value={value}>{value}</option>)}</select></label></FilterToolbar>{filtered.length ? <div className="feature-list">{filtered.map((item) => <article className="feature-row" key={item.id}><div><Status>{item.attributes.status}</Status><h3>{item.attributes.summary}</h3><p>{item.attributes.description || 'No description supplied.'}</p><small>{item.id} · Revision {item.attributes.revision}</small></div><Button variant="secondary" onClick={() => go(`requests/${item.id}`)}>Open request</Button></article>)}</div> : <EmptyState title="No matching requests" description="Try clearing the loaded-page filters." />}{create && <RequestForm providerId={providerId} requestTypeOptions={[...new Set(items.data.map((item) => item.attributes.request_type_id).filter((value): value is string => Boolean(value)))]} close={() => setCreate(false)} saved={(item) => setItems((current) => current ? { ...current, data: [item, ...current.data] } : { data: [item] })} />}</>}</Frame>; }
 
 function BookingForm({ providerId, close, saved }: { providerId: string; close: () => void; saved: (item: Resource<BookingAttributes>) => void }) {
-  const [form, setForm] = useState({ summary: '', customer_relationship_id: '', service_type_id: '', starts_at: '', ends_at: '' });
+  const [form, setForm] = useState({ summary: '', customer_relationship_id: '', service_type_id: '', starts_at: '', ends_at: '', time_zone: 'Asia/Kolkata' });
   const [relationships, setRelationships] = useState<Collection<GenericAttributes> | null>(null);
   const [serviceTypes, setServiceTypes] = useState<Collection<GenericAttributes> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { Promise.all([operationsData.customerRelationships(providerId), operationsData.configuration(providerId, 'service-types', 'ACTIVE')]).then(([relationshipResult, typeResult]) => { setRelationships(relationshipResult); setServiceTypes(typeResult); }).catch((cause) => setError(fail(cause))); }, [providerId]);
+  useEffect(() => { Promise.all([operationsData.customerRelationships(providerId), operationsData.configuration(providerId, 'service-types')]).then(([relationshipResult, typeResult]) => { setRelationships(relationshipResult); setServiceTypes(typeResult); }).catch((cause) => setError(fail(cause))); }, [providerId]);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (indiaDateTimeToDate(form.ends_at) <= indiaDateTimeToDate(form.starts_at)) { setError('The end time must be later than the start time.'); return; }
+    if (new Date(form.ends_at) <= new Date(form.starts_at)) { setError('The end time must be later than the start time.'); return; }
     setBusy(true);
     try {
-      const item = await operationsData.createAppointment(providerId, { summary: form.summary, customer_relationship_id: form.customer_relationship_id, service_type_id: form.service_type_id, requested_window: { starts_at: indiaDateTimeToIso(form.starts_at), ends_at: indiaDateTimeToIso(form.ends_at) } }, crypto.randomUUID());
+      const item = await operationsData.createAppointment(providerId, { summary: form.summary, customer_relationship_id: form.customer_relationship_id, service_type_id: form.service_type_id, requested_window: { starts_at: new Date(form.starts_at).toISOString(), ends_at: new Date(form.ends_at).toISOString(), time_zone: form.time_zone } }, crypto.randomUUID());
       saved(item); close();
     } catch (cause) { setError(fail(cause)); } finally { setBusy(false); }
   }
-  const ready = Boolean(form.summary.trim() && form.customer_relationship_id && form.service_type_id && form.starts_at && form.ends_at && indiaDateTimeToDate(form.ends_at) > indiaDateTimeToDate(form.starts_at));
+  const ready = Boolean(form.summary.trim() && form.customer_relationship_id && form.service_type_id && form.starts_at && form.ends_at && new Date(form.ends_at) > new Date(form.starts_at));
   return <OperationsDialog title="Create appointment" busy={busy} onClose={close}>
     <form className="provider-form appointment-form" onSubmit={(event) => void submit(event)}>
       <div className="appointment-form-body">
@@ -97,6 +348,7 @@ function BookingForm({ providerId, close, saved }: { providerId: string; close: 
       <div className="appointment-form-section"><h3>Requested window</h3>
         <label>Start *<input required type="datetime-local" value={form.starts_at} onChange={(event) => setForm({ ...form, starts_at: event.target.value })} /></label>
         <label>End *<input required type="datetime-local" value={form.ends_at} onChange={(event) => setForm({ ...form, ends_at: event.target.value })} /></label>
+        <label>Timezone *<input required value={form.time_zone} onChange={(event) => setForm({ ...form, time_zone: event.target.value })} /></label>
       </div>
       <p className="notice appointment-form-note">Capacity and appointment lifecycle checks remain server-authorized. Creating a booking does not dispatch a technician.</p>
       </div>
@@ -105,7 +357,7 @@ function BookingForm({ providerId, close, saved }: { providerId: string; close: 
   </OperationsDialog>;
 }
 
-function AppointmentDetail({ providerId, id, back }: { providerId: string; id: string; back: () => void }) { const [item, setItem] = useState<Resource<BookingAttributes> | null>(null); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false); const [dialog, setDialog] = useState<'reschedule' | 'cancel' | null>(null); const [starts, setStarts] = useState(''); const [ends, setEnds] = useState(''); useEffect(() => { operationsData.booking(providerId, id).then((value) => { setItem(value); setStarts(localDateTime(new Date(value.attributes.requested_window.starts_at))); setEnds(localDateTime(new Date(value.attributes.requested_window.ends_at))); }).catch((cause) => setError(fail(cause))); }, [providerId, id]); async function command(action: 'confirm' | 'reschedule' | 'cancel') { if (!item) return; if (action === 'reschedule' && indiaDateTimeToDate(ends) <= indiaDateTimeToDate(starts)) { setError('The end time must be later than the start time.'); return; } setBusy(true); try { const body = action === 'confirm' ? { expected_revision: item.attributes.revision } : action === 'cancel' ? { expected_revision: item.attributes.revision, reason: 'Provider requested cancellation' } : { starts_at: indiaDateTimeToIso(starts), ends_at: indiaDateTimeToIso(ends), expected_revision: item.attributes.revision }; const next = action === 'confirm' ? await operationsData.confirmAppointment(providerId, id, body, crypto.randomUUID()) : action === 'cancel' ? await operationsData.cancelAppointment(providerId, id, body, crypto.randomUUID()) : await operationsData.rescheduleAppointment(providerId, id, body, crypto.randomUUID()); setItem(next); setDialog(null); setMessage(`Booking ${action} accepted by the server.`); } catch (cause) { setError(/409|conflict|revision|changed/i.test(fail(cause)) ? 'This booking has changed. Refresh and review the latest details.' : fail(cause)); } finally { setBusy(false); } } if (!item) return <Frame title="Booking detail" description="Authorized appointment record">{error ? <Failure error={error} /> : <p className="notice">Loading booking…</p>}</Frame>; const allowed = new Set((item.attributes.allowed_transitions || []).map((transition) => transition.key || transition.transition)); return <Frame title={item.attributes.summary} description="Review schedule and server-authorized appointment actions."><button className="text-button" onClick={back}><SvgIcon name="arrow-left" size={16} /> Bookings</button>{error && <Failure error={error} />}{message && <ActionFeedback>{message}</ActionFeedback>}<section className="feature-detail"><Status>{item.attributes.status}</Status><dl><dt>Requested window</dt><dd>{readableWindow(item.attributes.requested_window)}</dd><dt>Revision</dt><dd>{item.attributes.revision}</dd></dl><div className="action-footer">{(!allowed.size || allowed.has('confirm')) && ['REQUESTED', 'PROPOSED', 'RESCHEDULED'].includes(item.attributes.status) && <Button disabled={busy} onClick={() => void command('confirm')}>Confirm booking</Button>}{(!allowed.size || allowed.has('reschedule')) && <Button variant="secondary" disabled={busy} onClick={() => setDialog('reschedule')}>Reschedule</Button>}{(!allowed.size || allowed.has('cancel')) && !['CANCELLED', 'COMPLETED'].includes(item.attributes.status) && <Button variant="danger" disabled={busy} onClick={() => void command('cancel')}>Cancel booking</Button>}</div></section>{dialog === 'reschedule' && <OperationsDialog title="Reschedule appointment" busy={busy} onClose={() => setDialog(null)}><form className="provider-form appointment-form appointment-reschedule-form" onSubmit={(event) => { event.preventDefault(); void command('reschedule'); }}><div className="appointment-form-section"><h3>Current appointment</h3><label>Appointment ID<input readOnly value={item.id} /></label><label>Current status<input readOnly value={item.attributes.status} /></label><label>Current window<input readOnly value={readableWindow(item.attributes.requested_window)} /></label><label>Revision<input readOnly value={item.attributes.revision} /></label></div><div className="appointment-form-section"><h3>Alternative timing</h3><label>New start *<input required type="datetime-local" value={starts} onChange={(event) => setStarts(event.target.value)} /></label><label>New end *<input required type="datetime-local" value={ends} onChange={(event) => setEnds(event.target.value)} /></label></div><p className="notice appointment-form-note">The server checks the expected revision and scheduling rules. Confirmation does not assign a technician or complete the visit.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setDialog(null)}>Cancel</Button><Button type="submit" busy={busy} disabled={!starts || !ends || indiaDateTimeToDate(ends) <= indiaDateTimeToDate(starts)}>Confirm change</Button></div></form></OperationsDialog>}{dialog === 'cancel' && <OperationsDialog title="Cancel booking" busy={busy} onClose={() => setDialog(null)}><p>This changes only the appointment lifecycle.</p><Button variant="danger" busy={busy} onClick={() => void command('cancel')}>Cancel booking</Button></OperationsDialog>}</Frame>; }
+function AppointmentDetail({ providerId, id, back }: { providerId: string; id: string; back: () => void }) { const [item, setItem] = useState<Resource<BookingAttributes> | null>(null); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false); const [dialog, setDialog] = useState<'reschedule' | 'cancel' | null>(null); const [starts, setStarts] = useState(''); const [ends, setEnds] = useState(''); useEffect(() => { operationsData.booking(providerId, id).then((value) => { setItem(value); setStarts(value.attributes.requested_window.starts_at.slice(0, 16)); setEnds(value.attributes.requested_window.ends_at.slice(0, 16)); }).catch((cause) => setError(fail(cause))); }, [providerId, id]); async function command(action: 'confirm' | 'reschedule' | 'cancel') { if (!item) return; if (action === 'reschedule' && new Date(ends) <= new Date(starts)) { setError('The end time must be later than the start time.'); return; } setBusy(true); try { const body = action === 'confirm' ? { expected_revision: item.attributes.revision } : action === 'cancel' ? { expected_revision: item.attributes.revision, reason: 'Provider requested cancellation' } : { starts_at: new Date(starts).toISOString(), ends_at: new Date(ends).toISOString(), time_zone: item.attributes.requested_window.time_zone, expected_revision: item.attributes.revision }; const next = action === 'confirm' ? await operationsData.confirmAppointment(providerId, id, body, crypto.randomUUID()) : action === 'cancel' ? await operationsData.cancelAppointment(providerId, id, body, crypto.randomUUID()) : await operationsData.rescheduleAppointment(providerId, id, body, crypto.randomUUID()); setItem(next); setDialog(null); setMessage(`Booking ${action} accepted by the server.`); } catch (cause) { setError(/409|conflict|revision|changed/i.test(fail(cause)) ? 'This booking has changed. Refresh and review the latest details.' : fail(cause)); } finally { setBusy(false); } } if (!item) return <Frame title="Booking detail" description="Authorized appointment record">{error ? <Failure error={error} /> : <p className="notice">Loading booking…</p>}</Frame>; const allowed = new Set((item.attributes.allowed_transitions || []).map((transition) => transition.key || transition.transition)); return <Frame title={item.attributes.summary} description="Review schedule and server-authorized appointment actions."><button className="text-button" onClick={back}><SvgIcon name="arrow-left" size={16} /> Bookings</button>{error && <Failure error={error} />}{message && <ActionFeedback>{message}</ActionFeedback>}<section className="feature-detail"><Status>{item.attributes.status}</Status><dl><dt>Requested window</dt><dd>{readableWindow(item.attributes.requested_window)}</dd><dt>Revision</dt><dd>{item.attributes.revision}</dd></dl><div className="action-footer">{(!allowed.size || allowed.has('confirm')) && ['REQUESTED', 'PROPOSED', 'RESCHEDULED'].includes(item.attributes.status) && <Button disabled={busy} onClick={() => void command('confirm')}>Confirm booking</Button>}{(!allowed.size || allowed.has('reschedule')) && <Button variant="secondary" disabled={busy} onClick={() => setDialog('reschedule')}>Reschedule</Button>}{(!allowed.size || allowed.has('cancel')) && !['CANCELLED', 'COMPLETED'].includes(item.attributes.status) && <Button variant="danger" disabled={busy} onClick={() => setDialog('cancel')}>Cancel booking</Button>}</div></section>{dialog === 'reschedule' && <OperationsDialog title="Reschedule appointment" busy={busy} onClose={() => setDialog(null)}><form className="provider-form appointment-form appointment-reschedule-form" onSubmit={(event) => { event.preventDefault(); void command('reschedule'); }}><div className="appointment-form-section"><h3>Current appointment</h3><label>Appointment ID<input readOnly value={item.id} /></label><label>Current status<input readOnly value={item.attributes.status} /></label><label>Current window<input readOnly value={readableWindow(item.attributes.requested_window)} /></label><label>Revision<input readOnly value={item.attributes.revision} /></label></div><div className="appointment-form-section"><h3>Alternative timing</h3><label>New start *<input required type="datetime-local" value={starts} onChange={(event) => setStarts(event.target.value)} /></label><label>New end *<input required type="datetime-local" value={ends} onChange={(event) => setEnds(event.target.value)} /></label><label>Timezone<input readOnly value={item.attributes.requested_window.time_zone} /></label></div><p className="notice appointment-form-note">The server checks the expected revision and scheduling rules. Confirmation does not assign a technician or complete the visit.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setDialog(null)}>Cancel</Button><Button type="submit" busy={busy} disabled={!starts || !ends || new Date(ends) <= new Date(starts)}>Confirm change</Button></div></form></OperationsDialog>}{dialog === 'cancel' && <OperationsDialog title="Cancel booking" busy={busy} onClose={() => setDialog(null)}><p>This changes only the appointment lifecycle.</p><Button variant="danger" busy={busy} onClick={() => void command('cancel')}>Cancel booking</Button></OperationsDialog>}</Frame>; }
 
 // Retained as a compatibility reference for the previous list/calendar implementation.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -138,13 +390,9 @@ function ServiceRequestsPaginated({ providerId, route, canCreate, canEdit }: { p
     {create && <RequestForm providerId={providerId} requestTypeOptions={requestTypeOptions} close={() => setCreate(false)} saved={(item) => { setItems((current) => current ? { ...current, data: [item, ...current.data] } : { data: [item] }); setCreate(false); }} />}</Frame>;
 }
 
-function localDateKey(date: Date) { const parts = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date); return `${parts.find((part) => part.type === 'year')?.value}-${parts.find((part) => part.type === 'month')?.value}-${parts.find((part) => part.type === 'day')?.value}`; }
-function civilDateKey(date: Date) { return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`; }
-function shiftCivilDate(key: string, amount: number) { const date = new Date(`${key}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + amount); return civilDateKey(date); }
-function weekStartKey(date: Date) { const key = localDateKey(date); const monday = new Date(`${key}T12:00:00Z`); monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7)); return civilDateKey(monday); }
-function weekDays(startKey: string) { return Array.from({ length: 7 }, (_, index) => new Date(`${shiftCivilDate(startKey, index)}T12:00:00Z`)); }
-function indiaHourMinute(date: Date) { const parts = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date); return { hour: Number(parts.find((part) => part.type === 'hour')?.value || 0), minute: Number(parts.find((part) => part.type === 'minute')?.value || 0) }; }
-function formatIndiaTimeForHour(hour: number) { return formatIndiaTime(indiaDateTimeToDate(`2000-01-01T${String(hour).padStart(2, '0')}:00`)); }
+function localDateKey(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+function weekStartKey(date: Date) { const monday = new Date(date); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); return localDateKey(monday); }
+function weekDays(startKey: string) { const start = new Date(`${startKey}T00:00:00`); return Array.from({ length: 7 }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return day; }); }
 
 function BookingsPaginated({ providerId, route }: { providerId: string; route: OperationsRoute }) {
   const [items, setItems] = useState<Collection<BookingAttributes> | null>(null);
@@ -156,8 +404,8 @@ function BookingsPaginated({ providerId, route }: { providerId: string; route: O
   const [weekStart, setWeekStart] = useState(() => weekStartKey(new Date()));
   const [create, setCreate] = useState(false);
   const [error, setError] = useState('');
-  const rangeStart = indiaDateTimeToDate(`${weekStart}T00:00`);
-  const rangeEnd = indiaDateTimeToDate(`${shiftCivilDate(weekStart, 7)}T00:00`);
+  const rangeStart = new Date(`${weekStart}T00:00:00`);
+  const rangeEnd = new Date(rangeStart); rangeEnd.setDate(rangeStart.getDate() + 7);
   const days = weekDays(weekStart);
   const calendarStartHour = 8;
   const calendarEndHour = 18;
@@ -165,10 +413,10 @@ function BookingsPaginated({ providerId, route }: { providerId: string; route: O
   useEffect(() => { setItems(null); setError(''); operationsData.bookings(providerId, { ...cursor, limit, query: queryText.trim() || undefined, status: statusFilter || undefined, startsAtGte: rangeStart.toISOString(), startsAtLt: rangeEnd.toISOString() }).then(setItems).catch((cause) => setError(fail(cause))); }, [providerId, cursor, limit, queryText, statusFilter, weekStart]);
   if (route.id) return <AppointmentDetail providerId={providerId} id={route.id} back={() => go('bookings')} />;
   const visibleItems = items?.data || [];
-  const shiftWeek = (amount: number) => { setWeekStart(shiftCivilDate(weekStart, amount * 7)); setCursor({}); };
-  const rangeLabel = `${formatIndiaDate(days[0])} – ${formatIndiaDate(days[6])}`;
+  const shiftWeek = (amount: number) => { const next = new Date(rangeStart); next.setDate(next.getDate() + amount * 7); setWeekStart(localDateKey(next)); setCursor({}); };
+  const rangeLabel = `${days[0].toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${days[6].toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
   return <Frame title="Appointments & dispatch" description="Schedule site visits, dispatch technicians, and manage field capacity." action={<div className="booking-week-actions"><Button variant="secondary" aria-label="Previous week" onClick={() => shiftWeek(-1)}>‹</Button><strong>{rangeLabel}</strong><Button variant="secondary" aria-label="Next week" onClick={() => shiftWeek(1)}>›</Button><Button variant="secondary" onClick={() => { setWeekStart(weekStartKey(new Date())); setCursor({}); }}>Today</Button><Button onClick={() => setCreate(true)}>Create booking</Button></div>}>
-    {error && <Failure error={error} />}{!items && !error && <p className="notice">Loading authorized appointments…</p>}{items && <><div className="feature-summary-grid"><div><span>Scheduled this week</span><strong>{items.data.length}</strong><small>Provider-scoped appointments</small></div><div><span>Confirmed</span><strong>{items.data.filter((item) => ['CONFIRMED', 'COMPLETED'].includes(item.attributes.status)).length}</strong><small>Appointment lifecycle</small></div><div><span>Pending action</span><strong>{items.data.filter((item) => ['REQUESTED', 'PROPOSED', 'RESCHEDULED'].includes(item.attributes.status)).length}</strong><small>Needs scheduling review</small></div><div><span>Rows per page</span><strong>{limit}</strong><small>Backend cursor pagination</small></div></div><div className="booking-controls"><FilterToolbar resultLabel={`${items.data.length} appointments in ${rangeLabel}`}><label>Search appointments<input aria-label="Search appointments" placeholder="Search appointment summary…" value={queryText} onChange={(event) => { setQueryText(event.target.value); setCursor({}); }} /></label><label>Status<select aria-label="Filter bookings by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCursor({}); }}><option value="">All statuses</option>{['REQUESTED', 'CONFIRMED', 'RESCHEDULED', 'COMPLETED', 'MISSED', 'CANCELLED'].map((status) => <option key={status} value={status}>{status}</option>)}</select></label></FilterToolbar><div className="booking-view-toggle" role="group" aria-label="Appointment view"><Button variant={view === 'list' ? 'primary' : 'secondary'} onClick={() => setView('list')}>List</Button><Button variant={view === 'calendar' ? 'primary' : 'secondary'} onClick={() => setView('calendar')}>Calendar</Button></div></div>{view === 'calendar' ? <div className="booking-calendar-region">{visibleItems.length === 0 && <EmptyState title="No appointments this week" description="There are no authorized appointments in this week or the selected filters." />}<div className="booking-week-scroll"><div className="booking-week-grid" style={{ '--booking-hour-height': `${hourHeight}px`, '--booking-hours': calendarEndHour - calendarStartHour } as CSSProperties}><div className="booking-week-time-axis" aria-label="Appointment calendar time axis"><div className="booking-week-time-heading">Time</div>{Array.from({ length: calendarEndHour - calendarStartHour }, (_, index) => <div className="booking-week-time-label" key={calendarStartHour + index}>{formatIndiaTimeForHour(calendarStartHour + index)}</div>)}</div>{days.map((day) => { const key = localDateKey(day); const dayItems = visibleItems.filter((item) => localDateKey(new Date(item.attributes.requested_window.starts_at)) === key); return <section className={`booking-week-day${key === localDateKey(new Date()) ? ' is-today' : ''}`} key={key}><h3><span>{new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(day)}</span><strong>{formatIndiaDate(day)}</strong></h3><div className="booking-week-track">{dayItems.map((item) => { const start = new Date(item.attributes.requested_window.starts_at); const end = new Date(item.attributes.requested_window.ends_at); const startMinutes = ((indiaHourMinute(start).hour - calendarStartHour) * 60 + indiaHourMinute(start).minute); const endMinutes = ((indiaHourMinute(end).hour - calendarStartHour) * 60 + indiaHourMinute(end).minute); const top = Math.max(0, Math.min((calendarEndHour - calendarStartHour) * 60 - 28, startMinutes)); const bottom = Math.max(top + 28, Math.min((calendarEndHour - calendarStartHour) * 60, endMinutes)); return <button className="booking-week-event" style={{ top: `${top / 60 * hourHeight}px`, height: `${(bottom - top) / 60 * hourHeight}px` }} type="button" key={item.id} title={`${item.attributes.summary} · ${readableWindow(item.attributes.requested_window)}`} onClick={() => go(`bookings/${item.id}`)}><Status>{item.attributes.status}</Status><strong>{item.attributes.summary}</strong><span>{formatIndiaTime(start)}–{formatIndiaTime(end)}</span></button>})}</div></section>; })}</div></div></div> : visibleItems.length === 0 ? <EmptyState title="No appointments this week" description="There are no authorized appointments in this week or the selected filters." /> : <div className="feature-list">{visibleItems.map((item) => <article className="feature-row" key={item.id}><div><Status>{item.attributes.status}</Status><h3>{item.attributes.summary}</h3><p>{readableWindow(item.attributes.requested_window)}</p></div><Button variant="secondary" onClick={() => go(`bookings/${item.id}`)}>View booking</Button></article>)}</div>}<div className="server-pagination" aria-label="Booking pages"><label className="page-size-control">Rows per page<select aria-label="Booking rows per page" value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setCursor({}); }}><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label><div><Button type="button" variant="secondary" disabled={!items.page?.previous} onClick={() => setCursor({ before: items.page?.previous || undefined })}>Previous</Button><Button type="button" disabled={!items.page?.next} onClick={() => setCursor({ after: items.page?.next || undefined })}>Next</Button></div></div></>}
+    {error && <Failure error={error} />}{!items && !error && <p className="notice">Loading authorized appointments…</p>}{items && <><div className="feature-summary-grid"><div><span>Scheduled this week</span><strong>{items.data.length}</strong><small>Provider-scoped appointments</small></div><div><span>Confirmed</span><strong>{items.data.filter((item) => ['CONFIRMED', 'COMPLETED'].includes(item.attributes.status)).length}</strong><small>Appointment lifecycle</small></div><div><span>Pending action</span><strong>{items.data.filter((item) => ['REQUESTED', 'PROPOSED', 'RESCHEDULED'].includes(item.attributes.status)).length}</strong><small>Needs scheduling review</small></div><div><span>Rows per page</span><strong>{limit}</strong><small>Backend cursor pagination</small></div></div><div className="booking-controls"><FilterToolbar resultLabel={`${items.data.length} appointments in ${rangeLabel}`}><label>Search appointments<input aria-label="Search appointments" placeholder="Search appointment summary…" value={queryText} onChange={(event) => { setQueryText(event.target.value); setCursor({}); }} /></label><label>Status<select aria-label="Filter bookings by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCursor({}); }}><option value="">All statuses</option>{['REQUESTED', 'CONFIRMED', 'RESCHEDULED', 'COMPLETED', 'MISSED', 'CANCELLED'].map((status) => <option key={status} value={status}>{status}</option>)}</select></label></FilterToolbar><div className="booking-view-toggle" role="group" aria-label="Appointment view"><Button variant={view === 'list' ? 'primary' : 'secondary'} onClick={() => setView('list')}>List</Button><Button variant={view === 'calendar' ? 'primary' : 'secondary'} onClick={() => setView('calendar')}>Calendar</Button></div></div>{view === 'calendar' ? <div className="booking-calendar-region">{visibleItems.length === 0 && <EmptyState title="No appointments this week" description="There are no authorized appointments in this week or the selected filters." />}<div className="booking-week-scroll"><div className="booking-week-grid" style={{ '--booking-hour-height': `${hourHeight}px`, '--booking-hours': calendarEndHour - calendarStartHour } as CSSProperties}><div className="booking-week-time-axis" aria-label="Appointment calendar time axis"><div className="booking-week-time-heading">Time</div>{Array.from({ length: calendarEndHour - calendarStartHour }, (_, index) => <div className="booking-week-time-label" key={calendarStartHour + index}>{new Date(2000, 0, 1, calendarStartHour + index).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>)}</div>{days.map((day) => { const key = localDateKey(day); const dayItems = visibleItems.filter((item) => localDateKey(new Date(item.attributes.requested_window.starts_at)) === key); return <section className={`booking-week-day${key === localDateKey(new Date()) ? ' is-today' : ''}`} key={key}><h3><span>{day.toLocaleDateString('en-IN', { weekday: 'short' })}</span><strong>{day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</strong></h3><div className="booking-week-track">{dayItems.map((item) => { const start = new Date(item.attributes.requested_window.starts_at); const end = new Date(item.attributes.requested_window.ends_at); const startMinutes = (start.getHours() - calendarStartHour) * 60 + start.getMinutes(); const endMinutes = (end.getHours() - calendarStartHour) * 60 + end.getMinutes(); const top = Math.max(0, Math.min((calendarEndHour - calendarStartHour) * 60 - 28, startMinutes)); const bottom = Math.max(top + 28, Math.min((calendarEndHour - calendarStartHour) * 60, endMinutes)); return <button className="booking-week-event" style={{ top: `${top / 60 * hourHeight}px`, height: `${(bottom - top) / 60 * hourHeight}px` }} type="button" key={item.id} title={`${item.attributes.summary} · ${readableWindow(item.attributes.requested_window)}`} onClick={() => go(`bookings/${item.id}`)}><Status>{item.attributes.status}</Status><strong>{item.attributes.summary}</strong><span>{start.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}–{end.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></button>})}</div></section>; })}</div></div></div> : visibleItems.length === 0 ? <EmptyState title="No appointments this week" description="There are no authorized appointments in this week or the selected filters." /> : <div className="feature-list">{visibleItems.map((item) => <article className="feature-row" key={item.id}><div><Status>{item.attributes.status}</Status><h3>{item.attributes.summary}</h3><p>{readableWindow(item.attributes.requested_window)}</p></div><Button variant="secondary" onClick={() => go(`bookings/${item.id}`)}>View booking</Button></article>)}</div>}<div className="server-pagination" aria-label="Booking pages"><label className="page-size-control">Rows per page<select aria-label="Booking rows per page" value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setCursor({}); }}><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label><div><Button type="button" variant="secondary" disabled={!items.page?.previous} onClick={() => setCursor({ before: items.page?.previous || undefined })}>Previous</Button><Button type="button" disabled={!items.page?.next} onClick={() => setCursor({ after: items.page?.next || undefined })}>Next</Button></div></div></>}
     {create && <BookingForm providerId={providerId} close={() => setCreate(false)} saved={(item) => { setItems((current) => current ? { ...current, data: [item, ...current.data] } : { data: [item] }); setCreate(false); }} />}</Frame>;
 }
 
@@ -176,6 +424,7 @@ export function OperationsPages({ section, providerId, route, t }: { section: Se
   const { session } = useAuth();
   const capabilities = session ? navigationForSession(session, providerId).context?.capabilities || [] : [];
   if (section === 'leads') return <MarketingLeads providerId={providerId} />;
+  if (section === 'work-intake') return <ProviderWorkIntakeWorkspace providerId={providerId} route={route} canCreate={capabilities.includes('work_intake_create')} canEdit={capabilities.includes('work_intake_edit')} />;
   if (section === 'projects') return <ProjectsWorkspace providerId={providerId} />;
   if (section === 'amc') return <ProviderPrograms providerId={providerId} canManage={capabilities.includes('customer_admin')} canConfigure={capabilities.includes('configuration')} />;
   if (section === 'reports') return <ReportsWorkspace providerId={providerId} />;

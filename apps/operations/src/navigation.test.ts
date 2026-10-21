@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navigationForSession, platformNavigation, providerRouteAllowed } from './navigation';
+import { groupedProviderNavigation, navigationForSession, platformNavigation, providerRouteAllowed } from './navigation';
 
 const context = (capabilities: string[]) => ({ providerId: 'provider-1', displayName: 'Provider One', capabilities });
 
@@ -11,8 +11,8 @@ describe('Operations capability navigation', () => {
   });
 
   it.each([
-    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects'], ['overview', 'leads', 'quotations', 'projects', 'requests', 'bookings', 'jobs', 'customers', 'onboarding', 'amc', 'workforce', 'reports', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'audit', 'team-access']],
-    ['operations', ['requests', 'workforce', 'audit'], ['overview', 'requests', 'workforce', 'reports', 'audit']],
+    ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects', 'amc', 'reports'], ['overview', 'leads', 'requests', 'quotations', 'projects', 'bookings', 'jobs', 'customers', 'onboarding', 'amc', 'workforce', 'reports', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'audit', 'team-access']],
+    ['operations', ['requests', 'workforce', 'audit', 'reports'], ['overview', 'requests', 'workforce', 'reports', 'audit']],
     ['dispatcher', ['bookings', 'jobs'], ['bookings', 'jobs']],
     ['agent', ['my_work'], ['my-work']]
   ])('%s receives only capabilities returned for the selected context', (_name, capabilities, expectedKeys) => {
@@ -52,14 +52,38 @@ describe('Operations capability navigation', () => {
     expect(providerRouteAllowed(session, 'provider-1', 'leads')).toBe(true);
   });
 
+  it('exposes unified Work Intake only when the selected provider returns its read capability', () => {
+    const session = { platformAdmin: false, providerCapabilities: [context(['work_intake'])] };
+    expect(navigationForSession(session, 'provider-1').provider.map((item) => item.key)).toContain('work-intake');
+    expect(providerRouteAllowed(session, 'provider-1', 'work-intake')).toBe(true);
+    expect(providerRouteAllowed({ ...session, providerCapabilities: [context([])] }, 'provider-1', 'work-intake')).toBe(false);
+  });
+
   it.each([
-    ['amc', 'projects'],
-    ['reports', 'workforce'],
+    ['amc', 'amc'],
+    ['reports', 'reports'],
     ['team-access', 'team_access'],
     ['business-profile', 'business_profile']
   ])('uses the navigation capability for the %s route', (section, capability) => {
     const session = { platformAdmin: false, providerCapabilities: [context([capability])] };
     expect(providerRouteAllowed(session, 'provider-1', section)).toBe(true);
+  });
+
+  it('keeps legacy route hashes while presenting Provider Workspace terminology', () => {
+    const capabilities = ['sales_marketing', 'requests', 'quotations', 'projects', 'bookings', 'jobs', 'my_work', 'customers', 'onboarding', 'amc', 'workforce', 'reports'];
+    const navigation = navigationForSession({ platformAdmin: false, providerCapabilities: [context(capabilities)] }, 'provider-1');
+    expect(navigation.provider.find((item) => item.key === 'leads')?.hash).toBe('leads');
+    expect(navigation.provider.find((item) => item.key === 'my-work')?.hash).toBe('jobs/my-work');
+    expect(navigation.provider.find((item) => item.key === 'projects')?.label).toBe('Projects & Delivery');
+    expect(navigation.provider.find((item) => item.key === 'amc')?.hash).toBe('amc');
+  });
+
+  it('orders only implemented destinations into the Provider Workspace groups', () => {
+    const capabilities = ['sales_marketing', 'requests', 'quotations', 'projects', 'bookings', 'jobs', 'my_work', 'customers', 'onboarding', 'amc', 'workforce', 'reports'];
+    const navigation = navigationForSession({ platformAdmin: false, providerCapabilities: [context(capabilities)] }, 'provider-1');
+    const groups = groupedProviderNavigation(navigation.provider);
+    expect(groups.map(({ group }) => group)).toEqual(['Overview', 'Work Intake', 'Sales & Quotations', 'Projects & Delivery', 'Field Operations', 'Assets & Sites', 'Service Programs', 'Workforce', 'Insights']);
+    expect(groups.flatMap(({ items }) => items).some(({ key }) => ['materials', 'quality', 'finance'].includes(key))).toBe(false);
   });
 
   it('guards deep links against the selected provider context', () => {

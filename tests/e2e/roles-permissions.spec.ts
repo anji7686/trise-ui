@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
-import { paceLocalSignIn, localSignIn, localSignOut, configuredAccount } from './local-auth';
+import { approvedLocalAccounts, paceLocalSignIn, localSignIn, localSignOut, configuredAccount } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 import type { Page, TestInfo, APIResponse } from 'playwright/test';
 import type { components } from '../../packages/api-client/src/generated';
 
@@ -39,10 +39,10 @@ test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000,
 test('approved accounts expose only their existing access workspaces', async ({ page, evidence }, testInfo) => {
   test.skip(testInfo.project.name !== 'operations-desktop', 'Authority inventory is recorded once in Operations.');
   test.setTimeout(90_000);
-  const accounts = readFileSync(new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url), 'utf8').trim().split('\n');
+  const accounts = approvedLocalAccounts();
   const observed: unknown[] = [];
-  for (const [index, line] of accounts.entries()) {
-    const [email, secret] = line.split(': ');
+  for (const [index, account] of accounts.entries()) {
+    const { email, secret } = account;
     await page.goto('/');
     const emailControl = page.getByRole('combobox', { name: 'Test email', exact: true });
     const quickMode = await emailControl.evaluate((element) => element.tagName === 'SELECT');
@@ -94,12 +94,12 @@ test('restore the approved session delegation baseline after interrupted accepta
   const cleanup: unknown[] = [];
   let cursor: string | null = null;
   do {
-    const response: APIResponse = await page.request.get(`http://127.0.0.1:3000/api/v1/platform/access/roles${cursor ? `?page[after]=${encodeURIComponent(cursor)}` : ''}`, { headers });
+    const response: APIResponse = await page.request.get(`${e2eApiV1Base()}/platform/access/roles${cursor ? `?page[after]=${encodeURIComponent(cursor)}` : ''}`, { headers });
     expect(response.status()).toBe(200);
     const collection: components['schemas']['AccessRoleCollection'] = await response.json();
     for (const role of collection.data) {
       if (!/^Browser verification (?:default|other operation) operations-(?:desktop|tablet|mobile)-[0-9]{13}$/.test(role.attributes.name) || role.attributes.status !== 'active' || !role.attributes.enabled) continue;
-      const disabled = await page.request.post(`http://127.0.0.1:3000/api/v1/platform/access/roles/${role.id}/enabled`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: role.attributes.revision, enabled: false } });
+      const disabled = await page.request.post(`${e2eApiV1Base()}/platform/access/roles/${role.id}/enabled`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: role.attributes.revision, enabled: false } });
       expect(disabled.status()).toBe(200);
       cleanup.push({ action: 'disable-session-verification-default', roleId: role.id, status: disabled.status() });
     }
@@ -119,7 +119,7 @@ test('platform publication and provider multiple-role workflows persist with aud
   const defaultName = `Browser verification default ${suffix}`;
   const excludedName = `Browser verification other operation ${suffix}`;
   const customNames = [`Browser verification audit ${suffix}`, `Browser verification support ${suffix}`];
-  const api = 'http://127.0.0.1:3000/api/v1';
+  const api = e2eApiV1Base();
   const providerSession = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const provider = providerSession.user.attributes.provider_capabilities.find((entry: { display_name: string; capabilities: string[] }) => entry.display_name.startsWith('Lift Rise Elevators') && entry.capabilities.includes('team_access'));
   expect(provider).toBeTruthy();

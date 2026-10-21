@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { localSignIn, localSignOut, configuredAccount } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -169,7 +170,7 @@ test('provider admin suspension removes operational access and restoration retur
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
   const admin = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
-  const api = 'http://127.0.0.1:3000/api/v1';
+  const api = e2eApiV1Base();
   const operations = admin.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
     entry.display_name.startsWith('Lift Rise Elevators') && entry.capabilities.includes('team_access'));
   expect(operations).toBeTruthy();
@@ -201,7 +202,7 @@ test('provider admin suspension removes operational access and restoration retur
   expect((await suspended).status()).toBe(200);
   await expect(row.getByText('suspended', { exact: true })).toBeVisible();
 
-  const operatorContext = await browser.newContext({ baseURL: 'http://127.0.0.1:4174' });
+  const operatorContext = await browser.newContext({ baseURL: process.env.TRISE_E2E_OPERATIONS_URL || 'http://127.0.0.1:4174' });
   const operatorPage = await operatorContext.newPage();
   try {
     const operator = await localSignIn(operatorPage, configuredAccount('OPERATOR'));

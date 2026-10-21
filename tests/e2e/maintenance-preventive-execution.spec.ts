@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { approvedLocalAccounts, configuredAccount, localSignIn } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'on-first-retry', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -8,7 +9,7 @@ test('technician completes a preventive maintenance ServiceJob from My Work', as
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
 
-  const apiBase = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const apiBase = e2eApiV1Base();
   const adminAccount = approvedLocalAccounts().find((account) => account.email === configuredAccount('PROVIDER_ADMIN'));
   if (!adminAccount) throw new Error('Provider Administrator fixture is not on the approved local list');
   const adminSignIn = await page.request.post(`${apiBase}/session/development`, {
@@ -47,10 +48,10 @@ test('technician completes a preventive maintenance ServiceJob from My Work', as
   await page.context().clearCookies();
   const technician = await localSignIn(page, configuredAccount('AGENT'));
   const capability = technician.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId);
-  expect(capability?.capabilities).toContain('my_work');
+  expect(capability?.capabilities, 'TRISE_E2E_AGENT_EMAIL must identify an authorized Provider Agent with the server-projected My Work capability').toContain('my_work');
   const technicianHeaders = { Authorization: `Bearer ${technician.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const existingVisits = await page.request.get(`${apiBase}/service-jobs/${job.id}/visits`, { headers: technicianHeaders });
-  expect(existingVisits.ok()).toBeTruthy();
+  expect(existingVisits.ok(), `assigned technician visit read returned ${existingVisits.status()}: ${await existingVisits.text()}`).toBeTruthy();
   if ((await existingVisits.json()).data.length === 0) {
     const visitResponse = await page.request.post(`${apiBase}/service-jobs/${job.id}/visits`, {
       headers: { ...technicianHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { notes: 'Preventive browser visit' }
@@ -84,7 +85,7 @@ test('technician completes a preventive maintenance ServiceJob from My Work', as
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
 
   await page.goto('/#/jobs');
-  await page.getByRole('button', { name: 'My Work', exact: true }).click();
+  await page.getByRole('tab', { name: 'My Work', exact: true }).click();
   const preventiveWork = page.locator('article.job-list-row').filter({ hasText: jobSummary });
   await expect(preventiveWork).toBeVisible();
   await preventiveWork.getByRole('button', { name: 'Open visit', exact: true }).click();

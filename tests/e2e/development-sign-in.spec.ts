@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
 import type { Page } from 'playwright/test';
-import { paceLocalSignIn } from './local-auth';
+import { approvedLocalAccounts, paceLocalSignIn } from './local-auth';
 
 async function revealSignOut(page: Page, operations: boolean) {
   if (operations) await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
@@ -13,20 +12,21 @@ async function revealSignOut(page: Page, operations: boolean) {
 test.use({ trace: 'off', video: 'off', screenshot: 'off' });
 
 test('local email selection authenticates a real user and logout restores the form', async ({ page, evidence }, testInfo) => {
-  const quickSignIn = process.env.VITE_DEVELOPMENT_QUICK_SIGN_IN === 'true';
-  const [email, secret] = quickSignIn ? ['', ''] : readFileSync(new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url), 'utf8').trim().split('\n')[0].split(': ');
+  const account = approvedLocalAccounts()[0];
+  if (!account) throw new Error('No approved local test identity is configured.');
   await page.goto('/');
   const emailField = page.getByRole('combobox', { name: 'Test email', exact: true });
   await expect(emailField).toBeVisible();
+  const quickSignIn = await emailField.evaluate((element) => element.tagName === 'SELECT');
   const submit = page.getByRole('button', { name: quickSignIn ? 'Sign in as selected account' : 'Sign in locally', exact: true });
   await submit.click();
   expect(await emailField.evaluate((node: HTMLInputElement) => node.validity.valueMissing)).toBe(true);
   if (quickSignIn) {
     await emailField.selectOption((await page.locator('select[name="email"] option').nth(1).getAttribute('value')) || '');
   } else {
-    await emailField.fill(email);
+    await emailField.fill(account.email);
     await paceLocalSignIn();
-    await page.getByLabel('Local secret', { exact: true }).fill(secret);
+    await page.getByLabel('Local secret', { exact: true }).fill(account.secret);
   }
   await submit.click();
   await revealSignOut(page, testInfo.project.name.startsWith('operations'));
@@ -43,14 +43,17 @@ test('local email selection authenticates a real user and logout restores the fo
 });
 
 test('password-based local sign-in remains available when quick sign-in is disabled', async ({ page }, testInfo) => {
-  test.skip(process.env.VITE_DEVELOPMENT_QUICK_SIGN_IN === 'true', 'Quick local account selection is enabled for this local environment.');
-  const [email, secret] = readFileSync(new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url), 'utf8').trim().split('\n')[0].split(': ');
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Test email', exact: true }).fill(email);
+  const emailField = page.getByRole('combobox', { name: 'Test email', exact: true });
+  await expect(emailField).toBeVisible();
+  test.skip(await emailField.evaluate((element) => element.tagName === 'SELECT'), 'Quick local account selection is enabled for this local environment.');
+  const account = approvedLocalAccounts()[0];
+  if (!account) throw new Error('No approved local test identity is configured.');
+  await emailField.fill(account.email);
   await page.getByLabel('Automatically sign in when my email and local secret are ready', { exact: true }).check();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toHaveCount(0);
   await paceLocalSignIn();
-  await page.getByLabel('Local secret', { exact: true }).fill(secret);
+  await page.getByLabel('Local secret', { exact: true }).fill(account.secret);
   await revealSignOut(page, testInfo.project.name.startsWith('operations'));
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Test email', exact: true })).toBeVisible();

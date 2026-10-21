@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { expect, type Page } from 'playwright/test';
 import { e2eEnv } from './e2e-config';
 
@@ -12,7 +13,8 @@ export function configuredAccount(persona: E2EPersona) {
 }
 
 export function approvedLocalAccounts() {
-  const source = new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url);
+  const configuredPath = e2eEnv('TRISE_E2E_LOCAL_SECRETS_FILE');
+  const source = configuredPath ? pathToFileURL(configuredPath) : new URL('../../../trise-api/.env.development-sign-in-secrets.txt', import.meta.url);
   let contents: string;
   try { contents = readFileSync(source, 'utf8').trim(); } catch {
     throw new Error('Approved local sign-in secrets are unavailable. Provide the private trise-api/.env.development-sign-in-secrets.txt file; never add credentials to trise-ui.');

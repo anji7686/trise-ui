@@ -23,8 +23,12 @@ test('Platform billing exposes the guided invoice route and inline PDF preview',
   const dueAtValue = dueAt.toISOString().slice(0, 16);
   await page.locator('input[type="datetime-local"]').fill(dueAtValue);
   await page.getByRole('button', { name: 'Continue to charges', exact: true }).click();
+  const taxRate = page.getByRole('combobox', { name: /Legacy tax rate/ });
+  await taxRate.click();
+  await expect(page.getByRole('option').first()).toBeVisible();
+  await page.getByRole('option').first().click();
   await page.getByRole('button', { name: 'Calculate server tax preview', exact: true }).click();
-  await expect(page.getByText('Ready', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Ready for invoice review', { exact: true })).toBeVisible({ timeout: 15000 });
   await page.getByRole('button', { name: 'Review invoice', exact: true }).click();
   await page.getByRole('button', { name: 'Issue invoice', exact: true }).click();
 

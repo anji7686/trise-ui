@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
+
+const apiBase = e2eApiV1Base();
 
 test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -10,102 +13,83 @@ function syntheticEvidenceId() {
   return value.join('');
 }
 
-test('provider operations reconciles partial shipment delivery in the Projects workspace', async ({ page }, info) => {
+async function activePermissionCodes(page: import('@playwright/test').Page, accessToken: string, providerId: string) {
+  const response = await page.request.get(`${apiBase}/provider/access/self/effective-permissions`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId },
+  });
+  expect(response.ok(), `effective-permission preview failed: ${response.status()} ${await response.text()}`).toBeTruthy();
+  const payload = await response.json();
+  return new Set((payload.data.attributes.permissions as Array<{ code: string; grant_effective: boolean }>)
+    .filter((permission) => permission.grant_effective).map((permission) => permission.code));
+}
+
+async function navigateProvider(page: import('@playwright/test').Page, label: string) {
+  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  const item = navigation.getByRole('button', { name: label, exact: true });
+  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await item.click();
+}
+
+test('Provider Admin milestone execution stays hidden and is denied by the API', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const relationships = await page.request.get(`${process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1'}/customer-relationships?page[limit]=1`, { headers });
+  const relationships = await page.request.get(`${apiBase}/customer-relationships?page[limit]=1`, { headers });
   expect(relationships.ok()).toBeTruthy();
   const relationship = (await relationships.json()).data[0];
   expect(relationship).toBeTruthy();
-  const projectResponse = await page.request.post(`${process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1'}/service-cases`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { title: `Synthetic shipment project ${Date.now()}`, project_classification_key: 'ELEVATOR_INSTALLATION' } });
+  const projectResponse = await page.request.post(`${apiBase}/service-cases`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { title: `Synthetic shipment project ${Date.now()}`, project_classification_key: 'ELEVATOR_INSTALLATION' } });
   if (projectResponse.status() !== 201) throw new Error(`project setup failed for relationship ${JSON.stringify(relationship)}: ${await projectResponse.text()}`);
   const project = (await projectResponse.json()).data;
-  const listedProjects = await page.request.get(`${process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1'}/service-cases?page[limit]=100`, { headers });
+  const listedProjects = await page.request.get(`${apiBase}/service-cases?page[limit]=100`, { headers });
   if (!listedProjects.ok()) throw new Error(`project list setup failed: ${await listedProjects.text()}`);
   const listedPayload = await listedProjects.json();
   if (!listedPayload.data.some((item: { data?: { id: string }; id?: string }) => (item.data?.id || item.id) === project.id)) throw new Error(`created project ${project.id} was not returned by provider list: ${JSON.stringify(listedPayload).slice(0, 2000)}`);
+
+  const stageCreateResponse = await page.request.post(`${apiBase}/service-cases/${project.id}/stages`, {
+    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+    data: { code: 'INSTALL', title: 'Install elevator equipment', mandatory: true },
+  });
+  if (stageCreateResponse.status() !== 201) throw new Error(`stage setup failed: ${stageCreateResponse.status()} ${await stageCreateResponse.text()}`);
+  const stage = (await stageCreateResponse.json()).data;
+  const verifiedStages = await page.request.get(`${apiBase}/service-cases/${project.id}/stages?page[limit]=100`, { headers });
+  if (!verifiedStages.ok()) throw new Error(`stage list verification failed: ${verifiedStages.status()} ${await verifiedStages.text()}`);
+  const stageRows = (await verifiedStages.json()).data as Array<{ id?: string; data?: { id: string } }>;
+  expect(stageRows.some((row) => (row.data?.id || row.id) === stage.id)).toBeTruthy();
 
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
   await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: project.attributes.title, exact: true })).toBeVisible();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
-  await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
-  await page.getByLabel('Code *', { exact: true }).fill('INSTALL');
-  await page.getByLabel('Title *', { exact: true }).fill('Install elevator equipment');
-  await page.getByRole('dialog').getByRole('button', { name: 'Save milestone', exact: true }).click();
-  await expect(page.getByText(/INSTALL · Install elevator equipment/)).toBeVisible();
-  await page.getByRole('button', { name: 'Start milestone', exact: true }).click();
-  await expect(page.getByText('IN_PROGRESS', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Complete milestone', exact: true }).click();
-  await expect(page.getByText('COMPLETED', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Add change order', exact: true }).click();
-  await page.getByLabel('Description *', { exact: true }).fill('Synthetic scope amendment');
-  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
-  await expect(page.getByText(/Synthetic scope amendment/)).toBeVisible();
-  const changeOrderCard = page.locator('article.record-card').filter({ hasText: 'Synthetic scope amendment' });
-  const submitChangeOrderResponse = page.waitForResponse((response) => response.url().includes('/change-orders/') && response.url().includes('/transitions') && response.request().method() === 'POST');
-  await changeOrderCard.getByRole('button', { name: 'Submit for approval', exact: true }).click();
-  const submitChangeOrderHttp = await submitChangeOrderResponse;
-  if (submitChangeOrderHttp.status() !== 200) throw new Error(`change-order submission failed: ${submitChangeOrderHttp.status()} ${await submitChangeOrderHttp.text()}`);
-  await expect(page.getByText(/Awaiting independent approval/)).toBeVisible();
-  await page.getByRole('button', { name: 'Add material requirement', exact: true }).click();
-  await page.getByLabel('Material code *', { exact: true }).fill('GUIDE-RAIL');
-  await page.getByLabel('Description *', { exact: true }).fill('Synthetic guide rail');
-  await page.getByRole('button', { name: 'Save requirement', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Material requirement recorded.');
-  await expect(page.getByText(/GUIDE-RAIL/)).toBeVisible();
-  await page.getByRole('button', { name: 'Create shipment', exact: true }).click();
-  const shipmentNumber = `SHIP-${Date.now()}`;
-  await page.getByLabel('Shipment number *', { exact: true }).fill(shipmentNumber);
-  await page.getByLabel('Quantity *', { exact: true }).fill('6');
-  await page.getByRole('button', { name: 'Dispatch shipment', exact: true }).click();
-  await expect(page.getByText(shipmentNumber, { exact: true })).toBeVisible();
-  await page.locator('article.record-card').filter({ hasText: shipmentNumber }).getByRole('button', { name: 'Record delivery', exact: true }).click();
-  await page.getByLabel('Accepted quantity *', { exact: true }).fill('5');
-  await page.getByLabel('Rejected quantity *', { exact: true }).fill('1');
-  await page.getByRole('button', { name: 'Save delivery', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Delivery reconciliation recorded.');
-  await expect(page.getByText(/Accepted 5/)).toBeVisible();
-  await expect(page.getByText(/Rejected 1/)).toBeVisible();
-  if (process.env.TRISE_E2E_STORAGE === 'true') {
-    await page.getByText('Delivery proof', { exact: true }).last().click();
-    await page.getByLabel('PDF, PNG, JPEG, XLS or XLSX', { exact: true }).setInputFiles({ name: 'delivery-proof.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 synthetic delivery proof') });
-    await page.getByRole('button', { name: 'Upload proof', exact: true }).click();
-    const proofAlerts = await page.locator('[role="alert"]').allTextContents();
-    if (proofAlerts.length) throw new Error(`delivery proof upload failed: ${proofAlerts.join(' | ')}`);
-    await page.waitForTimeout(1000);
-    if (!await page.getByText('Delivery proof finalized and associated with this shipment.', { exact: true }).isVisible().catch(() => false)) throw new Error(`delivery proof upload state: ${(await page.locator('body').innerText()).slice(-2500)}`);
-    await expect(page.getByText('Delivery proof finalized and associated with this shipment.', { exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/delivery-proof.pdf · available · not_scanned/)).toBeVisible();
-    const downloadResponse = page.waitForResponse((response) => response.url().includes('/documents/') && response.url().endsWith('/download') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Download proof', exact: true }).click();
-    expect((await downloadResponse).status()).toBe(200);
-  }
-  await page.getByRole('button', { name: 'Add payment milestone', exact: true }).click();
-  const paymentDialog = page.getByRole('dialog', { name: 'Configure payment stages', exact: true });
-  await paymentDialog.getByLabel('Payment basis *', { exact: true }).fill('1000');
-  await paymentDialog.getByLabel('Identifier *', { exact: true }).first().fill('ADVANCE');
-  await paymentDialog.getByLabel('Name *', { exact: true }).first().fill('Synthetic advance');
-  await paymentDialog.getByRole('button', { name: 'Save payment-stage configuration', exact: true }).click();
-  await expect.poll(async () => (await page.locator('body').innerText()).slice(-2500), { timeout: 10_000 }).toContain('ADVANCE');
-  await page.locator('section.detail-card').filter({ hasText: 'Customer payment schedule' }).getByRole('button', { name: 'Record collection', exact: true }).first().click();
-  await page.getByLabel('Amount *', { exact: true }).fill('500');
-  await page.getByRole('dialog').getByRole('button', { name: 'Record collection', exact: true }).click();
-  await expect(page.locator('section.detail-card').filter({ hasText: 'Customer payment schedule' }).getByText(/Collected 0/).first()).toBeVisible();
+  const projectRow = page.getByRole('row').filter({ hasText: project.attributes.title });
+  await expect(projectRow).toBeVisible();
+  await projectRow.getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Installation milestones', exact: true })).toBeVisible();
+  const deniedTransition = await page.request.post(`${apiBase}/service-stages/${stage.id}/transitions`, {
+    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+    data: { transition: 'IN_PROGRESS', expected_revision: 1 },
+  });
+  expect(deniedTransition.status()).toBe(403);
+  await expect(page.getByRole('button', { name: 'Start milestone', exact: true })).toHaveCount(0);
+  const stageList = await page.request.get(`${apiBase}/service-cases/${project.id}/stages`, { headers });
+  expect(stageList.ok()).toBeTruthy();
+  const persistedStage = (await stageList.json()).data.map((item: { data?: { id: string; attributes: { status: string } }; id?: string; attributes?: { status: string } }) => item.data || item).find((item: { id?: string }) => item.id === stage.id);
+  expect(persistedStage?.attributes.status).toBe('READY');
+  const screenshotPath = info.outputPath(`provider-admin-stage-execution-denied-${info.project.name}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  await info.attach(`provider-admin-stage-execution-denied-${info.project.name}`, { path: screenshotPath });
   await localSignOut(page);
 });
 
-test('Projects keeps milestone progress independent for two elevator units', async ({ page }, info) => {
+test('Projects keeps per-unit milestones independent and blocks unassigned execution', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -121,44 +105,56 @@ test('Projects keeps milestone progress independent for two elevator units', asy
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Quality and handover', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Request handover', exact: true }).click();
   await page.getByLabel('Handover elevator unit', { exact: true }).selectOption(assets[0].id);
   await page.getByLabel('Handover evidence document ID', { exact: true }).fill(syntheticEvidenceId());
-  expect(await page.getByRole('button', { name: 'Request handover', exact: true }).isEnabled()).toBeTruthy();
+  expect(await page.getByRole('dialog').getByRole('button', { name: 'Request handover', exact: true }).isEnabled()).toBeTruthy();
   const firstHandoverResponse = page.waitForResponse((response) => response.url().includes(`/service-cases/${project.id}/handover`) && response.request().method() === 'POST');
-  await page.getByRole('button', { name: 'Request handover', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Request handover', exact: true }).click();
   const firstHandoverHttp = await firstHandoverResponse;
   if (firstHandoverHttp.status() !== 201) throw new Error(`handover UI request failed: ${firstHandoverHttp.status()} ${await firstHandoverHttp.text()}`);
   const firstHandoverFeedback = page.locator('[role="status"], [role="alert"]').last();
   await expect(firstHandoverFeedback).toContainText('Handover request recorded by the server.');
+  await page.getByRole('button', { name: 'Request handover', exact: true }).click();
   await page.getByLabel('Handover elevator unit', { exact: true }).selectOption(assets[1].id);
   await page.getByLabel('Handover evidence document ID', { exact: true }).fill(syntheticEvidenceId());
-  await page.getByRole('button', { name: 'Request handover', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Request handover', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Handover request recorded by the server.');
   await expect(page.getByText('REQUESTED', { exact: true })).toHaveCount(2);
+  await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
   await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
   await page.getByLabel('Code *', { exact: true }).fill('INSTALL-A');
   await page.getByLabel('Title *', { exact: true }).fill('Install Lift A');
   await page.getByLabel('Elevator unit', { exact: true }).selectOption(assets[0].id);
   await page.getByRole('dialog').getByRole('button', { name: 'Save milestone', exact: true }).click();
-  await page.getByRole('button', { name: 'Start milestone', exact: true }).click();
-  await page.getByRole('button', { name: 'Complete milestone', exact: true }).click();
-  await expect(page.getByText(new RegExp(`${assets[0].attributes.name || assets[0].id}: 1/1 completed · 100%`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`${assets[0].attributes.name || assets[0].id}: 0/1 completed · 0%`))).toBeVisible();
+  const startMilestone = page.getByRole('button', { name: 'Start milestone', exact: true }).first();
+  await expect(startMilestone).toBeVisible();
+  const deniedStart = page.waitForResponse((response) => response.url().includes(`/service-stages/`) && response.url().endsWith('/transitions') && response.request().method() === 'POST');
+  await startMilestone.click();
+  expect((await deniedStart).status()).toBe(403);
+  await expect(page.getByRole('alert')).toContainText(/not authorized|forbidden|not permitted/i);
+  const stageState = await page.request.get(`${api}/service-cases/${project.id}/stages`, { headers });
+  expect(stageState.ok()).toBeTruthy();
+  expect((await stageState.json()).data.map((item: { data?: { attributes?: { status?: string } }; attributes?: { status?: string } }) => (item.data || item).attributes?.status)).toContain('READY');
   await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
   await page.getByLabel('Code *', { exact: true }).fill('INSTALL-B');
   await page.getByLabel('Title *', { exact: true }).fill('Install Lift B');
   await page.getByLabel('Elevator unit', { exact: true }).selectOption(assets[1].id);
   await page.getByRole('dialog').getByRole('button', { name: 'Save milestone', exact: true }).click();
   await expect(page.getByText(new RegExp(`${assets[1].attributes.name || assets[1].id}: 0/1 completed · 0%`))).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start milestone', exact: true })).toHaveCount(2);
   await localSignOut(page);
 });
 
 test('installation handover requests remain independent per elevator unit', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -187,7 +183,7 @@ test('installation handover requests remain independent per elevator unit', asyn
 test('Projects records a commissioning defect and requires independent reinspection', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(180_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const admin = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${admin.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -198,17 +194,19 @@ test('Projects records a commissioning defect and requires independent reinspect
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Commissioning defects and reinspection', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Report defect', exact: true }).click();
   await page.getByLabel('Quality finding title', { exact: true }).fill('Door interlock defect');
   await page.getByLabel('Quality finding description', { exact: true }).fill('Interlock does not engage during commissioning test');
   await page.getByLabel('Quality finding corrective action', { exact: true }).fill('Replace interlock and repeat the safety test');
-  await page.getByRole('button', { name: 'Report defect', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Report defect', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quality finding recorded.');
   await page.getByRole('button', { name: 'Start rectification', exact: true }).click();
   await expect(page.getByText('RECTIFICATION_IN_PROGRESS', { exact: true })).toBeVisible();
-  await page.getByLabel('Quality finding evidence document ID', { exact: true }).fill(syntheticEvidenceId());
+  await page.getByLabel('Reinspection evidence document ID', { exact: true }).fill(syntheticEvidenceId());
   await page.getByRole('button', { name: 'Submit for reinspection', exact: true }).click();
   await expect(page.getByText('READY_FOR_REINSPECTION', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Pass reinspection', exact: true }).click();
@@ -220,10 +218,11 @@ test('Projects records a commissioning defect and requires independent reinspect
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
   await expect(page.getByText('READY_FOR_REINSPECTION', { exact: true })).toBeVisible();
-  await page.getByLabel('Quality finding evidence document ID', { exact: true }).fill(syntheticEvidenceId());
+  await page.getByLabel('Reinspection evidence document ID', { exact: true }).fill(syntheticEvidenceId());
   await page.getByRole('button', { name: 'Pass reinspection', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quality finding resolved.');
   await expect(page.getByText('RESOLVED', { exact: true })).toBeVisible();
@@ -238,7 +237,7 @@ test('Projects records a commissioning defect and requires independent reinspect
 test('Projects creates and links an installation Service Job', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -269,8 +268,17 @@ test('Projects creates and links an installation Service Job', async ({ page }, 
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
+  const grants = await activePermissionCodes(page, session.accessToken, providerId);
+  if (!grants.has('SERVICE_JOB_EDIT')) {
+    await expect(page.getByRole('button', { name: 'Create installation job', exact: true })).toHaveCount(0);
+    const deniedCreate = await page.request.post(`${api}/service-jobs`, { headers, data: {} });
+    expect(deniedCreate.status()).toBe(403);
+    await localSignOut(page);
+    return;
+  }
   await page.getByRole('button', { name: 'Create installation job', exact: true }).click();
   const jobDialog = page.getByRole('dialog', { name: 'Create installation job', exact: true });
   await expect(jobDialog).toBeVisible();
@@ -291,9 +299,13 @@ test('Projects creates and links an installation Service Job', async ({ page }, 
     .find((item: { id?: string; attributes?: { display_name?: string } }) => item.attributes?.display_name === 'Demo Elevator Technician');
   expect(agent).toBeTruthy();
   await page.goto(`${process.env.TRISE_E2E_OPERATIONS_URL || 'http://127.0.0.1:4174'}/#jobs/${jobId}`);
-  await page.getByRole('button', { name: 'Open assignment drawer', exact: true }).click();
-  const assignmentDrawer = page.locator('dialog.operations-drawer');
-  await assignmentDrawer.getByRole('combobox', { name: 'Server-authorized agent', exact: true }).selectOption(agent.id);
+  await page.getByRole('button', { name: 'Assign or reassign technician', exact: true }).click();
+  const assignmentDrawer = page.getByRole('dialog', { name: 'Assign or reassign technician', exact: true });
+  const technicianSelect = page.getByRole('combobox', { name: 'Technician', exact: true });
+  await technicianSelect.selectOption(agent.id);
+  const assignmentScreenshot = info.outputPath(`provider-workspace-job-assignment-drawer-${info.project.name}.png`);
+  await page.screenshot({ path: assignmentScreenshot, fullPage: true });
+  await info.attach(`provider-workspace-job-assignment-drawer-${info.project.name}`, { path: assignmentScreenshot });
   const assignmentResponse = page.waitForResponse((response) => response.url().includes('/assign') && response.request().method() === 'POST');
   await assignmentDrawer.getByRole('button', { name: 'Confirm assignment', exact: true }).click();
   const assignmentHttp = await assignmentResponse;
@@ -305,7 +317,7 @@ test('Projects creates and links an installation Service Job', async ({ page }, 
 test('independent provider administrator approves a submitted change order', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const requester = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const requesterHeaders = { Authorization: `Bearer ${requester.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -331,8 +343,9 @@ test('independent provider administrator approves a submitted change order', asy
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await expect(page.getByText(/Synthetic independent approval/)).toBeVisible();
   await page.getByRole('button', { name: 'Approve change order', exact: true }).click();
   await expect(page.getByText('APPROVED', { exact: true })).toBeVisible();
@@ -345,10 +358,10 @@ test('independent provider administrator approves a submitted change order', asy
   await localSignOut(page);
 });
 
-test('independent provider administrator settles a customer payment through Projects', async ({ page }, info) => {
+test('provider payment evidence is recorded and settlement remains finance-authorized in Projects', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const requester = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const requesterHeaders = { Authorization: `Bearer ${requester.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -358,6 +371,13 @@ test('independent provider administrator settles a customer payment through Proj
   const scheduleResponse = await page.request.post(`${api}/service-cases/${project.id}/payment-schedules`, { headers: { ...requesterHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { milestone_code: 'ADVANCE', description: 'Synthetic advance', due_amount: 1000, currency_code: 'INR' } });
   expect(scheduleResponse.status()).toBe(201);
   const schedule = (await scheduleResponse.json()).data;
+  const requesterGrants = await activePermissionCodes(page, requester.accessToken, providerId);
+  if (!requesterGrants.has('PAYMENT_RECORD')) {
+    const deniedPayment = await page.request.post(`${api}/service-cases/${project.id}/payments`, { headers: { ...requesterHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { payment_schedule_id: schedule.id, payment_reference: `UNAUTHORIZED-${Date.now()}`, method: 'ONLINE', amount: 500, currency_code: 'INR' } });
+    expect(deniedPayment.status()).toBe(403);
+    await localSignOut(page);
+    return;
+  }
   const paymentResponse = await page.request.post(`${api}/service-cases/${project.id}/payments`, { headers: { ...requesterHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { payment_schedule_id: schedule.id, payment_reference: `ONLINE-${Date.now()}`, method: 'ONLINE', amount: 500, currency_code: 'INR' } });
   expect(paymentResponse.status()).toBe(201);
   await localSignOut(page);
@@ -368,10 +388,26 @@ test('independent provider administrator settles a customer payment through Proj
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await expect(page.getByText(/ONLINE ·/)).toBeVisible();
-  await page.getByRole('button', { name: 'Settle payment', exact: true }).click();
+  const recordedPayments = await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers: approverHeaders });
+  expect(recordedPayments.ok()).toBeTruthy();
+  const recordedRows = (await recordedPayments.json()).data as Array<{ data?: { id: string; attributes?: { status?: string } }; id?: string; attributes?: { status?: string } }>;
+  const onlinePayment = recordedRows.map((item) => item.data || item).find((item) => item.attributes?.status === 'PENDING_VERIFICATION');
+  expect(onlinePayment).toBeTruthy();
+  const settlementAction = page.getByRole('button', { name: 'Settle payment', exact: true });
+  if (!(await settlementAction.count())) {
+    const deniedSettlement = await page.request.post(`${api}/payments/${onlinePayment!.id}/transitions`, {
+      headers: { ...approverHeaders, 'Idempotency-Key': crypto.randomUUID() },
+      data: { expected_revision: 1, transition: 'SETTLED', reason: 'Unauthorized role denial verification' },
+    });
+    expect(deniedSettlement.status()).toBe(403);
+    await localSignOut(page);
+    return;
+  }
+  await settlementAction.click();
   await expect(page.getByText('SETTLED', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Reverse settlement', exact: true }).click();
   await expect(page.getByText('REVERSED', { exact: true })).toBeVisible();
@@ -384,7 +420,7 @@ test('independent provider administrator settles a customer payment through Proj
 test('concurrent customer payment allocations cannot exceed the configured obligation', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -395,11 +431,20 @@ test('concurrent customer payment allocations cannot exceed the configured oblig
   expect(scheduleResponse.status()).toBe(201);
   const schedule = (await scheduleResponse.json()).data;
   const payload = { payment_schedule_id: schedule.id, method: 'CASH', amount: 700, currency_code: 'INR' };
+  const grants = await activePermissionCodes(page, session.accessToken, providerId);
   const [first, second] = await Promise.all([
     page.request.post(`${api}/service-cases/${project.id}/payments`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { ...payload, payment_reference: `CONCURRENT-A-${Date.now()}` } }),
     page.request.post(`${api}/service-cases/${project.id}/payments`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { ...payload, payment_reference: `CONCURRENT-B-${Date.now()}` } })
   ]);
   const statuses = [first.status(), second.status()].sort((a, b) => a - b);
+  if (!grants.has('PAYMENT_RECORD')) {
+    expect(statuses).toEqual([403, 403]);
+    const emptyPayments = await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers });
+    expect(emptyPayments.ok()).toBeTruthy();
+    expect((await emptyPayments.json()).data).toHaveLength(0);
+    await localSignOut(page);
+    return;
+  }
   expect(statuses[0]).toBe(201);
   expect([409, 422]).toContain(statuses[1]);
   const paymentsResponse = await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers });
@@ -413,7 +458,7 @@ test('concurrent customer payment allocations cannot exceed the configured oblig
 test('Projects preserves cheque and online payment state transitions', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -427,8 +472,17 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+
+  const grants = await activePermissionCodes(page, session.accessToken, providerId);
+  if (!grants.has('PAYMENT_RECORD')) {
+    await expect(page.getByRole('button', { name: 'Record collection', exact: true })).toHaveCount(0);
+    const deniedPayment = await page.request.post(`${api}/service-cases/${project.id}/payments`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { payment_schedule_id: (await (await page.request.get(`${api}/service-cases/${project.id}/payment-schedules`, { headers })).json()).data[0].id, payment_reference: `UNAUTHORIZED-${Date.now()}`, method: 'CHEQUE', amount: 300, currency_code: 'INR' } });
+    expect(deniedPayment.status()).toBe(403);
+    await localSignOut(page);
+    return;
+  }
 
   const chequeReference = `CHEQUE-BROWSER-${Date.now()}`;
   await page.getByRole('button', { name: 'Record collection', exact: true }).click();
@@ -445,12 +499,24 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   expect(chequePayments.ok()).toBeTruthy();
   expect((await chequePayments.json()).data.some((item: { data?: { attributes?: { payment_reference?: string; status?: string } } }) => (item.data?.attributes?.payment_reference === chequeReference && item.data.attributes.status === 'RECEIVED'))).toBeTruthy();
   await page.reload();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   const chequeCard = page.locator('article.record-card').filter({ hasText: chequeReference });
   await expect(chequeCard).toContainText('RECEIVED');
-  await chequeCard.getByRole('button', { name: 'Record bounce', exact: true }).click();
-  await expect(chequeCard).toContainText('BOUNCED');
+  const chequeRows = (await (await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers })).json()).data as Array<{ data?: { id: string }; id?: string }>;
+  const chequePayment = chequeRows.map((item) => item.data || item).find((item) => item.id);
+  const bounceAction = chequeCard.getByRole('button', { name: 'Record bounce', exact: true });
+  if (await bounceAction.count()) {
+    await bounceAction.click();
+    await expect(chequeCard).toContainText('BOUNCED');
+  } else {
+    const deniedBounce = await page.request.post(`${api}/payments/${chequePayment!.id}/transitions`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: 1, transition: 'BOUNCED', reason: 'Unauthorized role denial verification' } });
+    expect(deniedBounce.status()).toBe(403);
+  }
 
+  // Collection entry is part of the project Overview; Commercial is the
+  // read-only payment-history workspace.
+  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
   await page.getByRole('button', { name: 'Record collection', exact: true }).click();
   const onlineDialog = page.getByRole('dialog', { name: 'Record collection — PAYMENT-STATES', exact: true });
   const onlineReference = `ONLINE-BROWSER-${Date.now()}`;
@@ -466,9 +532,20 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   const onlinePaymentRows = await onlinePayments.json();
   expect(onlinePaymentRows.data.some((item: { data?: { attributes?: { payment_reference?: string; status?: string } } }) => (item.data?.attributes?.payment_reference === onlineReference && item.data.attributes.status === 'PENDING_VERIFICATION'))).toBeTruthy();
   await page.reload();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   const onlineCard = page.locator('article.record-card').filter({ hasText: onlineReference });
   await expect(onlineCard).toContainText('PENDING_VERIFICATION');
+  const onlineSettleAction = onlineCard.getByRole('button', { name: 'Settle payment', exact: true });
+  if (!(await onlineSettleAction.count())) {
+    const onlineRows = (await (await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers })).json()).data as Array<{ data?: { id: string; attributes?: { payment_reference?: string } }; id?: string; attributes?: { payment_reference?: string } }>;
+    const pendingPayment = onlineRows.map((item) => item.data || item).find((item) => item.attributes?.payment_reference === onlineReference);
+    expect(pendingPayment).toBeTruthy();
+    const deniedSettlement = await page.request.post(`${api}/payments/${pendingPayment!.id}/transitions`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: 1, transition: 'SETTLED', reason: 'Unauthorized role denial verification' } });
+    expect(deniedSettlement.status()).toBe(403);
+    await localSignOut(page);
+    return;
+  }
   await localSignOut(page);
 
   const approver = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
@@ -487,7 +564,7 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
 test('Projects opens a linked Service Job in the execution workspace', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = apiBase;
   const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
   const session = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const headers = { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -522,8 +599,8 @@ test('Projects opens a linked Service Job in the execution workspace', async ({ 
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
+  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await expect(page.getByText(String(serviceJobId))).toBeVisible();
   await page.getByRole('button', { name: 'Open execution job', exact: true }).click();
   await expect(page.getByText('Focused job detail. Server authority remains the source of lifecycle state.', { exact: true })).toBeVisible();

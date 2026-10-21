@@ -1,5 +1,13 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
+
+async function navigateProvider(page: import('playwright/test').Page, label: string) {
+  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  const item = navigation.getByRole('button', { name: label, exact: true });
+  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await item.click();
+}
 
 test.use({ trace: 'on-first-retry', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -12,9 +20,7 @@ test('provider operations overview renders the provider-scoped elevator dashboar
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await navigateProvider(page, 'Overview');
   await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible();
   for (const label of ['Open requests', "Today's appointments", 'Active jobs', 'AMC renewals due', 'Payment follow-ups', 'Escalations']) await expect(page.getByText(label, { exact: true })).toBeVisible();
   for (const heading of ["Today's operations", 'Urgent complaints', 'Project stage billing', 'Technician availability', 'AMC renewal pipeline', 'Recent activity']) await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
@@ -58,7 +64,7 @@ test('provider operations overview renders the provider-scoped elevator dashboar
   await page.getByRole('button', { name: 'View requests', exact: true }).click();
   await expect(page).toHaveURL(/#requests$/);
   await page.goto(`${page.url().split('#')[0]}#overview`);
-  const dashboardResponse = await page.request.get(`${process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1'}/providers/operations/dashboard`, { headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId } });
+  const dashboardResponse = await page.request.get(`${e2eApiV1Base()}/providers/operations/dashboard`, { headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId } });
   expect(dashboardResponse.ok()).toBeTruthy();
   const dashboard = await dashboardResponse.json();
   expect(dashboard.data.attributes.counts).toMatchObject({ open_requests: expect.any(Number), todays_appointments: expect.any(Number), active_jobs: expect.any(Number), amc_renewals_due: expect.any(Number), open_payment_schedules: expect.any(Number), escalations: expect.any(Number) });
@@ -74,9 +80,7 @@ test('provider leads register is populated, selectable and responsive', async ({
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Leads & Surveys', exact: true }).click();
+  await navigateProvider(page, 'Marketing Leads & Surveys');
   await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
   await expect(page.locator('.lead-register')).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Rows per page', exact: true })).toHaveValue('10');
@@ -101,12 +105,11 @@ test('provider quotations register and detail are populated and responsive', asy
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   const quotationRows = page.locator('.quotation-register tbody tr');
   await expect(quotationRows.first()).toBeVisible({ timeout: 15_000 });
+  const baselineRowCount = await quotationRows.count();
   for (const column of ['Quote No.', 'Prospect / Customer', 'Scope', 'Rev.', 'Status', 'Value (₹)', 'Last updated']) await expect(page.getByRole('columnheader', { name: column, exact: true })).toBeVisible();
   await expect(quotationRows.first().locator('[data-label="Quote No."]')).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
   await expect(quotationRows.first().locator('td').nth(1)).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
@@ -122,11 +125,20 @@ test('provider quotations register and detail are populated and responsive', asy
   await page.screenshot({ path: info.outputPath('provider-admin-quotations-orders.png'), fullPage: true });
   const quotationNumber = (await quotationRows.first().locator('td').first().innerText()).trim();
   const search = page.locator('input[aria-label="Search quotations"]');
+  const searchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/quotations') && url.searchParams.has('filter[q]');
+  });
   await search.fill(quotationNumber);
-  await expect(quotationRows).toHaveCount(1);
+  const filteredResponse = await searchResponse;
+  expect(filteredResponse.ok()).toBeTruthy();
+  const filteredRows = (await filteredResponse.json()).data as Array<{ attributes: { quotation_number: string } }>;
+  expect(filteredRows.length).toBeGreaterThan(0);
+  expect(filteredRows.every((row) => row.attributes.quotation_number === quotationNumber)).toBe(true);
+  await expect(quotationRows).toHaveCount(filteredRows.length);
   await expect(quotationRows.first().locator('td').first()).toContainText(quotationNumber);
   await search.fill('');
-  await expect(quotationRows).toHaveCount(10);
+  await expect(quotationRows).toHaveCount(baselineRowCount);
   const customerFilter = page.getByRole('combobox', { name: 'Filter quotations by customer', exact: true });
   const firstCustomer = await customerFilter.locator('option').nth(1).getAttribute('value');
   if (firstCustomer) {
@@ -134,13 +146,14 @@ test('provider quotations register and detail are populated and responsive', asy
     await customerFilter.selectOption(firstCustomer);
     expect((await customerResults).ok()).toBeTruthy();
     await customerFilter.selectOption('');
-    await expect(quotationRows).toHaveCount(10);
+    await expect(quotationRows).toHaveCount(baselineRowCount);
   }
   const pageSize = page.getByRole('combobox', { name: 'Quotation rows per page', exact: true });
   const nextPageSize = page.waitForResponse(response => response.url().includes('/quotations?') && response.url().includes('limit') && response.url().includes('20'));
   await pageSize.selectOption('20');
   expect((await nextPageSize).ok()).toBeTruthy();
   await expect(pageSize).toHaveValue('20');
+  await expect.poll(() => quotationRows.count()).toBeLessThanOrEqual(20);
   await localSignOut(page);
 });
 
@@ -151,9 +164,7 @@ test('provider service request register and selected detail render responsively'
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption('01a10a91-fc7f-70bb-b4a1-ddeefdded2f7');
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Requests', exact: true }).click();
+  await navigateProvider(page, 'Service Requests');
   await expect(page.getByRole('heading', { name: 'Service Requests', exact: true })).toBeVisible();
   const requestRows = page.locator('.service-request-row');
   await expect(requestRows.first()).toBeVisible({ timeout: 15_000 });
@@ -177,9 +188,7 @@ test('provider appointments render on a time-aligned weekly calendar and list', 
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption('01a10a91-fc7f-70bb-b4a1-ddeefdded2f7');
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Appointments', exact: true }).click();
+  await navigateProvider(page, 'Appointments & Dispatch');
   await expect(page.getByRole('heading', { name: 'Appointments & dispatch', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Previous week' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next week' })).toBeVisible();
@@ -207,9 +216,7 @@ test('provider jobs register opens selected job in a responsive authorized detai
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption('01a10a91-fc7f-70bb-b4a1-ddeefdded2f7');
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Jobs', exact: true }).click();
+  await navigateProvider(page, 'Jobs & Execution');
   await expect(page.getByRole('heading', { name: 'Jobs & assignments', exact: true })).toBeVisible();
   const table = page.getByRole('table');
   await expect(table).toBeVisible({ timeout: 15_000 });
@@ -236,9 +243,7 @@ test('provider job execution and evidence forms remain permission-gated and resp
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption('01a10a91-fc7f-70bb-b4a1-ddeefdded2f7');
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  if ((page.viewportSize()?.width || 1440) <= 900) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByRole('button', { name: 'Jobs', exact: true }).click();
+  await navigateProvider(page, 'Jobs & Execution');
   const firstRow = page.getByRole('table').locator('tbody tr').first();
   await expect(firstRow).toBeVisible({ timeout: 15_000 });
   const jobId = await firstRow.getAttribute('data-job-id');

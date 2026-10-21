@@ -3298,6 +3298,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/marketing-leads/{leadId}/site-surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List surveys for an authorized Provider marketing lead */
+        get: operations["ListMarketingLeadSiteSurveys"];
+        put?: never;
+        /** Create a Provider site-survey draft or submitted survey */
+        post: operations["CreateSiteSurvey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketing-leads/{leadId}/site-surveys/{surveyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Save or submit a Provider site-survey draft */
+        patch: operations["UpdateSiteSurveyDraft"];
+        trace?: never;
+    };
     "/marketing-leads/{leadId}": {
         parameters: {
             query?: never;
@@ -4880,7 +4915,7 @@ export interface paths {
         put?: never;
         /**
          * Create Quotation
-         * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation.
+         * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation. A positive discount is rejected with conflict until an authoritative Provider discount-delegation policy is configured; client-supplied quotation terms never establish authorization limits.
          */
         post: operations["CreateQuotation"];
         delete?: never;
@@ -4910,7 +4945,7 @@ export interface paths {
         head?: never;
         /**
          * Update Quotation
-         * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation.
+         * @description Provider commercial role with explicit permission; no ordinary Agent or Customer mutation. A positive discount is rejected with conflict until an authoritative Provider discount-delegation policy is configured; client-supplied quotation terms never establish authorization limits.
          */
         patch: operations["UpdateQuotation"];
         trace?: never;
@@ -4928,7 +4963,7 @@ export interface paths {
         put?: never;
         /**
          * Create immutable quotation revision
-         * @description Create a new editable revision from an issued provider quotation; the source revision is superseded and remains immutable.
+         * @description Create a new editable revision from an issued provider quotation; the source revision is superseded and remains immutable. A positive discount is rejected with conflict until an authoritative Provider discount-delegation policy is configured; client-supplied quotation terms never establish authorization limits.
          */
         post: operations["CreateQuotationRevision"];
         delete?: never;
@@ -4953,6 +4988,54 @@ export interface paths {
         get: operations["GetQuotationPdf"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/delivery-recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List authorized quotation delivery recipients
+         * @description Lists active provider contact points with an email address belonging to the quotation's authorized commercial parties. Arbitrary recipient addresses are not accepted.
+         */
+        get: operations["ListQuotationDeliveryRecipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List quotation delivery history
+         * @description Lists provider-scoped delivery attempts, recipient snapshots and SMTP acceptance/failure outcomes.
+         */
+        get: operations["ListQuotationDeliveries"];
+        put?: never;
+        /**
+         * Queue exact quotation revision delivery
+         * @description Queues an email with the immutable quotation PDF attached. The recipient must be an active authorized ContactPoint; the exact version must have Provider approval; queue acceptance is not SMTP delivery confirmation.
+         */
+        post: operations["CreateQuotationDelivery"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4998,7 +5081,7 @@ export interface paths {
         put?: never;
         /**
          * Record Provider Quotation Review
-         * @description Records one immutable Provider approval/rejection for the exact issued quotation revision; it does not accept the quotation on behalf of the customer.
+         * @description Records one immutable Provider approval/rejection for the exact issued quotation revision; the revision creator cannot review that same revision, and this decision does not accept the quotation on behalf of the customer.
          */
         post: operations["RecordProviderQuotationReview"];
         delete?: never;
@@ -8665,6 +8748,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/provider-work-intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider-scoped work intake records */
+        get: operations["ListProviderWorkIntakes"];
+        put?: never;
+        post: operations["CreateProviderWorkIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-work-intakes/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Suggest advisory provider-scoped duplicate, Asset and Project matches without linking */
+        get: operations["SuggestProviderWorkIntakeMatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-work-intakes/{intakeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProviderWorkIntake"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateProviderWorkIntake"];
+        trace?: never;
+    };
+    "/provider-work-intakes/{intakeId}/relationship-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DecideProviderWorkIntakeRelationship"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-work-intakes/{intakeId}/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdvanceProviderWorkIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-work-intakes/{intakeId}/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateProviderWorkIntakeAssessment"];
+        trace?: never;
+    };
     "/service-cases": {
         parameters: {
             query?: never;
@@ -10997,7 +11178,7 @@ export interface components {
         ProviderCapabilityContext: {
             provider_id: components["schemas"]["Id"];
             display_name: string;
-            capabilities: ("customers" | "onboarding" | "configuration" | "business_profile" | "requests" | "bookings" | "jobs" | "my_work" | "workforce" | "audit")[];
+            capabilities: ("customers" | "customer_admin" | "onboarding" | "configuration" | "business_profile" | "requests" | "service_request_create" | "service_request_edit" | "bookings" | "jobs" | "my_work" | "workforce" | "audit" | "team_access" | "team_invitation_manage" | "compliance" | "sales_marketing" | "quotations" | "projects" | "subscriptions" | "amc" | "reports" | "work_intake" | "work_intake_create" | "work_intake_edit")[];
         };
         UserAttributes: {
             /** Format: date-time */
@@ -12029,6 +12210,96 @@ export interface components {
             emergency_classification?: components["schemas"]["EmergencyClassification"] | null;
             sla_policy_id?: components["schemas"]["Id"] | null;
         };
+        /** @description Drafts may omit the survey date and incomplete fields. Submission requires the survey date. Values are bounded by server-side size limits. */
+        SiteSurveyWorkspaceInput: {
+            /** Format: uuid */
+            service_location_id?: string;
+            /** Format: date */
+            survey_date?: string;
+            /**
+             * @default DRAFT
+             * @enum {string}
+             */
+            status: "DRAFT" | "SUBMITTED";
+            building_details?: {
+                [key: string]: unknown;
+            };
+            proposed_elevator_count?: number;
+            floor_count?: number;
+            technical_measurements?: {
+                [key: string]: unknown;
+            };
+            access_conditions?: {
+                [key: string]: unknown;
+            };
+            requirements?: {
+                [key: string]: unknown;
+            };
+            /** @description Bounded survey step state, contact/referral snapshots and GPS source/accuracy/timestamp. Contact and location scope remains provider-authorized. */
+            survey_context?: {
+                step?: number;
+                site_address?: string;
+                gps?: {
+                    latitude?: number | string;
+                    longitude?: number | string;
+                    accuracy_m?: number;
+                    /** @enum {string} */
+                    source?: "GPS" | "MANUAL";
+                    /** Format: date-time */
+                    captured_at?: string;
+                };
+                contacts?: {
+                    [key: string]: unknown;
+                }[];
+                referral?: {
+                    [key: string]: unknown;
+                };
+            } & {
+                [key: string]: unknown;
+            };
+            unit_details?: {
+                [key: string]: unknown;
+            }[];
+        };
+        SiteSurveyWorkspaceRecord: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "site-surveys";
+            attributes: {
+                /** Format: date-time */
+                created_at: string;
+                provider_id: components["schemas"]["Id"];
+                revision: number;
+                /** Format: date */
+                survey_date?: string | null;
+                /** @enum {string} */
+                status: "DRAFT" | "SCHEDULED" | "SUBMITTED" | "REVIEWED";
+                building_details: {
+                    [key: string]: unknown;
+                };
+                proposed_elevator_count?: number | null;
+                floor_count?: number | null;
+                technical_measurements: {
+                    [key: string]: unknown;
+                };
+                access_conditions: {
+                    [key: string]: unknown;
+                };
+                requirements: {
+                    [key: string]: unknown;
+                };
+                survey_context: {
+                    [key: string]: unknown;
+                };
+                unit_details: {
+                    [key: string]: unknown;
+                }[];
+            };
+            relationships: {
+                lead: components["schemas"]["ResourceLink"];
+                service_location?: components["schemas"]["ResourceLink"] | null;
+            };
+        };
         /** @description Authorized canonical ServiceRequest representation; fields and linked resources require independent authorization. */
         ServiceRequest: {
             id: components["schemas"]["Id"];
@@ -12780,6 +13051,52 @@ export interface components {
         };
         QuotationProviderReviewCollection: {
             data: components["schemas"]["QuotationProviderReview"][];
+            page: components["schemas"]["Page"];
+        };
+        QuotationDeliveryRecipient: {
+            id: components["schemas"]["Id"];
+            display_name: string;
+            /** Format: email */
+            email: string;
+        };
+        QuotationDeliveryRecipientCollection: {
+            data: components["schemas"]["QuotationDeliveryRecipient"][];
+        };
+        QuotationDeliveryCreate: {
+            contact_point_id: components["schemas"]["Id"];
+            expected_revision: components["schemas"]["Revision"];
+        };
+        /** @description Provider-scoped immutable recipient and exact quotation version delivery history. */
+        QuotationDelivery: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "quotation-deliveries";
+            attributes: {
+                /** Format: date-time */
+                created_at: string;
+                quotation_revision: components["schemas"]["Revision"];
+                quotation_version_number: number;
+                recipient_name: string;
+                /** Format: email */
+                recipient_email: string;
+                /** @enum {string} */
+                status: "queued" | "processing" | "smtp_accepted" | "failed";
+                attempts: number;
+                /** Format: date-time */
+                requested_at: string;
+                /** Format: date-time */
+                accepted_at: string | null;
+                /** Format: date-time */
+                failed_at: string | null;
+                failure_reason: string | null;
+            };
+            relationships: {
+                quotation?: components["schemas"]["ResourceLink"];
+                contact?: components["schemas"]["ResourceLink"];
+            };
+        };
+        QuotationDeliveryCollection: {
+            data: components["schemas"]["QuotationDelivery"][];
             page: components["schemas"]["Page"];
         };
         NotificationEventAttributes: {
@@ -22467,6 +22784,107 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListMarketingLeadSiteSurveys: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped survey drafts and submitted surveys. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["SiteSurveyWorkspaceRecord"][];
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateSiteSurvey: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteSurveyWorkspaceInput"];
+            };
+        };
+        responses: {
+            /** @description Survey draft or submitted survey created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSurveyWorkspaceRecord"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    UpdateSiteSurveyDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                leadId: string;
+                surveyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteSurveyWorkspaceInput"] & {
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated survey draft or submitted survey. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSurveyWorkspaceRecord"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     DeleteUnreferencedMarketingLead: {
         parameters: {
             query?: never;
@@ -26344,6 +26762,104 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    ListQuotationDeliveryRecipients: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped recipient choices. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationDeliveryRecipientCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    ListQuotationDeliveries: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery history for this quotation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationDeliveryCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateQuotationDelivery: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotationDeliveryCreate"];
+            };
+        };
+        responses: {
+            /** @description Delivery request queued for background processing. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationDelivery"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     ApproveQuotation: {
@@ -33665,6 +34181,272 @@ export interface operations {
         requestBody: components["requestBodies"]["Batch47ReasonRevision"];
         responses: {
             200: components["responses"]["Batch47Ok"];
+        };
+    };
+    ListProviderWorkIntakes: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CreateProviderWorkIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    source: "MARKETING" | "PROVIDER_DIRECT" | "REFERRAL" | "EXISTING_ASSET" | "AMC_RENEWAL" | "INTERNAL_REQUEST" | "PARTNER";
+                    /** @enum {string} */
+                    work_type: "NEW_INSTALLATION" | "MODIFICATION" | "TAKEOVER" | "AMC" | "REPAIR" | "INSPECTION";
+                    title: string;
+                    description?: string | null;
+                    requester_name?: string | null;
+                    requester_contact_reference?: string | null;
+                    site_summary?: string | null;
+                    assigned_to_user_id?: components["schemas"]["Id"] | null;
+                    marketing_lead_id?: components["schemas"]["Id"] | null;
+                    service_request_id?: components["schemas"]["Id"] | null;
+                    customer_relationship_id?: components["schemas"]["Id"] | null;
+                    service_location_id?: components["schemas"]["Id"] | null;
+                    asset_id?: components["schemas"]["Id"] | null;
+                    project_id?: components["schemas"]["Id"] | null;
+                    maintenance_contract_id?: components["schemas"]["Id"] | null;
+                    relationship_decision_reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Batch47Created"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    SuggestProviderWorkIntakeMatches: {
+        parameters: {
+            query?: {
+                title?: string;
+                site_summary?: string;
+                asset_query?: string;
+                service_location_id?: components["schemas"]["Id"];
+                asset_id?: components["schemas"]["Id"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded suggestions; lookup never mutates a relationship. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** @enum {string} */
+                            kind: "ASSET" | "PROJECT" | "WORK_INTAKE";
+                            id: components["schemas"]["Id"];
+                            label: string;
+                            /** @constant */
+                            confidence: "POSSIBLE";
+                            reason: string;
+                        }[];
+                        meta: {
+                            provider_scoped?: boolean;
+                            /** @constant */
+                            automatic_linking?: false;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetProviderWorkIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                intakeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    UpdateProviderWorkIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                intakeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    title?: string;
+                    description?: string | null;
+                    requester_name?: string | null;
+                    requester_contact_reference?: string | null;
+                    site_summary?: string | null;
+                    assigned_to_user_id?: components["schemas"]["Id"] | null;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    DecideProviderWorkIntakeRelationship: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                intakeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "REVIEW" | "DISMISS" | "CONFIRM";
+                    /** @enum {string} */
+                    candidate_kind?: "ASSET" | "PROJECT" | "WORK_INTAKE";
+                    candidate_id?: components["schemas"]["Id"];
+                    reason: string;
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    AdvanceProviderWorkIntake: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                intakeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "OPEN" | "ASSESSMENT" | "EXECUTION" | "CLOSED";
+                    reason: string;
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    UpdateProviderWorkIntakeAssessment: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                intakeId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "OPEN" | "IN_PROGRESS" | "COMPLETED";
+                    assigned_to_user_id?: components["schemas"]["Id"] | null;
+                    /** @description Current operating condition and inherited work; required to complete Modification and Takeover assessments */
+                    current_state_assessment?: string | null;
+                    /** @description Work remaining within this intake; required to complete Modification and Takeover assessments */
+                    remaining_scope_assessment?: string | null;
+                    /** @description Explicit Provider responsibility boundary; required to complete Modification and Takeover assessments */
+                    responsibility_boundary?: string | null;
+                    reason?: string;
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     ListServiceCase: {

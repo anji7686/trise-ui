@@ -1,11 +1,12 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'retain-on-failure', video: 'off' });
 
 test('Platform reviewer can assign and decide a pending compliance request', async ({ page, evidence }) => {
   const session = await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
-  const apiBase = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3001/api/v1';
+  const apiBase = e2eApiV1Base();
   const queueResponse = await page.request.get(`${apiBase}/platform/compliance`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
   expect(queueResponse.ok()).toBeTruthy();
   const queue = await queueResponse.json() as { data: Array<{ id: string; attributes: { submitted_by_user_id?: string | null; status: string } }> };
@@ -53,7 +54,7 @@ test('Provider audit history is served only within the authorized provider conte
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.locator('#account-provider').selectOption({ label: 'TRISE Demo Solar Water Heater Services' });
   await page.goto('/#audit');
-  await expect(page.getByRole('heading', { name: 'Audit history', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Audit Logs', exact: true })).toBeVisible();
   expect(evidence.exceptions).toEqual([]);
   expect(evidence.responses.filter(response => response.status >= 500)).toEqual([]);
 });

@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { approvedLocalAccounts, configuredAccount, localSignIn } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'on-first-retry', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -9,7 +10,7 @@ test('qualified inspector assignment and report execution are enforced in Chromi
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
 
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+  const api = e2eApiV1Base();
   const admin = approvedLocalAccounts().find((account) => account.email === configuredAccount('PROVIDER_ADMIN'));
   if (!admin) throw new Error('Provider Administrator fixture is not on the approved local list');
   const signIn = await page.request.post(`${api}/session/development`, {
@@ -51,7 +52,7 @@ test('qualified inspector assignment and report execution are enforced in Chromi
     headers: { ...adminHeaders, 'Content-Type': 'application/json', 'Idempotency-Key': `inspection-browser-assign-${job.id}` },
     data: { agent_id: qualified?.id, effective_at: new Date().toISOString() }
   });
-  expect(assignment.status()).toBe(201);
+  expect(assignment.status(), `qualified assignment failed: ${assignment.status()} ${await assignment.text()}`).toBe(201);
   const qualifications = await page.request.get(`${api}/agents/${qualified?.id}/certifications`, { headers: adminHeaders });
   expect(qualifications.status()).toBe(200);
   const qualificationRows = await qualifications.json() as { data: Array<{ attributes?: { verification?: string } }> };
@@ -61,11 +62,11 @@ test('qualified inspector assignment and report execution are enforced in Chromi
   const technician = await localSignIn(page, configuredAccount('AGENT'));
   const technicianHeaders = { Authorization: `Bearer ${technician.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const visits = await page.request.get(`${api}/service-jobs/${job.id}/visits`, { headers: technicianHeaders });
-  expect(visits.ok()).toBeTruthy();
+  expect(visits.ok(), `assigned technician visit read returned ${visits.status()}: ${await visits.text()}`).toBeTruthy();
   let visitId = ((await visits.json()).data as Array<{ id: string }>)[0]?.id;
   if (!visitId) {
     const visit = await page.request.post(`${api}/service-jobs/${job.id}/visits`, { headers: { ...technicianHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { notes: 'Independent inspection browser visit' } });
-    expect(visit.status()).toBe(201);
+    expect(visit.status(), `assigned visit creation failed: ${visit.status()} ${await visit.text()}`).toBe(201);
     visitId = (await visit.json()).id;
   }
   const current = await page.request.get(`${api}/service-jobs/${job.id}`, { headers: technicianHeaders });
@@ -86,7 +87,7 @@ test('qualified inspector assignment and report execution are enforced in Chromi
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.goto('/#/jobs');
-  await page.getByRole('button', { name: 'My Work', exact: true }).click();
+  await page.getByRole('tab', { name: 'My Work', exact: true }).click();
   const work = page.locator('article.job-list-row').filter({ hasText: summary });
   await expect(work).toBeVisible();
   await work.getByRole('button', { name: 'Open visit', exact: true }).click();

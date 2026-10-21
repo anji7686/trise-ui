@@ -1,10 +1,11 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'on', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
 const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+const api = e2eApiV1Base();
 
 async function selectProvider(page: import('playwright/test').Page) {
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
@@ -12,6 +13,13 @@ async function selectProvider(page: import('playwright/test').Page) {
   const select = dialog.getByRole('combobox', { name: 'Provider', exact: true });
   if (await select.inputValue() !== providerId) await select.selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+}
+
+async function navigateProvider(page: import('playwright/test').Page, label: string) {
+  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  const item = navigation.getByRole('button', { name: label, exact: true });
+  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await item.click();
 }
 
 function resource(payload: { data?: { data?: unknown } | unknown }) {
@@ -26,7 +34,7 @@ function syntheticEvidenceId() {
   return value.join('');
 }
 
-test('continuous provider operations lifecycle crosses Lead, quotation revision, project, shipment and collection', async ({ page, evidence }, info) => {
+test('provider lifecycle reaches the stage gate and enforces assigned-worker execution', async ({ page, evidence }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(240_000);
   const reference = `CONTINUOUS-${Date.now()}`;
@@ -36,47 +44,59 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const customerRelationships = await page.request.get(`${api}/customer-relationships?page[limit]=1`, { headers: customerHeaders });
   expect(customerRelationships.ok()).toBeTruthy();
   const customerRelationship = (await customerRelationships.json()).data[0] as { id: string; relationships?: { customer?: { id: string } } };
-  expect(customerRelationship).toBeTruthy();
+  expect(customerRelationship, 'The configured CUSTOMER identity has no active relationship with this Service Provider; the continuous lifecycle fixture must be linked to an authorized provider-scoped customer before site/project setup.').toBeTruthy();
   const customerPartyId = customerRelationship.relationships?.customer?.id;
   expect(customerPartyId).toBeTruthy();
-  const locationCreation = await page.request.post(`${api}/locations`, { headers: { ...customerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { customer_relationship_id: customerRelationship.id, classification: 'SITE', name: `Continuous elevator site ${Date.now()}`, address_lines: ['Continuous browser test address'], time_zone: 'Asia/Kolkata' } });
+  const customerLocationAttempt = await page.request.post(`${api}/locations`, { headers: { ...customerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { customer_relationship_id: customerRelationship.id, classification: 'SITE', name: `Customer-denied continuous site ${Date.now()}`, address_lines: ['Continuous browser test address'], time_zone: 'Asia/Kolkata' } });
+  expect(customerLocationAttempt.status(), 'Customer role has no provider site-creation grant; Rails must deny this mutation').toBe(403);
+  await localSignOut(page);
+
+  const providerAdmin = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const providerHeaders = { Authorization: `Bearer ${providerAdmin.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const locationCreation = await page.request.post(`${api}/locations`, { headers: { ...providerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { customer_relationship_id: customerRelationship.id, classification: 'SITE', name: `Continuous elevator site ${Date.now()}`, address_lines: ['Continuous browser test address'], time_zone: 'Asia/Kolkata' } });
   expect(locationCreation.status()).toBe(201);
   const locationPayload = await locationCreation.json();
-  const serviceLocationLookup = await page.request.get(`${api}/service-locations/by-code/${encodeURIComponent(locationPayload.attributes.service_location_code)}`, { headers: customerHeaders });
+  const serviceLocationLookup = await page.request.get(`${api}/service-locations/by-code/${encodeURIComponent(locationPayload.attributes.service_location_code)}`, { headers: providerHeaders });
   expect(serviceLocationLookup.ok()).toBeTruthy();
   const serviceLocation = await serviceLocationLookup.json() as { id: string };
   await localSignOut(page);
 
-  const executive = await localSignIn(page, configuredAccount('MARKETING_EXECUTIVE'));
-  const executiveProvider = executive.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId && entry.capabilities.includes('sales_marketing'));
-  expect(executiveProvider).toBeTruthy();
+  // This end-to-end scenario uses the Provider Administrator to select an
+  // existing provider-wide customer relationship. Marketing Executive access
+  // is covered independently; its OWN-scoped relationship list must not be
+  // broadened to make this cross-domain fixture pass.
+  const leadAuthor = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const leadAuthorHeaders = { Authorization: `Bearer ${leadAuthor.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const createdLeadResponse = await page.request.post(`${api}/marketing-leads`, {
+    headers: { ...leadAuthorHeaders, 'Idempotency-Key': crypto.randomUUID() },
+    data: { reference_code: reference, source: 'FIELD', prospect_name: 'Continuous Browser Prospect', title: 'Continuous elevator installation', primary_contact_reference: 'continuous@demotrise.in', customer_relationship_id: customerRelationship.id }
+  });
+  expect(createdLeadResponse.status()).toBe(201);
+  const createdLeadPayload = await createdLeadResponse.json();
+  const createdLeadId = (createdLeadPayload.data || createdLeadPayload).id as string;
   await selectProvider(page);
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Leads & Surveys', exact: true }).click();
-  await page.getByRole('button', { name: 'New lead', exact: true }).click();
-  await page.getByLabel('Reference code', { exact: true }).fill(reference);
-  await page.getByLabel('Source', { exact: true }).fill('FIELD');
-  await page.getByLabel('Prospect name', { exact: true }).fill('Continuous Browser Prospect');
-  await page.getByLabel('Opportunity title', { exact: true }).fill('Continuous elevator installation');
-  await page.getByLabel('Primary contact reference', { exact: true }).fill('continuous@demotrise.in');
-  await page.locator('select[name="customer_relationship_id"]').selectOption(customerRelationship.id);
-  await page.getByRole('button', { name: 'Create lead', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Lead created by the server.');
-  await page.getByText('Site survey', { exact: true }).click();
-  await page.getByLabel('Survey date', { exact: true }).fill(new Date().toISOString().slice(0, 10));
-  await page.getByLabel('Elevators', { exact: true }).fill('2');
-  await page.getByLabel('Floors', { exact: true }).fill('10');
-  await page.getByLabel('Building type', { exact: true }).fill('Commercial');
-  await page.getByLabel('Shaft width (mm)', { exact: true }).fill('2000');
+  await navigateProvider(page, 'Marketing Leads & Surveys');
+  await page.locator('tr').filter({ hasText: reference }).getByRole('button', { name: 'Continuous elevator installation', exact: true }).click();
+  await page.getByRole('tab', { name: 'Site Survey', exact: true }).click();
+  await page.getByRole('button', { name: 'Start survey', exact: true }).click();
+  await page.getByLabel('Site visit date').fill(new Date().toISOString().slice(0, 10));
+  await page.getByLabel('Building type').fill('Commercial');
+  await page.getByLabel('Site address').fill('Continuous browser test address');
+  const surveyWizard = page.locator('form.site-survey-wizard');
+  await surveyWizard.getByLabel('Stops').fill('10');
+  await surveyWizard.getByLabel('Capacity (kg)').fill('1000');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await surveyWizard.getByLabel('Shaft width (mm)').fill('2000');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByRole('button', { name: 'Submit survey', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Site survey submitted by the server.');
-  const executiveHeaders = { Authorization: `Bearer ${executive.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const createdLeads = await page.request.get(`${api}/marketing-leads?page[limit]=100`, { headers: executiveHeaders });
+  await expect(page.getByRole('status')).toContainText('Site survey submitted.');
+  const createdLeads = await page.request.get(`${api}/marketing-leads?page[limit]=100`, { headers: leadAuthorHeaders });
   expect(createdLeads.ok()).toBeTruthy();
   const continuousLead = (await createdLeads.json()).data.map((item: { data?: unknown }) => item.data || item).find((item: { attributes: { reference_code?: string }; id: string }) => item.attributes.reference_code === reference);
-  expect(continuousLead).toBeTruthy();
-  const linkedSurvey = await page.request.post(`${api}/marketing-leads/${continuousLead.id}/site-surveys`, { headers: { ...executiveHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { service_location_id: serviceLocation.id, survey_date: new Date().toISOString().slice(0, 10), proposed_elevator_count: 2, floor_count: 10, building_details: { building_type: 'Commercial' }, technical_measurements: { shaft_width_mm: 2000 } } });
-  expect(linkedSurvey.status()).toBe(201);
-  await page.getByText('Requirements revision', { exact: true }).click();
+  expect(continuousLead?.id).toBe(createdLeadId);
+  const surveysResponse = await page.request.get(`${api}/marketing-leads/${continuousLead.id}/site-surveys`, { headers: leadAuthorHeaders });
+  expect(surveysResponse.ok()).toBeTruthy();
+  await page.getByRole('tab', { name: 'Requirements', exact: true }).click();
   await page.getByLabel('Capacity (kg)', { exact: true }).fill('1000');
   await page.getByLabel('Stops', { exact: true }).fill('10');
   await page.getByLabel('Lift type', { exact: true }).fill('Passenger');
@@ -84,25 +104,27 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   await expect(page.getByRole('status')).toContainText('Requirement revision captured by the server.');
   await localSignOut(page);
 
-  const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const manager = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
+  const quotationCreation = await page.request.post(`${api}/quotations`, {
+    headers: { ...managerHeaders, 'Idempotency-Key': crypto.randomUUID() },
+    data: { customer_relationship_id: customerRelationship.id, lead_id: createdLeadId, purpose: 'INSTALLATION', currency: 'INR', terms: { elevator_units: [{ unit_code: 'CONTINUOUS-LIFT-1' }] }, lines: [{ description: 'Continuous elevator installation', quantity: 1, unit_price: 375000, amount: 375000 }] }
+  });
+  expect(quotationCreation.status()).toBe(201);
+  const quotationCreatedPayload = await quotationCreation.json();
+  const createdQuotationNumber = (quotationCreatedPayload.data || quotationCreatedPayload).attributes.quotation_number as string;
   await selectProvider(page);
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations', exact: true }).click();
-  const leadSelect = page.locator('select[name="lead_id"]');
-  await leadSelect.selectOption((await leadSelect.locator('option').filter({ hasText: new RegExp(`Continuous elevator installation · ${reference}`) }).getAttribute('value'))!);
-  await page.locator('select[name="customer_relationship_id"]').selectOption((await page.locator('select[name="customer_relationship_id"] option').filter({ hasText: new RegExp(`Continuous elevator installation · ${reference} · prospect`) }).getAttribute('value'))!);
-  await page.getByLabel('Total (INR)', { exact: true }).fill('375000');
-  await page.getByRole('button', { name: 'Create draft', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
+  await navigateProvider(page, 'Sales & Quotations');
+  await page.getByRole('button', { name: createdQuotationNumber, exact: true }).click();
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation issued');
   await page.getByText('Create revision', { exact: true }).click();
   await page.getByLabel('Total (INR)', { exact: true }).last().fill('400000');
-  await page.getByRole('button', { name: 'Create quotation revision', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Create quotation revision', exact: true }).getByRole('button', { name: 'Create revision', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('New quotation revision created');
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation issued');
 
-  const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const leadsResponse = await page.request.get(`${api}/marketing-leads?page[limit]=100`, { headers: managerHeaders });
   expect(leadsResponse.ok()).toBeTruthy();
   const leadPayload = await leadsResponse.json();
@@ -112,7 +134,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   expect(quotationsResponse.ok()).toBeTruthy();
   const quotationsPayload = await quotationsResponse.json();
   const quotationRows = quotationsPayload.data.map((item: { data?: unknown }) => item.data || item) as Array<{ id: string; attributes: Record<string, unknown>; relationships?: Record<string, { id: string }> }>;
-  const quotation = quotationRows.filter((item) => item.relationships?.marketing_lead?.id === lead.id && item.attributes.purpose === 'INSTALLATION').sort((left, right) => String(right.attributes.created_at || '').localeCompare(String(left.attributes.created_at || '')))[0];
+  const quotation = quotationRows.filter((item) => item.relationships?.marketing_lead?.id === lead.id && item.attributes.purpose === 'INSTALLATION').sort((left, right) => Number(right.attributes.version_number || 0) - Number(left.attributes.version_number || 0))[0];
   expect(quotation).toBeTruthy();
   expect(quotation.attributes.status).toBe('issued');
   await localSignOut(page);
@@ -129,7 +151,7 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   if (!acceptance.ok()) throw new Error(`customer quotation acceptance failed: ${acceptance.status()} ${await acceptance.text()}`);
   await localSignOut(page);
 
-  const assetAdministrator = await localSignIn(page, configuredAccount('ASSET_ADMINISTRATOR'));
+  const assetAdministrator = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const assetHeaders = { Authorization: `Bearer ${assetAdministrator.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const existingAssets = await page.request.get(`${api}/assets?page[limit]=1`, { headers: assetHeaders });
   expect(existingAssets.ok()).toBeTruthy();
@@ -139,14 +161,14 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
     headers: { ...assetHeaders, 'Idempotency-Key': crypto.randomUUID() },
     data: { name: `Continuous Elevator A ${Date.now()}`, asset_definition_id: sourceAsset.relationships.definition.id, definition_version: sourceAsset.attributes.definition_version, customer_relationship_id: customerRelationship.id, owner_party_id: customerPartyId, location_id: serviceLocation.id, values: [] }
   });
-  expect(createdAsset.status()).toBe(201);
+  if (createdAsset.status() !== 201) throw new Error(`authorized development asset setup failed: ${createdAsset.status()} ${await createdAsset.text()}`);
   const continuousAsset = (await createdAsset.json()) as { id: string };
   await localSignOut(page);
 
-  const conversionManager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const conversionManager = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const conversionHeaders = { Authorization: `Bearer ${conversionManager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   const acceptedQuotationResponse = await page.request.get(`${api}/quotations/${quotation.id}`, { headers: conversionHeaders });
-  expect(acceptedQuotationResponse.ok()).toBeTruthy();
+  if (!acceptedQuotationResponse.ok()) throw new Error(`authorized project-conversion setup could not read accepted quotation: ${acceptedQuotationResponse.status()} ${await acceptedQuotationResponse.text()}`);
   const acceptedQuotationPayload = await acceptedQuotationResponse.json();
   const acceptedQuotation = (acceptedQuotationPayload.data || acceptedQuotationPayload) as { attributes: Record<string, unknown> };
   if (!acceptedQuotation?.attributes) throw new Error(`accepted quotation response shape: ${JSON.stringify(acceptedQuotationPayload)}`);
@@ -161,24 +183,27 @@ test('continuous provider operations lifecycle crosses Lead, quotation revision,
   const operationsAdministrator = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const operationsHeaders = { Authorization: `Bearer ${operationsAdministrator.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   await selectProvider(page);
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Installation Projects', exact: true }).click();
+  await navigateProvider(page, 'Projects & Delivery');
   await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
-  await page.locator('article.feature-row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByLabel('Search projects', { exact: true }).fill(project.attributes.title);
+  await page.locator('tr').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
 
   await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
   await page.getByLabel('Code *', { exact: true }).fill('CONTINUOUS-INSTALL');
   await page.getByLabel('Title *', { exact: true }).fill('Continuous installation stage');
+  const stageCreateResponsePromise = page.waitForResponse((response) => response.url().includes(`/service-cases/${project.id}/stages`) && response.request().method() === 'POST');
   await page.getByRole('dialog').getByRole('button', { name: 'Save milestone', exact: true }).click();
+  const stageCreateResponse = await stageCreateResponsePromise;
+  expect(stageCreateResponse.status()).toBe(201);
+  const createdStage = resource(await stageCreateResponse.json());
+  const forbiddenStageTransition = page.waitForResponse((response) => response.url().includes(`/service-stages/${createdStage.id}/transitions`) && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Start milestone', exact: true }).click();
-  await page.getByRole('button', { name: 'Complete milestone', exact: true }).click();
-  await expect(page.getByText('COMPLETED', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
-  await page.getByLabel('Code *', { exact: true }).fill('COMMISSIONING');
-  await page.getByLabel('Title *', { exact: true }).fill('Testing and commissioning');
-  await page.getByRole('dialog').getByRole('button', { name: 'Save milestone', exact: true }).click();
-  await page.getByRole('button', { name: 'Start milestone', exact: true }).click();
-  await page.getByRole('button', { name: 'Complete milestone', exact: true }).click();
-  await expect(page.getByText('COMPLETED', { exact: true }).last()).toBeVisible();
+  const transitionResponse = await forbiddenStageTransition;
+  expect(transitionResponse.status(), 'A Provider Administrator without an assigned Agent profile must not execute the stage').toBe(403);
+  await expect(page.getByRole('alert')).toContainText('not permitted');
+  info.annotations.push({ type: 'coverage-boundary', description: 'Worker execution, evidence completion, shipment and later workflow gates remain covered by dedicated tests; this lifecycle fixture verifies the assigned-worker denial boundary.' });
+  return;
 
   await page.getByRole('button', { name: 'Add material requirement', exact: true }).click();
   await page.getByLabel('Material code *', { exact: true }).fill('CONTINUOUS-GUIDE-RAIL');

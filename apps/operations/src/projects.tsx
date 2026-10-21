@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { useAuth } from "@trise/auth";
 import {
   operationsData,
   type Collection,
@@ -17,6 +18,7 @@ import { ActionFeedback, EmptyState } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
 import { sha256Hex } from "./provider-document-upload";
 import { indiaDateTimeToIso } from './subscription-support';
+import { accessData } from "./access-data";
 
 const fail = (error: unknown) =>
   (error as { message?: string })?.message ||
@@ -24,6 +26,8 @@ const fail = (error: unknown) =>
 const uuid = () => crypto.randomUUID();
 
 export function ProjectsWorkspace({ providerId }: { providerId: string }) {
+  const { session } = useAuth();
+  const [effectivePermissions, setEffectivePermissions] = useState<string[] | null>(null);
   const [projects, setProjects] =
     useState<Collection<ServiceCaseAttributes> | null>(null);
   const [selected, setSelected] =
@@ -34,6 +38,17 @@ export function ProjectsWorkspace({ providerId }: { providerId: string }) {
   const [queryText, setQueryText] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   useEffect(() => {
+    let active = true;
+    setEffectivePermissions(null);
+    if (!session?.userId) return;
+    void accessData.selfEffectivePermissions(providerId).then((preview) => {
+      if (active) setEffectivePermissions(preview.data.attributes.membership_active
+        ? preview.data.attributes.permissions.filter((permission) => permission.grant_effective).map((permission) => permission.code)
+        : []);
+    }).catch(() => { if (active) setEffectivePermissions([]); });
+    return () => { active = false; };
+  }, [providerId, session?.userId]);
+  useEffect(() => {
     operationsData
       .serviceCases(providerId, { ...pageCursor, limit: pageLimit, query: queryText.trim() || undefined, status: statusFilter || undefined })
       .then(setProjects)
@@ -41,6 +56,7 @@ export function ProjectsWorkspace({ providerId }: { providerId: string }) {
   }, [providerId, pageCursor, pageLimit, queryText, statusFilter]);
   useEffect(() => { setPageCursor({}); setSelected(null); }, [queryText, statusFilter]);
   const visibleProjects = projects?.data || [];
+  const canExecuteStages = effectivePermissions?.includes("SERVICE_JOB_EXECUTE") === true;
   return (
     <section className="content feature-page">
       <PageHeader
@@ -92,6 +108,8 @@ export function ProjectsWorkspace({ providerId }: { providerId: string }) {
         <ProjectDetail
           providerId={providerId}
           project={selected}
+          permissions={effectivePermissions || []}
+          canExecuteStages={canExecuteStages}
           back={() => setSelected(null)}
           onSaved={setSelected}
         />
@@ -112,14 +130,19 @@ function ProjectEditForm({ providerId, project, onSaved }: { providerId: string;
 function ProjectDetail({
   providerId,
   project,
+  permissions,
+  canExecuteStages,
   back,
   onSaved,
 }: {
   providerId: string;
   project: Resource<ServiceCaseAttributes>;
+  permissions: string[];
+  canExecuteStages: boolean;
   back: () => void;
   onSaved: (project: Resource<ServiceCaseAttributes>) => void;
 }) {
+  const hasPermission = (code: string) => permissions.includes(code);
   const [orders, setOrders] = useState<Collection<GenericAttributes> | null>(
     null,
   );
@@ -169,17 +192,17 @@ function ProjectDetail({
     <>
       <div className="project-detail-toolbar">
         <button className="text-button" onClick={back}>← Projects</button>
-        {['DRAFT', 'OPEN'].includes(String(project.attributes.status).toUpperCase()) && <Button variant="secondary" onClick={() => setEditDialog(true)}>Edit project</Button>}
+        {hasPermission("SERVICE_JOB_EDIT") && ['DRAFT', 'OPEN'].includes(String(project.attributes.status).toUpperCase()) && <Button variant="secondary" onClick={() => setEditDialog(true)}>Edit project</Button>}
       </div>
       <section className="project-detail-heading"><div><h2>{project.attributes.title}</h2><p>{project.attributes.project_classification_key || 'Service project'} · Revision {project.attributes.revision}</p></div><Status>{project.attributes.status}</Status></section>
       <nav className="project-detail-tabs" role="tablist" aria-label="Project work areas">
         {([['overview', 'Overview'], ['execution', 'Stages & execution'], ['quality', 'QA & handover'], ['commercial', 'Commercial']] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>{label}</button>)}
       </nav>
-      {activeTab === 'overview' && <LegacyProjectDetailContent providerId={providerId} project={project} />}
-      {activeTab === 'execution' && <><ProjectJobControl providerId={providerId} project={project} /><StagePlanning providerId={providerId} caseId={project.id} projectAssets={project.attributes.project_assets || []} /></>}
-      {activeTab === 'quality' && <><QualityFindingPanel providerId={providerId} project={project} /><HandoverPanel providerId={providerId} project={project} /></>}
+      {activeTab === 'overview' && <LegacyProjectDetailContent providerId={providerId} project={project} permissions={permissions} />}
+      {activeTab === 'execution' && <><ProjectJobControl providerId={providerId} project={project} canCreateJob={hasPermission("SERVICE_JOB_EDIT")} /><StagePlanning providerId={providerId} caseId={project.id} projectAssets={project.attributes.project_assets || []} canEditStages={hasPermission("SERVICE_JOB_EDIT")} canExecuteStages={canExecuteStages} /></>}
+      {activeTab === 'quality' && <><QualityFindingPanel providerId={providerId} project={project} canEditFindings={hasPermission("SERVICE_JOB_EDIT")} /><HandoverPanel providerId={providerId} project={project} canRequestHandover={hasPermission("SERVICE_JOB_EDIT")} /></>}
       {activeTab === 'commercial' && <>
-      <ProjectLifecycleActions providerId={providerId} project={project} onSaved={onSaved} />
+      <ProjectLifecycleActions providerId={providerId} project={project} permissions={permissions} onSaved={onSaved} />
       <section className="detail-card">
         <div className="section-heading">
           <div>
@@ -189,9 +212,9 @@ function ProjectDetail({
               applying them to delivery.
             </p>
           </div>
-          <Button variant="secondary" onClick={() => setDialog(true)}>
+          {hasPermission("SERVICE_JOB_EDIT") && <Button variant="secondary" onClick={() => setDialog(true)}>
             Add change order
-          </Button>
+          </Button>}
         </div>
         {error && (
           <p className="error" role="alert">
@@ -249,7 +272,7 @@ function ProjectDetail({
                     {String(baseline.stage_count || 0)} stages
                   </small>
                 )}
-                {order.attributes.status === "DRAFT" && (
+                {order.attributes.status === "DRAFT" && hasPermission("SERVICE_JOB_EDIT") && (
                   <Button
                     variant="secondary"
                     onClick={() =>
@@ -270,7 +293,7 @@ function ProjectDetail({
                     Submit for approval
                   </Button>
                 )}
-                {order.attributes.status === "SUBMITTED" && (
+                {order.attributes.status === "SUBMITTED" && hasPermission("PROJECT_APPROVE") && (
                   <>
                     <small>
                       Awaiting independent approval. The requester cannot
@@ -321,7 +344,7 @@ function ProjectDetail({
               </span>
               {["RECEIVED", "PENDING_VERIFICATION"].includes(
                 String(payment.attributes.status),
-              ) && (
+              ) && hasPermission("PAYMENT_SETTLEMENT_VERIFY") && (
                 <>
                   <small>
                     Awaiting an independent verifier; received and
@@ -348,7 +371,7 @@ function ProjectDetail({
                   </Button>
                 </>
               )}
-              {payment.attributes.status === "RECEIVED" && (
+              {payment.attributes.status === "RECEIVED" && hasPermission("PAYMENT_SETTLEMENT_VERIFY") && (
                 <Button
                   variant="secondary"
                   onClick={() =>
@@ -370,7 +393,7 @@ function ProjectDetail({
                   Record bounce
                 </Button>
               )}
-              {payment.attributes.status === "SETTLED" && (
+              {payment.attributes.status === "SETTLED" && hasPermission("PAYMENT_REVERSAL_REVIEW") && (
                 <Button
                   variant="secondary"
                   onClick={() =>
@@ -415,11 +438,12 @@ function ProjectDetail({
   );
 }
 
-function ProjectLifecycleActions({ providerId, project, onSaved }: { providerId: string; project: Resource<ServiceCaseAttributes>; onSaved: (project: Resource<ServiceCaseAttributes>) => void }) {
+function ProjectLifecycleActions({ providerId, project, permissions, onSaved }: { providerId: string; project: Resource<ServiceCaseAttributes>; permissions: string[]; onSaved: (project: Resource<ServiceCaseAttributes>) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const next = project.attributes.status === "OPEN" || project.attributes.status === "DRAFT" || project.attributes.status === "REJECTED" ? "SUBMITTED" : project.attributes.status === "PENDING_APPROVAL" ? "APPROVED" : project.attributes.status === "APPROVED" ? "ACTIVE" : null;
-  if (!next) return null;
+  const requiredPermission = next === "SUBMITTED" ? "SERVICE_JOB_EDIT" : next === "APPROVED" ? "PROJECT_APPROVE" : next === "ACTIVE" ? "PROJECT_ACTIVATE" : null;
+  if (!next || !requiredPermission || !permissions.includes(requiredPermission)) return null;
   async function transition() {
     setBusy(true); setError("");
     try { const updated = await operationsData.transitionServiceCase(providerId, project.id, { transition: next, expected_revision: project.attributes.revision }, uuid()); onSaved(updated); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); }
@@ -430,10 +454,18 @@ function ProjectLifecycleActions({ providerId, project, onSaved }: { providerId:
 function LegacyProjectDetailContent({
   providerId,
   project,
+  permissions,
 }: {
   providerId: string;
   project: Resource<ServiceCaseAttributes>;
+  permissions: string[];
 }) {
+  const can = (code: string) => permissions.includes(code);
+  const canEditProject = can("SERVICE_JOB_EDIT");
+  const canReleaseMaterials = can("MATERIAL_SHIPMENT_RELEASE");
+  const canVerifyDelivery = can("MATERIAL_DELIVERY_VERIFY");
+  const canRecordPayment = can("PAYMENT_RECORD");
+  const canReleaseStage = can("PAYMENT_STAGE_RELEASE");
   const [requirements, setRequirements] =
     useState<Collection<MaterialRequirementAttributes> | null>(null);
   const [shipments, setShipments] =
@@ -484,19 +516,19 @@ function LegacyProjectDetailContent({
         )}
         {message && <ActionFeedback>{message}</ActionFeedback>}
         <div className="action-footer">
-          <Button onClick={() => setDialog("material")}>
+          {canEditProject && <Button onClick={() => setDialog("material")}>
             Add material requirement
-          </Button>
-          <Button
+          </Button>}
+          {canReleaseMaterials && <Button
             variant="secondary"
             disabled={!requirements?.data.length}
             onClick={() => setDialog("shipment")}
           >
             Create shipment
-          </Button>
-          <Button variant="secondary" onClick={() => setDialog("schedule")}>
+          </Button>}
+          {canEditProject && <Button variant="secondary" onClick={() => setDialog("schedule")}>
             Add payment milestone
-          </Button>
+          </Button>}
         </div>
         <section className="detail-card">
           <h3>Linked installation jobs</h3>
@@ -565,7 +597,7 @@ function LegacyProjectDetailContent({
                 ))}
                 {["DISPATCHED", "PARTIALLY_ACCEPTED"].includes(
                   item.attributes.status,
-                ) && (
+                ) && canVerifyDelivery && (
                   <Button
                     variant="secondary"
                     onClick={() => {
@@ -599,7 +631,7 @@ function LegacyProjectDetailContent({
                   {schedule.attributes.collected_amount} · Outstanding{" "}
                   {schedule.attributes.outstanding_amount}
                 </span>
-                <Button
+                {canRecordPayment && <Button
                   variant="secondary"
                   disabled={schedule.attributes.outstanding_amount === "0"}
                   onClick={() => {
@@ -608,8 +640,8 @@ function LegacyProjectDetailContent({
                   }}
                 >
                   Record collection
-                </Button>
-                {schedule.attributes.outstanding_amount === "0" && (
+                </Button>}
+                {canReleaseStage && schedule.attributes.outstanding_amount === "0" && (
                   <Button variant="secondary" onClick={() => { setActiveSchedule(schedule); setDialog("release"); }}>
                     Authorize stage release
                   </Button>
@@ -694,9 +726,11 @@ function LegacyProjectDetailContent({
 function QualityFindingPanel({
   providerId,
   project,
+  canEditFindings,
 }: {
   providerId: string;
   project: Resource<ServiceCaseAttributes>;
+  canEditFindings: boolean;
 }) {
   const units = project.attributes.project_assets || [];
   const [findings, setFindings] =
@@ -796,7 +830,7 @@ function QualityFindingPanel({
             evidence-backed independent reinspection before resolution.
           </p>
         </div>
-        <Button variant="secondary" onClick={() => setShowForm(true)}>Report defect</Button>
+        {canEditFindings && <Button variant="secondary" onClick={() => setShowForm(true)}>Report defect</Button>}
       </div>
       {error && (
         <p className="error" role="alert">
@@ -808,8 +842,8 @@ function QualityFindingPanel({
           {message}
         </p>
       )}
-      {findings?.data.some((finding) => finding.attributes.status === "RECTIFICATION_IN_PROGRESS") && <label className="reinspection-evidence-field">Reinspection evidence document ID<input aria-label="Reinspection evidence document ID" value={form.evidence_id} onChange={(event) => setForm({ ...form, evidence_id: event.target.value })} /></label>}
-      {showForm && <OperationsDialog title="Report commissioning defect" busy={busy} onClose={() => setShowForm(false)}><form className="provider-form quality-finding-form" onSubmit={(event) => void create(event)}>
+      {findings?.data.some((finding) => ["RECTIFICATION_IN_PROGRESS", "READY_FOR_REINSPECTION"].includes(finding.attributes.status)) && <label className="reinspection-evidence-field">Reinspection evidence document ID<input aria-label="Reinspection evidence document ID" value={form.evidence_id} onChange={(event) => setForm({ ...form, evidence_id: event.target.value })} /></label>}
+      {showForm && canEditFindings && <OperationsDialog title="Report commissioning defect" busy={busy} onClose={() => setShowForm(false)}><form className="provider-form quality-finding-form" onSubmit={(event) => void create(event)}>
         <label>
           Elevator unit{units.length > 1 ? " *" : ""}
           <select
@@ -905,7 +939,7 @@ function QualityFindingPanel({
               <small>
                 Corrective action: {finding.attributes.corrective_action}
               </small>
-              {finding.attributes.status === "OPEN" && (
+              {finding.attributes.status === "OPEN" && canEditFindings && (
                 <Button
                   variant="secondary"
                   onClick={() =>
@@ -916,7 +950,7 @@ function QualityFindingPanel({
                   Start rectification
                 </Button>
               )}
-              {finding.attributes.status === "RECTIFICATION_IN_PROGRESS" && (
+              {finding.attributes.status === "RECTIFICATION_IN_PROGRESS" && canEditFindings && (
                 <Button
                   variant="secondary"
                   onClick={() =>
@@ -927,7 +961,7 @@ function QualityFindingPanel({
                   Submit for reinspection
                 </Button>
               )}
-              {finding.attributes.status === "READY_FOR_REINSPECTION" && (
+              {finding.attributes.status === "READY_FOR_REINSPECTION" && canEditFindings && (
                 <>
                   <small>Independent reviewer required for resolution.</small>
                   <Button
@@ -948,7 +982,7 @@ function QualityFindingPanel({
                   </Button>
                 </>
               )}
-              {finding.attributes.status === "REINSPECTION_FAILED" && (
+              {finding.attributes.status === "REINSPECTION_FAILED" && canEditFindings && (
                 <Button
                   variant="secondary"
                   onClick={() =>
@@ -972,9 +1006,11 @@ function QualityFindingPanel({
 function HandoverPanel({
   providerId,
   project,
+  canRequestHandover,
 }: {
   providerId: string;
   project: Resource<ServiceCaseAttributes>;
+  canRequestHandover: boolean;
 }) {
   const units = project.attributes.project_assets || [];
   const [assetId, setAssetId] = useState(units.length === 1 ? units[0].id : "");
@@ -1044,7 +1080,7 @@ function HandoverPanel({
             server-enforced milestone, evidence and authorization gates pass.
           </p>
         </div>
-        <Button variant="secondary" disabled={!units.length} title={!units.length ? "Link an authorized elevator unit before requesting handover." : undefined} onClick={() => setShowRequestDialog(true)}>Request handover</Button>
+        {canRequestHandover && <Button variant="secondary" disabled={!units.length} title={!units.length ? "Link an authorized elevator unit before requesting handover." : undefined} onClick={() => setShowRequestDialog(true)}>Request handover</Button>}
       </div>
       {!units.length && <p className="notice">Per-unit handover is unavailable until an authorized elevator unit is linked to this project.</p>}
       {units.length > 1 && (
@@ -1064,7 +1100,7 @@ function HandoverPanel({
         </p>
       )}
       {events.length === 0 && <p className="notice">No per-unit handover requests recorded.</p>}
-      {showRequestDialog && <OperationsDialog title="Request per-unit handover" busy={busy} onClose={() => setShowRequestDialog(false)}><form className="provider-form handover-request-form" onSubmit={(event) => void request(event)}>
+      {showRequestDialog && canRequestHandover && <OperationsDialog title="Request per-unit handover" busy={busy} onClose={() => setShowRequestDialog(false)}><form className="provider-form handover-request-form" onSubmit={(event) => void request(event)}>
         <label>
           Elevator unit{units.length > 1 ? " *" : ""}
           <select
@@ -1138,9 +1174,11 @@ function HandoverPanel({
 function ProjectJobControl({
   providerId,
   project,
+  canCreateJob,
 }: {
   providerId: string;
   project: Resource<ServiceCaseAttributes>;
+  canCreateJob: boolean;
 }) {
   const [dialog, setDialog] = useState(false);
   const [message, setMessage] = useState("");
@@ -1155,7 +1193,7 @@ function ProjectJobControl({
             work execution remain governed by the canonical Jobs workspace.
           </p>
         </div>
-        <Button
+        {canCreateJob && <Button
           variant="secondary"
           onClick={() => {
             setError("");
@@ -1163,7 +1201,7 @@ function ProjectJobControl({
           }}
         >
           Create installation job
-        </Button>
+        </Button>}
       </div>
       {message && (
         <p className="success" role="status">
@@ -1175,7 +1213,7 @@ function ProjectJobControl({
           {error}
         </p>
       )}
-      {dialog && (
+      {dialog && canCreateJob && (
         <ProjectJobDialog
           providerId={providerId}
           project={project}
@@ -1313,9 +1351,13 @@ function StagePlanning({
   providerId,
   caseId,
   projectAssets,
+  canEditStages,
+  canExecuteStages,
 }: {
   providerId: string;
   caseId: string;
+  canExecuteStages: boolean;
+  canEditStages: boolean;
   projectAssets: Array<{
     id: string;
     display_name?: string | null;
@@ -1351,9 +1393,9 @@ function StagePlanning({
             overall progress
           </p>
         </div>
-        <Button variant="secondary" onClick={() => setDialog(true)}>
+        {canEditStages && <Button variant="secondary" onClick={() => setDialog(true)}>
           Add milestone
-        </Button>
+        </Button>}
       </div>
       {projectAssets.length > 1 && (
         <div className="record-card">
@@ -1399,7 +1441,7 @@ function StagePlanning({
                 ? ` · Planned ${String(stage.attributes.planned_start_at)}`
                 : ""}
             </span>
-            {["READY", "IN_PROGRESS"].includes(
+            {canExecuteStages && ["READY", "IN_PROGRESS"].includes(
               String(stage.attributes.status),
             ) && (
               <Button
@@ -1438,7 +1480,7 @@ function StagePlanning({
       ) : (
         <p className="notice">No installation milestones configured.</p>
       )}
-      {dialog && (
+      {dialog && canEditStages && (
         <StageDialog
           providerId={providerId}
           caseId={caseId}
@@ -2012,7 +2054,7 @@ function MaterialDialog({
   const [form, setForm] = useState({
     material_code: "",
     description: "",
-    required_quantity: "10",
+    required_quantity: "",
     unit_code: "UNIT",
   });
   const [busy, setBusy] = useState(false);

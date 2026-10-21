@@ -1,6 +1,6 @@
 import type { ProviderCapabilityContext, Session } from '@trise/auth';
 
-export type ProviderNavigationGroup = 'Overview' | 'Operations' | 'Customers & Assets' | 'Service Programs' | 'Workforce' | 'Commercial' | 'Insights' | 'Administration';
+export type ProviderNavigationGroup = 'Overview' | 'Work Intake' | 'Sales & Quotations' | 'Projects & Delivery' | 'Field Operations' | 'Assets & Sites' | 'Service Programs' | 'Workforce' | 'Insights' | 'Provider Settings';
 export type OperationsNavigationItem = { key: string; label: string; hash: string; capability?: string; group?: ProviderNavigationGroup };
 
 export const platformNavigation: OperationsNavigationItem[] = [
@@ -28,25 +28,26 @@ export const platformNavigation: OperationsNavigationItem[] = [
 ];
 
 const providerItems: OperationsNavigationItem[] = [
-  { key: 'overview', label: 'Dashboard', hash: 'overview', capability: 'requests', group: 'Overview' },
-  { key: 'leads', label: 'Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Operations' },
-  { key: 'quotations', label: 'Quotations & Orders', hash: 'quotations', capability: 'quotations', group: 'Operations' },
-  { key: 'projects', label: 'Projects & Stages', hash: 'projects', capability: 'projects', group: 'Operations' },
-  { key: 'requests', label: 'Requests', hash: 'requests', capability: 'requests', group: 'Operations' },
-  { key: 'bookings', label: 'Appointments', hash: 'bookings', capability: 'bookings', group: 'Operations' },
-  { key: 'jobs', label: 'Jobs', hash: 'jobs', capability: 'jobs', group: 'Operations' },
-  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Operations' },
-  { key: 'customers', label: 'Customers & Assets', hash: 'customers', capability: 'customers', group: 'Customers & Assets' },
-  { key: 'onboarding', label: 'Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Customers & Assets' },
-  { key: 'amc', label: 'AMC', hash: 'amc', capability: 'projects', group: 'Service Programs' },
+  { key: 'overview', label: 'Overview', hash: 'overview', capability: 'requests', group: 'Overview' },
+  { key: 'work-intake', label: 'Work Intake', hash: 'work-intake', capability: 'work_intake', group: 'Work Intake' },
+  { key: 'leads', label: 'Marketing Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Work Intake' },
+  { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Work Intake' },
+  { key: 'quotations', label: 'Sales & Quotations', hash: 'quotations', capability: 'quotations', group: 'Sales & Quotations' },
+  { key: 'projects', label: 'Projects & Delivery', hash: 'projects', capability: 'projects', group: 'Projects & Delivery' },
+  { key: 'bookings', label: 'Appointments & Dispatch', hash: 'bookings', capability: 'bookings', group: 'Field Operations' },
+  { key: 'jobs', label: 'Jobs & Execution', hash: 'jobs', capability: 'jobs', group: 'Field Operations' },
+  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Field Operations' },
+  { key: 'customers', label: 'Customers, Sites & Assets', hash: 'customers', capability: 'customers', group: 'Assets & Sites' },
+  { key: 'onboarding', label: 'Site Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Assets & Sites' },
+  { key: 'amc', label: 'AMC & Service Programs', hash: 'amc', capability: 'amc', group: 'Service Programs' },
   { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
-  { key: 'reports', label: 'Reports', hash: 'reports', capability: 'workforce', group: 'Insights' },
-  { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration', group: 'Administration' },
-  { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile', group: 'Administration' },
-  { key: 'compliance', label: 'Compliance', hash: 'compliance', capability: 'compliance', group: 'Administration' },
-  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Administration' },
-  { key: 'audit', label: 'Audit Logs', hash: 'audit', capability: 'audit', group: 'Administration' },
-  { key: 'team-access', label: 'Teams & Roles', hash: 'team-access', capability: 'team_access', group: 'Administration' }
+  { key: 'reports', label: 'Reports & Analytics', hash: 'reports', capability: 'reports', group: 'Insights' },
+  { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration', group: 'Provider Settings' },
+  { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile', group: 'Provider Settings' },
+  { key: 'compliance', label: 'Provider compliance', hash: 'compliance', capability: 'compliance', group: 'Provider Settings' },
+  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Provider Settings' },
+  { key: 'audit', label: 'Provider audit logs', hash: 'audit', capability: 'audit', group: 'Provider Settings' },
+  { key: 'team-access', label: 'Team & roles', hash: 'team-access', capability: 'team_access', group: 'Provider Settings' }
 ];
 
 export function providerContextFor(session: Pick<Session, 'providerCapabilities'>, providerId?: string): ProviderCapabilityContext | undefined {
@@ -64,7 +65,7 @@ export function navigationForSession(session: Pick<Session, 'platformAdmin' | 'p
   };
 }
 
-export const providerNavigationGroups: ProviderNavigationGroup[] = ['Overview', 'Operations', 'Customers & Assets', 'Service Programs', 'Workforce', 'Commercial', 'Insights', 'Administration'];
+export const providerNavigationGroups: ProviderNavigationGroup[] = ['Overview', 'Work Intake', 'Sales & Quotations', 'Projects & Delivery', 'Field Operations', 'Assets & Sites', 'Service Programs', 'Workforce', 'Insights', 'Provider Settings'];
 
 export function groupedProviderNavigation(items: OperationsNavigationItem[]) {
   return providerNavigationGroups.map((group) => ({ group, items: items.filter((item) => item.group === group) })).filter((entry) => entry.items.length > 0);

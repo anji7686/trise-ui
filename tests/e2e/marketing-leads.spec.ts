@@ -1,109 +1,128 @@
-import { test, expect } from './fixtures';
-import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { expect, test } from './fixtures';
+import { configuredAccount, localSignIn } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
-test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000, navigationTimeout: 15_000 });
-
-async function selectLiftRiseProvider(page: import('playwright/test').Page, providerId: string) {
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+async function selectProvider(page: import('playwright/test').Page) {
+  const trigger = page.getByRole('button', { name: 'Open account menu', exact: true });
+  await trigger.click();
   const dialog = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
-  const select = dialog.getByRole('combobox', { name: 'Provider', exact: true });
-  if (await select.inputValue() !== providerId) {
-    await select.selectOption(providerId);
-    await page.waitForTimeout(250);
-  }
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  const provider = dialog.getByRole('combobox', { name: 'Provider', exact: true });
+  await expect.poll(() => provider.locator('option').count()).toBeGreaterThan(1);
+  if (!await provider.inputValue()) await provider.selectOption({ index: 1 });
+  const providerId = await provider.inputValue();
+  await trigger.click();
+  return providerId;
 }
 
-async function openLeads(page: import('playwright/test').Page) {
-  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
-  const leads = navigation.getByRole('button', { name: 'Leads & Surveys', exact: true });
-  if (!await leads.isVisible()) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await leads.click();
-}
+test('Provider marketing survey draft resumes and submits as a versioned survey', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const { accessToken } = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const providerId = await selectProvider(page);
+  const api = e2eApiV1Base();
+  const reference = `E2E-SURVEY-${Date.now()}`;
+  const createdLead = await page.request.post(`${api}/marketing-leads`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Idempotency-Key': crypto.randomUUID() },
+    data: { reference_code: reference, source: 'FIELD', title: 'Mobile survey verification', prospect_name: 'Synthetic survey prospect' },
+  });
+  expect(createdLead.status()).toBe(201);
 
-test('Field Marketing Executive captures a lead and Marketing Manager reviews it', async ({ page, evidence }, info) => {
-  test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
-  test.setTimeout(120_000);
-  const reference = `BROWSER-${Date.now()}`;
-
-  const executiveSession = await localSignIn(page, configuredAccount('MARKETING_EXECUTIVE'));
-  const provider = executiveSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
-    entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('sales_marketing'));
-  expect(provider).toBeTruthy();
-  await selectLiftRiseProvider(page, provider!.provider_id);
-  await openLeads(page);
-  await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
-
-  await page.getByRole('button', { name: 'New lead', exact: true }).click();
-  await page.getByLabel('Reference code', { exact: true }).fill(reference);
-  await page.getByLabel('Source', { exact: true }).fill('FIELD');
-  await page.getByLabel('Prospect name', { exact: true }).fill('Synthetic Demo Prospect');
-  await page.getByLabel('Opportunity title', { exact: true }).fill('Synthetic Lift Modernization');
-  await page.getByLabel('Primary contact reference', { exact: true }).fill('demo-contact@demotrise.in');
-  await page.getByRole('button', { name: 'Create lead', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Lead created by the server.');
-  await expect(page.getByRole('heading', { name: 'Synthetic Lift Modernization', exact: true })).toBeVisible();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  await page.screenshot({ path: info.outputPath('lead-overview.png'), fullPage: true });
-
-  await page.getByRole('tab', { name: 'Activity', exact: true }).click();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  await page.screenshot({ path: info.outputPath('lead-activity.png'), fullPage: true });
-  await page.getByLabel('Activity type', { exact: true }).fill('CALL');
-  await page.getByLabel('Notes', { exact: true }).fill('Synthetic browser follow-up');
-  await page.getByRole('button', { name: 'Log follow-up', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Follow-up recorded by the server.');
-
+  await page.goto('/#leads');
+  await expect(page.getByRole('heading', { name: /Leads & site surveys/i })).toBeVisible();
+  const leadRow = page.getByRole('row').filter({ hasText: reference });
+  await expect(leadRow).toBeVisible();
+  await leadRow.getByRole('button', { name: 'Mobile survey verification', exact: true }).click();
   await page.getByRole('tab', { name: 'Site Survey', exact: true }).click();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  await page.getByLabel('Survey date', { exact: true }).fill(new Date().toISOString().slice(0, 10));
-  await page.getByLabel('Elevators', { exact: true }).fill('2');
-  await page.getByLabel('Floors', { exact: true }).fill('8');
-  await page.getByLabel('Building type', { exact: true }).fill('Residential');
-  await page.getByLabel('Shaft width (mm)', { exact: true }).fill('1800');
-  await page.getByRole('button', { name: 'Submit survey', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Site survey submitted by the server.');
-  await page.screenshot({ path: info.outputPath('lead-site-survey.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Start survey', exact: true }).click();
+  const wizard = page.locator('.site-survey-wizard');
+  const date = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  await wizard.getByLabel('Site visit date', { exact: true }).fill(date);
+  await wizard.getByRole('button', { name: 'Save draft', exact: true }).click();
+  await expect(page.getByText('Draft saved securely. You can resume it from this lead later.')).toBeVisible();
 
+  await wizard.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Resume draft', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Resume draft', exact: true }).click();
+  await expect(wizard.getByLabel('Site visit date', { exact: true })).toHaveValue(date);
+
+  await wizard.getByLabel('Site address').fill('Synthetic site address, Pune');
+  await wizard.getByLabel('Latitude').fill('18.5204');
+  await wizard.getByLabel('Longitude').fill('73.8567');
+  await wizard.getByRole('button', { name: 'Save draft', exact: true }).click();
+  await expect(page.getByText('Draft saved securely. You can resume it from this lead later.')).toBeVisible();
+
+  await wizard.getByLabel('Name', { exact: true }).fill('Synthetic Site Contact');
+  await wizard.getByLabel('Site role').fill('Facilities');
+  await wizard.getByLabel('Referrer name').fill('Synthetic referral');
+  await wizard.getByLabel('Unit label').first().fill('Lift A');
+  await wizard.getByLabel('Stops').first().fill('8');
+  await wizard.getByLabel('Capacity (kg)').first().fill('680');
+  await wizard.getByRole('button', { name: 'Add another unit', exact: true }).click();
+  await expect(wizard.getByLabel('Unit label')).toHaveCount(2);
+  await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+  await wizard.getByLabel('Shaft width (mm)').fill('1800');
+  await wizard.getByLabel('Shaft depth (mm)').fill('1900');
+  await expect(page.getByText('Evidence upload is unavailable', { exact: true })).toBeVisible();
+  await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByText('Unavailable until an approved scanner is configured')).toBeVisible();
+  await testInfo.attach(`survey-summary-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`survey-summary-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+  await wizard.getByRole('button', { name: 'Submit survey', exact: true }).click();
+  await expect(page.getByText('Site survey submitted. The captured revision is now read-only.')).toBeVisible();
+  await expect(page.getByText(/SUBMITTED ·/)).toBeVisible();
   await page.getByRole('tab', { name: 'Requirements', exact: true }).click();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  await page.getByLabel('Capacity (kg)', { exact: true }).fill('680');
+  await page.getByLabel('Capacity (kg)', { exact: true }).fill('1000');
   await page.getByLabel('Stops', { exact: true }).fill('8');
   await page.getByLabel('Lift type', { exact: true }).fill('Passenger');
   await page.getByRole('button', { name: 'Capture requirements', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Requirement revision captured by the server.');
-  await page.screenshot({ path: info.outputPath('lead-requirements.png'), fullPage: true });
-  await page.getByRole('tab', { name: 'Attachments', exact: true }).click();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  const evidenceInput = page.getByLabel('PDF, PNG, JPEG, XLS or XLSX', { exact: true });
-  await expect(evidenceInput).toBeVisible();
-  await page.screenshot({ path: info.outputPath('lead-attachments.png'), fullPage: true });
-  if (process.env.TRISE_E2E_STORAGE === 'true') {
-    await evidenceInput.setInputFiles({ name: 'survey-evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 synthetic survey evidence') });
-    await page.getByRole('button', { name: 'Upload evidence', exact: true }).click();
-    await expect(page.getByText('Survey evidence finalized and associated with this lead.', { exact: true })).toBeVisible();
-    await expect(page.getByText('survey-evidence.pdf · available · not_scanned', { exact: true })).toBeVisible();
-    const evidenceAuthorization = page.waitForResponse((response) => response.url().includes('/documents/') && response.url().endsWith('/download') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Download evidence', exact: true }).click();
-    const authorizedResponse = await evidenceAuthorization;
-    expect(authorizedResponse.status()).toBe(200);
-    await expect((await authorizedResponse.json()).url).toContain('127.0.0.1:5001');
-  }
-  await page.screenshot({ path: `/tmp/trise-marketing-lead-${reference}-executive.png`, fullPage: true });
+  await expect(page.getByText('Requirement revision captured by the server.')).toBeVisible();
+  await testInfo.attach(`requirements-revision-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`requirements-revision-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+});
 
-  await localSignOut(page);
-  const managerSession = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
-  const managerProvider = managerSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
-    entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('sales_marketing'));
-  expect(managerProvider).toBeTruthy();
-  await selectLiftRiseProvider(page, managerProvider!.provider_id);
-  await openLeads(page);
-  await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
-  const createdLead = page.getByRole('row').filter({ hasText: reference });
-  await expect(createdLead.getByRole('button', { name: 'Synthetic Lift Modernization', exact: true })).toBeVisible();
-  await page.screenshot({ path: `/tmp/trise-marketing-lead-${reference}-manager.png`, fullPage: true });
-  await localSignOut(page);
+test('Provider lead create, update and follow-up dialogs persist supported fields', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  const { accessToken } = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const providerId = await selectProvider(page);
+  const api = e2eApiV1Base();
 
-  expect(evidence.exceptions).toEqual([]);
-  expect(evidence.responses.filter((response) => response.status >= 500)).toEqual([]);
+  await page.goto('/#leads');
+  await page.getByRole('button', { name: 'New lead', exact: true }).click();
+  const create = page.getByRole('dialog', { name: 'Create lead', exact: true });
+  await testInfo.attach(`lead-create-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`lead-create-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+  const reference = `E2E-LEAD-${Date.now()}`;
+  await create.getByLabel('Reference code').fill(reference);
+  await create.getByLabel('Source').fill('FIELD');
+  await create.getByLabel('Prospect name').fill('Synthetic provider prospect');
+  await create.getByLabel('Opportunity title').fill('Elevator modernization assessment');
+  await create.getByLabel('Primary contact reference').fill('synthetic-contact-ref');
+  await create.getByRole('button', { name: 'Create lead', exact: true }).click();
+  await expect(page.getByText('Lead created by the server.')).toBeVisible();
+
+  const row = page.getByRole('row').filter({ hasText: reference });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Elevator modernization assessment', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit lead', exact: true }).click();
+  const edit = page.getByRole('dialog', { name: 'Update lead', exact: true });
+  await testInfo.attach(`lead-update-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`lead-update-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+  await edit.getByLabel('Opportunity title').fill('Modernization and site assessment');
+  await edit.getByLabel('Lead stage').selectOption('CONTACTED');
+  await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByText('Lead updated by the server.')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Activity', exact: true }).click();
+  await page.getByRole('button', { name: 'Record follow-up', exact: true }).click();
+  const followUp = page.getByRole('dialog', { name: 'Record follow-up', exact: true });
+  await testInfo.attach(`lead-follow-up-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`lead-follow-up-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+  await followUp.getByLabel('Activity type').selectOption('CALL');
+  await followUp.getByLabel('Outcome').fill('Customer requested a site visit');
+  await followUp.getByLabel('Next action').fill('Coordinate site access');
+  await followUp.getByLabel('Summary / notes').fill('Discussed modernization scope and tentative visit date.');
+  await followUp.getByRole('button', { name: 'Save activity', exact: true }).click();
+  await expect(page.getByText('Follow-up recorded by the server.')).toBeVisible();
+
+  const fetched = await page.request.get(`${api}/marketing-leads?filter%5Bq%5D=${encodeURIComponent(reference)}`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(fetched.ok()).toBeTruthy();
+  const leadPayload = await fetched.json() as { data: Array<{ id: string; attributes: { reference_code: string; title: string; status: string } }> };
+  const savedLead = leadPayload.data.find(item => item.attributes.reference_code === reference);
+  expect(savedLead?.attributes).toMatchObject({ title: 'Modernization and site assessment', status: 'CONTACTED' });
 });

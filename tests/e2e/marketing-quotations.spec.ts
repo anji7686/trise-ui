@@ -1,5 +1,19 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
+
+function providerIdFor(user: { attributes: { provider_capabilities: Array<{ provider_id: string; display_name: string; capabilities: string[] }> } }, capability = 'quotations') {
+  const provider = user.attributes.provider_capabilities.find((entry) => entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes(capability));
+  if (!provider) throw new Error(`The configured local identity has no authorized Provider capability: ${capability}`);
+  return provider.provider_id;
+}
+
+async function navigateProvider(page: import('playwright/test').Page, label: string) {
+  const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  const item = navigation.getByRole('button', { name: label, exact: true });
+  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await item.click();
+}
 
 test.use({ trace: 'on', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
@@ -8,9 +22,11 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   test.setTimeout(120_000);
   const reference = `QUOTE-BROWSER-${Date.now()}`;
   const session = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const api = e2eApiV1Base();
   const provider = session.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string; capabilities: string[] }) =>
     entry.display_name === 'Lift Rise Elevators — Demo Operations' && entry.capabilities.includes('quotations'));
   expect(provider).toBeTruthy();
+  const providerId = provider!.provider_id;
 
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
@@ -18,7 +34,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await providerSelect.selectOption(provider!.provider_id);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
 
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Leads & Surveys', exact: true }).click();
+  await navigateProvider(page, 'Marketing Leads & Surveys');
   await page.getByRole('button', { name: 'New lead', exact: true }).click();
   await page.getByLabel('Reference code', { exact: true }).fill(reference);
   await page.getByLabel('Source', { exact: true }).fill('MANAGER');
@@ -27,7 +43,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await page.getByRole('button', { name: 'Create lead', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Lead created by the server.');
 
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
   const leadSelect = page.locator('select[name="lead_id"]');
@@ -36,16 +52,49 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   const relationshipSelect = page.locator('select[name="customer_relationship_id"]');
   const relationshipOption = relationshipSelect.locator('option').filter({ hasText: new RegExp(`Browser quotation opportunity · ${reference} · prospect`) });
   await relationshipSelect.selectOption((await relationshipOption.getAttribute('value'))!);
+  await page.getByLabel('Lift unit codes (comma separated)', { exact: true }).fill('Lift-A, Lift-B');
   await page.getByLabel('Total (INR)', { exact: true }).fill('450000');
+  await page.screenshot({ path: info.outputPath('quotation-create-draft.png') });
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
+  const quotationNumber = (await page.locator('.quotation-detail-panel h3').textContent())?.trim();
+  expect(quotationNumber).toBeTruthy();
+  const quotationRowsResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers: { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
+  expect(quotationRowsResponse.ok()).toBeTruthy();
+  const quotationRowsPayload = await quotationRowsResponse.json();
+  const createdQuote = quotationRowsPayload.data.map((row: { data?: unknown }) => row.data || row)
+    .find((row: { attributes: { quotation_number: string } }) => row.attributes.quotation_number === quotationNumber);
+  expect(createdQuote.attributes.terms.elevator_units).toEqual([{ unit_code: 'Lift-A' }, { unit_code: 'Lift-B' }]);
+  expect(createdQuote.attributes.terms).not.toHaveProperty('payment_milestones');
+  expect(createdQuote.attributes.terms).not.toHaveProperty('included_free_amc');
+  await page.getByRole('button', { name: 'Edit draft', exact: true }).click();
+  await page.screenshot({ path: info.outputPath('quotation-edit-draft.png') });
+  await page.getByLabel('Description', { exact: true }).fill('Revised browser quotation scope');
+  await page.getByLabel('Total (INR)', { exact: true }).fill('455000');
+  await page.getByRole('dialog', { name: 'Edit draft quotation', exact: true }).getByRole('button', { name: 'Save draft', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Draft quotation updated by the server.');
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation issued; awaiting Provider review before customer acceptance.');
   await page.getByRole('button', { name: 'Record negotiation', exact: true }).click();
   await page.getByLabel('Notes', { exact: true }).fill('Customer requested a revised commercial offer.');
   await page.getByRole('dialog', { name: 'Record negotiation', exact: true }).getByRole('button', { name: 'Record negotiation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Negotiation event recorded in immutable history.');
-  await page.screenshot({ path: `/tmp/trise-marketing-quotation-${reference}.png`, fullPage: true });
+  await page.screenshot({ path: info.outputPath('quotation-issued-negotiation.png') });
+  await localSignOut(page);
+
+  const reviewer = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  expect(providerIdFor(reviewer.user)).toBe(providerId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: quotationNumber!, exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Internal approval is required');
+  await page.getByRole('button', { name: 'Approve revision', exact: true }).click();
+  await page.screenshot({ path: info.outputPath('quotation-provider-review.png') });
+  await page.getByRole('dialog', { name: 'Approve quotation revision', exact: true }).getByRole('button', { name: 'Approve revision', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Provider review approved for this exact quotation revision');
   await localSignOut(page);
   expect(evidence.exceptions).toEqual([]);
   expect(evidence.responses.filter((response) => response.status >= 500)).toEqual([]);
@@ -54,17 +103,21 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
 test('approved quotation converts to an installation project from the Manager workspace', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
-  const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
-  const customerName = customer.user.attributes.display_name;
-  await localSignOut(page);
+  const api = e2eApiV1Base();
   const relationshipReader = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
-  const customerRelationshipsResponse = await page.request.get(`${api}/customer-relationships?page[limit]=100`, { headers: { Authorization: `Bearer ${relationshipReader.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
-  expect(customerRelationshipsResponse.ok()).toBeTruthy();
-  const relationshipPayload = await customerRelationshipsResponse.json();
-  const customerRelationship = relationshipPayload.data.find((row: { attributes: { display_name: string; status: string } }) => row.attributes.display_name === customerName && row.attributes.status === 'ACTIVE');
-  expect(customerRelationship).toBeTruthy();
+  const providerId = providerIdFor(relationshipReader.user);
+  const providerHeaders = { Authorization: `Bearer ${relationshipReader.accessToken}`, 'X-TRISE-Provider-Id': providerId };
+  const contractsResponse = await page.request.get(`${api}/maintenance-contracts?page[limit]=100`, { headers: providerHeaders });
+  expect(contractsResponse.ok()).toBeTruthy();
+  const contractsPayload = await contractsResponse.json();
+  const contractRows = contractsPayload.data.map((row: { data?: unknown }) => row.data || row) as Array<{ attributes: { contract_number?: string; status?: string }; relationships?: { customer_relationship?: { id: string } } }>;
+  const canonicalContract = contractRows.find((row) => row.attributes.contract_number === 'DEMO-ELEV-AMC-001' && ['active', 'approved'].includes(String(row.attributes.status || '').toLowerCase()));
+  expect(canonicalContract?.relationships?.customer_relationship?.id).toBeTruthy();
+  const customerRelationshipResponse = await page.request.get(`${api}/customer-relationships/${canonicalContract!.relationships!.customer_relationship!.id}`, { headers: providerHeaders });
+  expect(customerRelationshipResponse.ok()).toBeTruthy();
+  const customerRelationshipPayload = await customerRelationshipResponse.json();
+  const customerRelationship = customerRelationshipPayload.data || customerRelationshipPayload;
+  expect(customerRelationship.attributes.status).toBe('ACTIVE');
   await localSignOut(page);
   const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
@@ -98,7 +151,7 @@ test('approved quotation converts to an installation project from the Manager wo
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await page.getByRole('button', { name: quotationLabel, exact: true }).click();
   await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Internal approval is required');
   await page.getByRole('button', { name: 'Approve revision', exact: true }).click();
@@ -121,12 +174,12 @@ test('approved quotation converts to an installation project from the Manager wo
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   await page.getByRole('button', { name: quotationLabel, exact: true }).click();
   await page.getByRole('button', { name: 'Convert to installation project', exact: true }).click();
-  await expect(page).toHaveURL(/#projects$/);
-  await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Quotation converted to installation project');
+  await page.screenshot({ path: info.outputPath('quotation-converted-project-success.png'), fullPage: true });
   await localSignOut(page);
   const verifier = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
   const projectsResponse = await page.request.get(`${api}/service-cases?page[limit]=25`, { headers: { Authorization: `Bearer ${verifier.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
@@ -134,21 +187,53 @@ test('approved quotation converts to an installation project from the Manager wo
   const projectsPayload = await projectsResponse.json();
   expect(projectsPayload.data.length).toBeGreaterThan(0);
   const projectRows = projectsPayload.data.map((row: { data?: { attributes: { source_quotation_id?: string } }; attributes?: { source_quotation_id?: string } }) => row.data || row);
-  expect(projectRows.some((row: { attributes: { source_quotation_id?: string } }) => row.attributes.source_quotation_id === quotation.id)).toBe(true);
+  const convertedProject = projectRows.find((row: { id?: string; attributes: { title?: string; source_quotation_id?: string } }) => row.attributes.source_quotation_id === quotation.id);
+  expect(convertedProject).toBeTruthy();
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  const accessResponse = await page.request.get(`${api}/provider/access/self/effective-permissions`, { headers: { Authorization: `Bearer ${verifier.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
+  expect(accessResponse.ok()).toBeTruthy();
+  const accessPayload = await accessResponse.json();
+  const reviewerPermissions = new Set((accessPayload.data.attributes.permissions as Array<{ code: string; grant_effective: boolean }>).filter((item) => item.grant_effective).map((item) => item.code));
+  await navigateProvider(page, 'Projects & Delivery');
+  await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
+  const convertedProjectRow = page.getByRole('row').filter({ hasText: String(convertedProject.attributes.title) });
+  await expect(convertedProjectRow).toBeVisible();
+  const openProjectButton = convertedProjectRow.getByRole('button', { name: 'Open project', exact: true });
+  const rowBounds = await convertedProjectRow.boundingBox();
+  const buttonBounds = await openProjectButton.boundingBox();
+  expect(rowBounds && buttonBounds && buttonBounds.x >= rowBounds.x && buttonBounds.x + buttonBounds.width <= rowBounds.x + rowBounds.width).toBe(true);
+  await openProjectButton.click();
+  await expect(page.getByRole('heading', { name: String(convertedProject.attributes.title), exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add material requirement', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await expect(page.getByRole('button', { name: 'Edit project', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Create installation job', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await expect(page.getByRole('button', { name: 'Add milestone', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Report defect', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await expect(page.getByRole('button', { name: 'Request handover', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Submit for approval', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await expect(page.getByRole('button', { name: 'Add change order', exact: true })).toHaveCount(reviewerPermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
+  await page.getByRole('button', { name: '← Projects', exact: true }).click();
+  await expect(convertedProjectRow).toBeVisible();
+  await page.screenshot({ path: info.outputPath('quotation-converted-installation-project.png'), fullPage: true });
   await localSignOut(page);
 });
 
 test('Provider Administrator creates and converts an accepted paid AMC renewal quotation', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
-  const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
+  const api = e2eApiV1Base();
   const manager = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  const providerId = providerIdFor(manager.user);
   const managerHeaders = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Create paid AMC renewal', exact: true }).click();
   const predecessor = page.locator('select[name="predecessor_contract_id"]');
@@ -190,7 +275,7 @@ test('Provider Administrator creates and converts an accepted paid AMC renewal q
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  await navigateProvider(page, 'Sales & Quotations');
   await page.getByRole('button', { name: renewalLabel, exact: true }).click();
   await page.getByRole('button', { name: 'Create renewal contract draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Renewal draft contract', { timeout: 30_000 });
@@ -216,59 +301,56 @@ test('Provider Administrator creates and converts an accepted paid AMC renewal q
 test('Marketing Manager creates a new immutable quotation revision from the workspace', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(120_000);
-  const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
-  const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
-  const customerName = customer.user.attributes.display_name;
-  await localSignOut(page);
-  const relationshipReader = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
-  const relationships = await page.request.get(`${api}/customer-relationships?page[limit]=100`, { headers: { Authorization: `Bearer ${relationshipReader.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
-  expect(relationships.ok()).toBeTruthy();
-  const relationshipPayload = await relationships.json();
-  const relationship = relationshipPayload.data.find((row: { attributes: { display_name: string; status: string } }) => row.attributes.display_name === customerName && row.attributes.status === 'ACTIVE');
-  expect(relationship).toBeTruthy();
-  await localSignOut(page);
+  const api = e2eApiV1Base();
   const manager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const providerId = providerIdFor(manager.user);
   const headers = { Authorization: `Bearer ${manager.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const leadResponse = await page.request.post(`${api}/marketing-leads`, {
-    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
-    data: { reference_code: `BROWSER-REVISION-${Date.now()}`, source: 'BROWSER', title: 'Team-scoped revision lead', prospect_name: 'Browser revision prospect', customer_relationship_id: relationship.id }
-  });
-  if (leadResponse.status() !== 201) throw new Error(`revision lead setup failed: ${await leadResponse.text()}`);
-  const leadPayload = await leadResponse.json();
-  const lead = leadPayload.data?.data || leadPayload.data || leadPayload;
-  const createdResponse = await page.request.post(`${api}/quotations`, {
-    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
-    data: { customer_relationship_id: relationship.id, lead_id: lead.id, purpose: 'INSTALLATION', currency: 'INR', lines: [{ description: 'Revision browser lift', quantity: 1, unit_price: 100000, amount: 100000 }] }
-  });
-  expect(createdResponse.status()).toBe(201);
-  const createdPayload = await createdResponse.json();
-  const created = createdPayload.data?.data || createdPayload.data || createdPayload;
-  const createdLabel = String(created.attributes.quotation_number || created.id);
-  const issuedResponse = await page.request.post(`${api}/quotations/${created.id}/transitions`, {
-    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { action: 'issue', expected_revision: created.attributes.revision }
-  });
-  expect(issuedResponse.ok()).toBeTruthy();
-  const issuedPayload = await issuedResponse.json();
-  const issued = issuedPayload.data?.data || issuedPayload.data || issuedPayload;
-
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('complementary', { name: 'Operations navigation' }).getByRole('button', { name: 'Quotations & Orders', exact: true }).click();
+  const reference = `BROWSER-REVISION-${Date.now()}`;
+  await navigateProvider(page, 'Marketing Leads & Surveys');
+  await page.getByRole('button', { name: 'New lead', exact: true }).click();
+  await page.getByLabel('Reference code', { exact: true }).fill(reference);
+  await page.getByLabel('Source', { exact: true }).fill('BROWSER');
+  await page.getByLabel('Prospect name', { exact: true }).fill('Quotation revision prospect');
+  await page.getByLabel('Opportunity title', { exact: true }).fill('Browser immutable revision opportunity');
+  await page.getByRole('button', { name: 'Create lead', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Lead created by the server.');
+  await navigateProvider(page, 'Sales & Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: createdLabel, exact: true }).click();
+  await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
+  const leadSelect = page.locator('select[name="lead_id"]');
+  const leadOption = leadSelect.locator('option').filter({ hasText: new RegExp(`Browser immutable revision opportunity · ${reference}`) });
+  await leadSelect.selectOption((await leadOption.getAttribute('value'))!);
+  const relationshipSelect = page.locator('select[name="customer_relationship_id"]');
+  const relationshipOption = relationshipSelect.locator('option').filter({ hasText: new RegExp(`Browser immutable revision opportunity · ${reference} · prospect`) });
+  await relationshipSelect.selectOption((await relationshipOption.getAttribute('value'))!);
+  await page.getByLabel('Total (INR)', { exact: true }).fill('100000');
+  await page.getByRole('button', { name: 'Create draft', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
+  const createdLabel = (await page.locator('.quotation-detail-panel h3').textContent())?.trim();
+  expect(createdLabel).toBeTruthy();
+  const quotesResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers });
+  expect(quotesResponse.ok()).toBeTruthy();
+  const quotePayload = await quotesResponse.json();
+  const quoteRows = quotePayload.data.map((row: { data?: unknown }) => row.data || row) as Array<{ id: string; attributes: { quotation_number?: string } }>;
+  const created = quoteRows.find((row) => row.attributes.quotation_number === createdLabel);
+  expect(created).toBeTruthy();
+  await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Quotation issued; awaiting Provider review before customer acceptance.');
   await page.getByText('Create revision', { exact: true }).click();
+  await page.screenshot({ path: info.outputPath('quotation-create-revision.png') });
   await page.getByLabel('Total (INR)', { exact: true }).last().fill('125000');
   await page.getByRole('dialog', { name: 'Create quotation revision', exact: true }).getByRole('button', { name: 'Create revision', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('New quotation revision created');
   await expect(page.getByText('Status', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('draft', { exact: true }).last()).toBeVisible();
-  const source = await page.request.get(`${api}/quotations/${created.id}`, { headers });
+  const source = await page.request.get(`${api}/quotations/${created!.id}`, { headers });
   expect(source.ok()).toBeTruthy();
   const sourcePayload = await source.json();
   const sourceRow = sourcePayload.data?.data || sourcePayload.data || sourcePayload;
   expect(sourceRow.attributes.status).toBe('superseded');
-  expect(Number(sourceRow.attributes.revision)).toBeGreaterThan(Number(issued.attributes.revision));
+  expect(Number(sourceRow.attributes.revision)).toBeGreaterThan(1);
   await localSignOut(page);
 });

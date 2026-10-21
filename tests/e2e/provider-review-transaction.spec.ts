@@ -3,13 +3,25 @@ import { configuredAccount, localSignIn } from './local-auth';
 
 test.use({ trace: 'retain-on-failure', video: 'off' });
 
+const solarProviderId = '01a0ed1c-94dc-7702-9ea8-64187649b5a3';
+
+async function selectSolarProvider(page: import('playwright/test').Page, session: Awaited<ReturnType<typeof localSignIn>>) {
+  const provider = session.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) =>
+    entry.provider_id === solarProviderId && entry.capabilities.includes('compliance'));
+  expect(provider, 'The configured reviewer must have server-authorized compliance access to the synthetic Solar Provider').toBeTruthy();
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true })
+    .getByRole('combobox', { name: 'Provider', exact: true }).selectOption(solarProviderId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+}
+
 test('Provider reviewer can approve one pending Asset compliance request', async ({ page, evidence }) => {
-  await page.addInitScript(() => sessionStorage.setItem('trise-operations-provider', '01a0ed1c-94dc-7702-9ea8-64187649b5a3'));
-  await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const session = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  await selectSolarProvider(page, session);
   const queueResponse = page.waitForResponse((response) => response.url().includes('/providers/compliance/review-queue') && response.request().method() === 'GET');
-  await page.goto('/#/compliance');
+  await page.goto('/#/compliance/assets');
   await queueResponse;
-  await expect(page.getByRole('heading', { name: 'My compliance requests', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Asset approvals', exact: true })).toBeVisible();
 
   const queue = page.locator('section.detail-section').filter({ hasText: 'Provider compliance review queue' }).first();
   await expect(queue).toBeVisible();
@@ -37,12 +49,12 @@ test('Provider reviewer can approve one pending Asset compliance request', async
 });
 
 test('Provider reviewer can approve one pending Agent compliance request', async ({ page, evidence }) => {
-  await page.addInitScript(() => sessionStorage.setItem('trise-operations-provider', '01a0ed1c-94dc-7702-9ea8-64187649b5a3'));
-  await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  const session = await localSignIn(page, configuredAccount('PROVIDER_REVIEWER'));
+  await selectSolarProvider(page, session);
   const queueResponse = page.waitForResponse((response) => response.url().includes('/providers/compliance/review-queue') && response.request().method() === 'GET');
-  await page.goto('/#/compliance');
+  await page.goto('/#/compliance/agents');
   await queueResponse;
-  await expect(page.getByRole('heading', { name: 'My compliance requests', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent certifications', exact: true })).toBeVisible();
 
   const queue = page.locator('section.detail-section').filter({ hasText: 'Provider compliance review queue' }).first();
   await expect(queue).toBeVisible();

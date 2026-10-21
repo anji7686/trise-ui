@@ -1,10 +1,11 @@
 import { test, expect } from './fixtures';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'on', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
 const providerId = '01a10a91-fc7f-70bb-b4a1-ddeefdded2f7';
-const api = process.env.TRISE_E2E_API_URL || 'http://127.0.0.1:3000/api/v1';
+const api = e2eApiV1Base();
 
 test('customer can view only authorized elevator installation project progress', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('customer'), 'Customer application only');
@@ -19,7 +20,7 @@ test('customer can view only authorized elevator installation project progress',
   expect(customerRelationshipsResponse.ok()).toBeTruthy();
   const customerRelationshipPayload = await customerRelationshipsResponse.json();
   const relationship = customerRelationshipPayload.data[0] as { id: string; relationships?: { customer?: { id: string } } };
-  expect(relationship?.id).toBeTruthy();
+  expect(relationship?.id, 'The configured CUSTOMER identity has no active relationship with this Service Provider; provision an authorized local customer/provider relationship before running populated customer-project verification.').toBeTruthy();
   const customerPartyId = relationship.relationships?.customer?.id;
   expect(customerPartyId).toBeTruthy();
   await localSignOut(page);

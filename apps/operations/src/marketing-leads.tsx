@@ -9,7 +9,9 @@ import {
   type Resource,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
+import { OperationsDialog } from "./operations-dialog";
 import { sha256Hex } from "./provider-document-upload";
+import { SiteSurveyWizard } from "./site-survey-wizard";
 
 type Props = { providerId: string };
 const EVIDENCE_MEDIA_TYPES = [
@@ -31,6 +33,7 @@ export function MarketingLeads({ providerId }: Props) {
   const [selectedLeadTab, setSelectedLeadTab] = useState("Overview");
   const automaticLeadSelection = useRef(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [surveyId, setSurveyId] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -142,6 +145,9 @@ export function MarketingLeads({ providerId }: Props) {
             form.get("primary_contact_reference") || undefined,
           status: form.get("status"),
           priority: form.get("priority"),
+          next_follow_up_at: form.get("next_follow_up_at")
+            ? new Date(String(form.get("next_follow_up_at"))).toISOString()
+            : null,
           expected_revision: selected.attributes.revision,
         },
         crypto.randomUUID(),
@@ -160,6 +166,36 @@ export function MarketingLeads({ providerId }: Props) {
       );
       setEditOpen(false);
       setMessage("Lead updated by the server.");
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function recordFollowUp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      await operationsData.createLeadActivity(
+        providerId,
+        selected.id,
+        {
+          activity_type: form.get("activity_type"),
+          occurred_at: form.get("occurred_at")
+            ? new Date(String(form.get("occurred_at"))).toISOString()
+            : undefined,
+          outcome: form.get("outcome") || undefined,
+          next_action: form.get("next_action") || undefined,
+          notes: form.get("notes"),
+        },
+        crypto.randomUUID(),
+      );
+      setActivityOpen(false);
+      setMessage("Follow-up recorded by the server.");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -287,8 +323,9 @@ export function MarketingLeads({ providerId }: Props) {
       </div>
       <div className="feature-summary-grid"><div><span>New leads</span><strong>{newLeads}</strong><small>of {leads.data.length} on this page</small></div><div><span>Follow-ups</span><strong>{followUps}</strong><small>Contacted leads on this page</small></div><div><span>Surveys pending</span><strong>{surveysPending}</strong><small>Qualified leads on this page</small></div><div><span>Ready for quotation</span><strong>{readyForQuote}</strong><small>Eligible leads on this page</small></div></div>
       {formOpen && (
-        <section className="detail-card" aria-label="New marketing lead">
-          <form onSubmit={createLead}>
+        <OperationsDialog title="Create lead" busy={busy} className="lead-workflow-dialog" onClose={() => setFormOpen(false)}>
+          <p className="lead-dialog-intro">Create a provider-scoped sales lead. This does not create a Customer or Project.</p>
+          <form className="lead-workflow-form" onSubmit={createLead}>
             <div className="form-grid">
               <label>
                 Reference code
@@ -341,20 +378,12 @@ export function MarketingLeads({ providerId }: Props) {
                 </select>
               </label>
             </div>
-            <div className="inline-actions">
-              <Button disabled={busy}>
-                {busy ? "Saving…" : "Create lead"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setFormOpen(false)}
-              >
-                Cancel
-              </Button>
+            <div className="lead-workflow-actions">
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => setFormOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Create lead"}</Button>
             </div>
           </form>
-        </section>
+        </OperationsDialog>
       )}
       <div className="leads-workspace">
       <section className="leads-list-panel">
@@ -413,38 +442,6 @@ export function MarketingLeads({ providerId }: Props) {
           <Button variant="secondary" onClick={() => setEditOpen(true)}>
             Edit lead
           </Button>
-          {editOpen && (
-            <form className="provider-form" onSubmit={(event) => void updateLead(event)}>
-              <label>
-                Opportunity title
-                <input name="title" required defaultValue={selected.attributes.title} />
-              </label>
-              <label>
-                Prospect name
-                <input name="prospect_name" required defaultValue={selected.attributes.prospect_name} />
-              </label>
-              <label>
-                Primary contact reference
-                <input name="primary_contact_reference" defaultValue={selected.attributes.primary_contact_reference || ""} />
-              </label>
-              <label>
-                Status
-                <select name="status" defaultValue={selected.attributes.status}>
-                  <option>NEW</option><option>CONTACTED</option><option>QUALIFIED</option><option>LOST</option>
-                </select>
-              </label>
-              <label>
-                Priority
-                <select name="priority" defaultValue={selected.attributes.priority}>
-                  <option>NORMAL</option><option>HIGH</option><option>URGENT</option>
-                </select>
-              </label>
-              <div className="inline-actions">
-                <Button disabled={busy}>{busy ? "Saving…" : "Save lead"}</Button>
-                <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
-              </div>
-            </form>
-          )}
           </section>
           <section id="lead-panel-attachments" role="tabpanel" aria-labelledby="lead-tab-attachments" hidden={selectedLeadTab !== "Attachments"}>
             <h4>Survey evidence</h4>
@@ -498,89 +495,11 @@ export function MarketingLeads({ providerId }: Props) {
           </section>
           <section id="lead-panel-activity" role="tabpanel" aria-labelledby="lead-tab-activity" hidden={selectedLeadTab !== "Activity"}>
             <h4>Follow-up activity</h4>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                void operationsData
-                  .createLeadActivity(
-                    providerId,
-                    selected.id,
-                    {
-                      activity_type: form.get("activity_type"),
-                      notes: form.get("notes"),
-                    },
-                    crypto.randomUUID(),
-                  )
-                  .then(() => setMessage("Follow-up recorded by the server."))
-                  .catch((cause) => setError((cause as Error).message));
-              }}
-            >
-              <label>
-                Activity type
-                <input name="activity_type" required defaultValue="CALL" />
-              </label>
-              <label>
-                Notes
-                <textarea name="notes" required maxLength={4000} />
-              </label>
-              <Button>Log follow-up</Button>
-            </form>
+            <p>Record a call, email, meeting or site visit. The entry is appended to the lead audit history.</p>
+            <Button onClick={() => setActivityOpen(true)}>Record follow-up</Button>
           </section>
           <section id="lead-panel-site-survey" role="tabpanel" aria-labelledby="lead-tab-site-survey" hidden={selectedLeadTab !== "Site Survey"}>
-            <h4>Site survey</h4>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                void operationsData
-                  .createSiteSurvey(
-                    providerId,
-                    selected.id,
-                    {
-                      survey_date: form.get("survey_date"),
-                      proposed_elevator_count: Number(
-                        form.get("elevator_count"),
-                      ),
-                      floor_count: Number(form.get("floor_count")),
-                      building_details: {
-                        building_type: form.get("building_type"),
-                      },
-                      technical_measurements: {
-                        shaft_width_mm: Number(form.get("shaft_width_mm")),
-                      },
-                    },
-                    crypto.randomUUID(),
-                  )
-                  .then((result) => {
-                    setSurveyId(result.id);
-                    setMessage("Site survey submitted by the server.");
-                  })
-                  .catch((cause) => setError((cause as Error).message));
-              }}
-            >
-              <label>
-                Survey date
-                <input name="survey_date" type="date" required />
-              </label>
-              <label>
-                Elevators
-                <input name="elevator_count" type="number" min="1" required />
-              </label>
-              <label>
-                Floors
-                <input name="floor_count" type="number" min="1" required />
-              </label>
-              <label>
-                Building type
-                <input name="building_type" required />
-              </label>
-              <label>
-                Shaft width (mm)
-                <input name="shaft_width_mm" type="number" min="1" required />
-              </label>
-              <Button>Submit survey</Button>
-            </form>
+            <SiteSurveyWizard providerId={providerId} leadId={selected.id} leadTitle={`${selected.attributes.reference_code} · ${selected.attributes.title}`} onSubmitted={setSurveyId} onMessage={setMessage} />
           </section>
           <section id="lead-panel-requirements" role="tabpanel" aria-labelledby="lead-tab-requirements" hidden={selectedLeadTab !== "Requirements"}>
             <h4>Requirements revision</h4>
@@ -628,6 +547,22 @@ export function MarketingLeads({ providerId }: Props) {
       )}
       {!selected && <aside className="lead-detail-placeholder"><strong>Select a lead</strong><p>Choose a prospect to review activity, site survey details, requirements and attachments.</p></aside>}
       </div>
+      {editOpen && selected && <OperationsDialog title="Update lead" busy={busy} className="lead-workflow-dialog" onClose={() => setEditOpen(false)}>
+        <p className="lead-dialog-intro">Changes are revision checked. Previously captured surveys and requirement revisions remain preserved.</p>
+        <form className="lead-workflow-form" onSubmit={(event) => void updateLead(event)}>
+          <fieldset><legend>Lead identity</legend><label>Reference code<input value={selected.attributes.reference_code} readOnly /></label><label>Prospect<input name="prospect_name" required maxLength={200} defaultValue={selected.attributes.prospect_name} /></label><label>Opportunity title<input name="title" required maxLength={200} defaultValue={selected.attributes.title} /></label><label>Primary contact reference<input name="primary_contact_reference" maxLength={320} defaultValue={selected.attributes.primary_contact_reference || ""} /></label></fieldset>
+          <fieldset><legend>Sales management</legend><label>Priority<select name="priority" defaultValue={selected.attributes.priority}><option value="LOW">Low</option><option value="NORMAL">Normal</option><option value="HIGH">High</option></select></label><label>Lead stage<select name="status" defaultValue={selected.attributes.status}><option value="NEW">New</option><option value="CONTACTED">Contacted</option><option value="QUALIFIED">Qualified</option><option value="QUOTATION_PENDING">Quotation pending</option><option value="WON">Won</option><option value="LOST">Lost</option></select></label><label>Next follow-up<input name="next_follow_up_at" type="datetime-local" defaultValue={selected.attributes.next_follow_up_at ? new Date(selected.attributes.next_follow_up_at).toISOString().slice(0, 16) : ""} /></label></fieldset>
+          <div className="lead-workflow-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setEditOpen(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</Button></div>
+        </form>
+      </OperationsDialog>}
+      {activityOpen && selected && <OperationsDialog title="Record follow-up" busy={busy} className="lead-workflow-dialog" onClose={() => setActivityOpen(false)}>
+        <p className="lead-dialog-intro">Activity records are internal audit history; logging a call does not send a message.</p>
+        <form className="lead-workflow-form" onSubmit={(event) => void recordFollowUp(event)}>
+          <fieldset><legend>Interaction</legend><label>Lead<input value={`${selected.attributes.reference_code} · ${selected.attributes.title}`} readOnly /></label><label>Activity type<select name="activity_type" defaultValue="CALL"><option value="CALL">Call</option><option value="EMAIL">Email</option><option value="MEETING">Meeting</option><option value="SITE_VISIT">Site visit</option><option value="OTHER">Other</option></select></label><label>Activity date<input name="occurred_at" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} /></label><label>Outcome<input name="outcome" maxLength={500} /></label></fieldset>
+          <fieldset><legend>Next action and notes</legend><label>Next action<input name="next_action" maxLength={500} /></label><label className="lead-form-span">Summary / notes<textarea name="notes" required maxLength={4000} rows={4} /></label></fieldset>
+          <div className="lead-workflow-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setActivityOpen(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save activity"}</Button></div>
+        </form>
+      </OperationsDialog>}
       {message && (
         <p className="success" role="status">
           {message}

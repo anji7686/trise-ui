@@ -28,6 +28,9 @@ export function QuotationsWorkspace({ providerId }: Props) {
   const [renewalOpen, setRenewalOpen] = useState(false);
   const [detailDialog, setDetailDialog] = useState<'edit' | 'revision' | 'negotiation' | null>(null);
   const [reviewDialog, setReviewDialog] = useState<'approve' | 'reject' | null>(null);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [deliveryRecipients, setDeliveryRecipients] = useState<Array<{ id: string; display_name: string; email: string }>>([]);
+  const [deliveryHistory, setDeliveryHistory] = useState<Collection<GenericAttributes> | null>(null);
   const [effectivePermissions, setEffectivePermissions] = useState<string[] | null>(null);
   const automaticQuotationSelection = useRef(true);
 
@@ -87,14 +90,18 @@ export function QuotationsWorkspace({ providerId }: Props) {
     setBusy(true); setError(''); setMessage('');
     try {
       const amount = Number(form.get('amount'));
+      const unitCodes = String(form.get('lift_unit_codes') || '').split(',').map((code) => code.trim()).filter(Boolean);
+      if (!unitCodes.length || unitCodes.length > 100 || unitCodes.some((code) => code.length > 80) || new Set(unitCodes.map((code) => code.toLowerCase())).size !== unitCodes.length) {
+        throw new Error('Enter 1–100 unique lift unit codes, each no longer than 80 characters.');
+      }
       const effectiveFrom = new Date();
       const effectiveTo = new Date(effectiveFrom);
-      effectiveTo.setFullYear(effectiveTo.getFullYear() + 1);
+      effectiveTo.setDate(effectiveTo.getDate() + 30);
       const created = await operationsData.createQuotation(providerId, {
         customer_relationship_id: form.get('customer_relationship_id'),
         lead_id: form.get('lead_id') || undefined,
         purpose: 'INSTALLATION',
-        terms: { elevator_units: [{ unit_code: 'LIFT-A' }], materials: [], installation_charges: String(amount), tax_source: 'CANONICAL_PROVIDER_TAX', delivery_terms: 'Provider delivery terms', payment_milestones: [{ code: 'ADVANCE', percentage: 50 }], warranty_terms: 'As accepted in the quotation', included_free_amc: { months: 12, frequency: 'QUARTERLY' }, effective_from: effectiveFrom.toISOString(), effective_to: effectiveTo.toISOString(), exclusions: [], validity_days: 30 },
+        terms: { elevator_units: unitCodes.map((unit_code) => ({ unit_code })), materials: [], installation_charges: String(amount), tax_source: 'CANONICAL_PROVIDER_TAX', delivery_terms: 'Provider delivery terms', payment_milestones: [{ code: 'ADVANCE', percentage: 50 }], warranty_terms: 'As accepted in the quotation', included_free_amc: { months: 12, frequency: 'QUARTERLY' }, effective_from: effectiveFrom.toISOString(), effective_to: effectiveTo.toISOString(), exclusions: [], validity_days: 30 },
         currency: 'INR',
         lines: [{ description: form.get('description'), quantity: 1, unit_price: amount, amount }]
       }, crypto.randomUUID());
@@ -207,7 +214,6 @@ export function QuotationsWorkspace({ providerId }: Props) {
       }
       setMessage(renewal ? `Renewal draft contract ${converted.id} created; activation remains separately authorized.` : `Quotation converted to installation project ${converted.id}.`);
       if (renewal) setConvertedContract(converted);
-      if (!renewal) window.location.hash = 'projects';
     } catch (cause) { setError((cause as Error).message); } finally { setBusy(false); }
   }
 
@@ -237,6 +243,34 @@ export function QuotationsWorkspace({ providerId }: Props) {
       anchor.click();
       URL.revokeObjectURL(url);
       setMessage('Immutable quotation PDF downloaded.');
+    } catch (cause) { setError((cause as Error).message); } finally { setBusy(false); }
+  }
+
+  async function openQuotationDelivery() {
+    if (!selected) return;
+    setBusy(true); setError('');
+    try {
+      const [recipients, history] = await Promise.all([
+        operationsData.quotationDeliveryRecipients(providerId, selected.id),
+        operationsData.quotationDeliveries(providerId, selected.id)
+      ]);
+      setDeliveryRecipients(recipients.data);
+      setDeliveryHistory(history);
+      setDeliveryOpen(true);
+    } catch (cause) { setError((cause as Error).message); } finally { setBusy(false); }
+  }
+
+  async function sendQuotationRevision(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const contactPointId = String(new FormData(event.currentTarget).get('contact_point_id') || '');
+    if (!contactPointId) { setError('Choose an authorized contact before sending.'); return; }
+    setBusy(true); setError('');
+    try {
+      await operationsData.createQuotationDelivery(providerId, selected.id,
+        { contact_point_id: contactPointId, expected_revision: Number(selected.attributes.revision) }, crypto.randomUUID());
+      setDeliveryHistory(await operationsData.quotationDeliveries(providerId, selected.id));
+      setMessage('Delivery request queued for the approved quotation revision. SMTP acceptance will appear in delivery history.');
     } catch (cause) { setError((cause as Error).message); } finally { setBusy(false); }
   }
 
@@ -284,10 +318,11 @@ export function QuotationsWorkspace({ providerId }: Props) {
     <div className="feature-summary-grid quotation-summary-grid"><div><span>Drafts on page</span><strong>{draftCount}</strong><small>Current server page</small></div><div><span>Awaiting approval</span><strong>{approvalCount}</strong><small>Current server page</small></div><div><span>Accepted on page</span><strong>{acceptedCount}</strong><small>Current server page</small></div><div><span>Stage billing due</span><strong>—</strong><small>View Projects &amp; Stages</small></div></div>
     {createOpen && <div className="quotation-create-overlay"><section className="quotation-create-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-create-title"><div className="quotation-create-dialog-heading"><div><span className="eyebrow">New commercial draft</span><h3 id="quotation-create-title">Create quotation</h3></div><Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Close</Button></div><section className="quotation-create-grid"><section className="detail-card" aria-label="New quotation"><h3>Prepare quotation</h3>
       {!relationshipOptions.length && <p className="notice">A provider customer/prospect relationship is required before a quotation can be created.</p>}
-      <form onSubmit={createQuotation}><div className="form-grid">
+      <form onSubmit={createQuotation}><p className="notice">This draft does not pre-allocate payment percentages or free AMC. Configure the accepted payable basis and stage schedule in the authorized project workflow.</p><div className="form-grid">
         <label>Customer relationship<select name="customer_relationship_id" required disabled={!selectableRelationships.length}><option value="">Select relationship</option>{selectableRelationships.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
         <label>Lead<select name="lead_id"><option value="">No linked lead</option>{leads?.data.map((item) => <option key={item.id} value={item.id}>{String(item.attributes.title || item.id)} · {String(item.attributes.reference_code || item.id)}</option>)}</select></label>
         <label>Description<input name="description" required defaultValue="Elevator installation" /></label>
+        <label>Lift unit codes (comma separated)<input aria-label="Lift unit codes (comma separated)" aria-describedby="lift-unit-code-help" name="lift_unit_codes" required maxLength={8100} defaultValue="Lift 1" /><small id="lift-unit-code-help">Use one unique unit code per quoted lift.</small></label>
         <label>Total (INR)<input name="amount" type="number" min="0" step="0.01" required /></label>
       </div><Button disabled={busy || !selectableRelationships.length}>{busy ? 'Saving…' : 'Create draft'}</Button></form>
     </section></section></section></div>}
@@ -319,6 +354,7 @@ export function QuotationsWorkspace({ providerId }: Props) {
       <div className="quotation-detail-actions">
         {String(selected.attributes.status).toLowerCase() === 'draft' && hasPermission('QUOTATION_EDIT') && <Button variant="secondary" onClick={() => setDetailDialog('edit')}>Edit draft</Button>}{String(selected.attributes.status).toLowerCase() === 'draft' && hasPermission('QUOTATION_ISSUE') && <Button onClick={() => void issueQuotation()} disabled={busy}>Issue quotation</Button>}
         {String(selected.attributes.status).toLowerCase() !== 'draft' && <Button variant="secondary" onClick={() => void downloadQuotationPdf()} disabled={busy}>Download PDF</Button>}
+        {['issued', 'viewed', 'under_review'].includes(String(selected.attributes.status).toLowerCase()) && hasPermission('QUOTATION_ISSUE') && (selected.attributes.provider_review as { decision?: string } | undefined)?.decision === 'approved' && <Button variant="secondary" onClick={() => void openQuotationDelivery()} disabled={busy}>Send approved revision</Button>}
         {['issued', 'viewed', 'under_review'].includes(String(selected.attributes.status).toLowerCase()) && hasPermission('QUOTATION_EDIT') && <Button variant="secondary" onClick={() => setDetailDialog('revision')}>Create revision</Button>}
         {['approved', 'accepted'].includes(String(selected.attributes.status).toLowerCase()) && hasPermission('QUOTATION_CONVERT') && <Button onClick={() => void convertQuotation()} disabled={busy}>{String(selected.attributes.purpose || '').toUpperCase() === 'CONTRACT_RENEWAL' ? 'Create renewal contract draft' : 'Convert to installation project'}</Button>}
         {hasPermission('QUOTATION_NEGOTIATE') && <Button variant="quiet" onClick={() => setDetailDialog('negotiation')}>Record negotiation</Button>}
@@ -331,6 +367,7 @@ export function QuotationsWorkspace({ providerId }: Props) {
     {detailDialog === 'revision' && <OperationsDialog title="Create quotation revision" busy={busy} onClose={() => setDetailDialog(null)}><p className="notice">This creates a new revision; the issued revision remains immutable.</p><form className="quotation-modal-form" onSubmit={(event) => void createQuotationRevision(event)}><label>Description<input name="description" required defaultValue="Revised elevator installation" /></label><label>Total (INR)<input name="amount" type="number" min="0" step="0.01" required /></label><div className="provider-form-actions"><Button type="button" variant="quiet" onClick={() => setDetailDialog(null)}>Cancel</Button><Button type="submit" busy={busy}>Create revision</Button></div></form></OperationsDialog>}
     {detailDialog === 'negotiation' && <OperationsDialog title="Record negotiation" busy={busy} onClose={() => setDetailDialog(null)}><form className="quotation-modal-form" onSubmit={(event) => void recordNegotiation(event)}><label>Event<select name="event_type"><option value="CUSTOMER_FEEDBACK">Customer feedback</option><option value="DISCOUNT_REQUESTED">Discount requested</option><option value="SCOPE_CHANGE">Scope change</option><option value="TERMS_CHANGE">Terms change</option><option value="COUNTER_OFFER">Counter offer</option></select></label><label>Notes<textarea name="notes" required maxLength={4000} /></label><label>Offered total<input name="offered_total" type="number" min="0" step="0.01" /></label><div className="provider-form-actions"><Button type="button" variant="quiet" onClick={() => setDetailDialog(null)}>Cancel</Button><Button type="submit" busy={busy}>Record negotiation</Button></div></form></OperationsDialog>}
     {reviewDialog && <OperationsDialog title={reviewDialog === 'approve' ? 'Approve quotation revision' : 'Reject quotation revision'} busy={busy} onClose={() => setReviewDialog(null)}><form className="quotation-modal-form" onSubmit={(event) => void recordProviderReview(event)}><p className="notice">This internal decision applies only to quotation revision R{String(selected.attributes.revision)}. It does not record customer acceptance or activate a project.</p>{reviewDialog === 'reject' && <label>Reason for rejection<textarea name="reason" required minLength={1} maxLength={4000} /></label>}<div className="provider-form-actions"><Button type="button" variant="quiet" disabled={busy} onClick={() => setReviewDialog(null)}>Cancel</Button><Button type="submit" busy={busy}>{reviewDialog === 'approve' ? 'Approve revision' : 'Reject revision'}</Button></div></form></OperationsDialog>}
+    {deliveryOpen && <OperationsDialog title="Send approved quotation revision" busy={busy} onClose={() => setDeliveryOpen(false)}><div className="quotation-modal-form"><p className="notice">This sends the immutable commercial version {String(selected.attributes.version_number || 1)} from current record revision R{String(selected.attributes.revision)}. Only active authorized customer contacts are listed. Queueing is not proof of email delivery.</p><form onSubmit={(event) => void sendQuotationRevision(event)}><label>Recipient<select name="contact_point_id" required defaultValue=""><option value="">Choose authorized contact</option>{deliveryRecipients.map((contact) => <option key={contact.id} value={contact.id}>{contact.display_name} · {contact.email}</option>)}</select></label><div className="provider-form-actions"><Button type="button" variant="quiet" disabled={busy} onClick={() => setDeliveryOpen(false)}>Close</Button><Button type="submit" busy={busy} disabled={!deliveryRecipients.length}>Queue email</Button></div></form>{!deliveryRecipients.length && <p className="notice">No active authorized contact has an email address. Add or update a provider-scoped contact first.</p>}<h4>Delivery history</h4>{deliveryHistory?.data.length ? <ul>{deliveryHistory.data.map((row) => <li key={row.id}>{String(row.attributes.status)} · {String(row.attributes.recipient_name)} · version {String(row.attributes.quotation_version_number)} · {String(row.attributes.requested_at)}</li>)}</ul> : <p>No delivery attempts recorded for this quotation.</p>}</div></OperationsDialog>}
     </> : <aside className="quotation-detail-placeholder"><strong>Select a quotation</strong><p>Choose a revision from the register to review lifecycle actions, negotiation history and protected conversion controls.</p></aside>}</section>
     {message && <p className="success" role="status">{message}</p>}{error && <p className="error" role="alert">{error}</p>}
   </section>;
