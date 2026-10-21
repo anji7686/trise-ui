@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type FormEvent, type ReactNode } from 'react';
 import { Button, PageHeader } from '@trise/ui';
 import { SvgIcon } from './icons';
 import { formatIndiaDateTime } from './subscription-support';
@@ -31,13 +31,18 @@ export function AdminDataTable({ children, className = '' }: { children: ReactNo
   return <div className={`platform-provider-table-wrap admin-data-table ${className}`}>{children}</div>;
 }
 
-export function AdminPagination({ shown, scope = 'records loaded', hasMore, busy = false, onLoadMore }: {
+export function AdminPagination({ shown, scope = 'records loaded', hasMore, busy = false, onLoadMore, hasPrevious = false, hasNext = false, onPrevious, onNext }: {
   shown: number;
   scope?: string;
   hasMore: boolean;
   busy?: boolean;
-  onLoadMore: () => void;
+  onLoadMore?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  onPrevious?: () => void;
+  onNext?: () => void;
 }) {
+  if (onPrevious || onNext) return <div className="platform-pagination admin-pagination"><span>{shown} {scope}</span><div><Button variant="secondary" disabled={busy || !hasPrevious} onClick={onPrevious}>Previous</Button><Button variant="secondary" busy={busy} disabled={busy || !hasNext} onClick={onNext}>Next</Button></div></div>;
   return <div className="platform-pagination admin-pagination"><span>{shown} {scope}</span>{hasMore && <Button variant="secondary" busy={busy} disabled={busy} onClick={onLoadMore}>Load more</Button>}</div>;
 }
 
@@ -50,13 +55,19 @@ export function AdminDetailTabs({ items, active }: { items: Array<{ key: string;
 }
 
 export function AdminActionMenu({ label = 'More actions', children }: { label?: string; children: ReactNode }) {
-  return <details className="admin-action-menu"><summary aria-label={label}>•••</summary><div onClick={(event) => {
+  const actions = Children.toArray(children).flatMap((child) => {
+    if (isValidElement(child) && child.type === Fragment) return Children.toArray((child.props as { children?: ReactNode }).children);
+    return [child];
+  });
+  if (!actions.length) return null;
+  if (actions.length === 1) return <span className="admin-single-action">{actions[0]}</span>;
+  return <span className="admin-action-group"><span className="admin-single-action">{actions[0]}</span><details className="admin-action-menu"><summary aria-label={label}>•••</summary><div onClick={(event) => {
     const target = event.target as HTMLElement;
     if (target.closest('button, a')) {
       const menu = target.closest('details') as HTMLDetailsElement | null;
       if (menu) menu.open = false;
     }
-  }}>{children}</div></details>;
+  }}>{actions.slice(1)}</div></details></span>;
 }
 
 export function AdminAuditTimeline({ rows }: { rows: Array<{ action: string; occurred_at: string; actor_user_id?: string | null }> }) {

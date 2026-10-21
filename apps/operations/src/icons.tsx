@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'search' | 'send' | 'settings' | 'shield' | 'upload' | 'users' | 'x';
+type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bell' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'search' | 'send' | 'settings' | 'shield' | 'upload' | 'users' | 'x';
 
 const paths: Record<IconName, string> = {
   activity: 'M3 12h4l2-8 4 16 2-8h6',
@@ -8,6 +8,7 @@ const paths: Record<IconName, string> = {
   'arrow-left': 'M19 12H5m7 7-7-7 7-7',
   'arrow-right': 'M5 12h14m0 0-7-7m7 7-7 7',
   'arrow-up': 'M12 19V5m0 0-7 7m7-7 7 7',
+  bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
   building: 'M4 21V5l8-3 8 3v16M8 9h1m6 0h1M8 13h1m6 0h1M8 17h1m6 0h1M10 21v-3h4v3',
   calendar: 'M5 4h14v16H5zM8 2v4m8-4v4M5 9h14',
   'chevron-down': 'm6 9 6 6 6-6',

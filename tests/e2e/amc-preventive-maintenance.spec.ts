@@ -33,6 +33,7 @@ test('Provider Admin can search the AMC register and inspect contract coverage a
   const pageSizeRequest = page.waitForRequest(request => request.url().includes('/maintenance-contracts?') && request.url().includes('page%5Blimit%5D=20'));
   await pageSize.selectOption('20');
   await pageSizeRequest;
+  await page.locator('.amc-contract-table tbody tr').first().getByRole('button', { name: 'View', exact: true }).click();
   await expect(page.locator('.amc-detail-panel h2')).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Coverage', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Covered assets', exact: true })).toBeVisible();

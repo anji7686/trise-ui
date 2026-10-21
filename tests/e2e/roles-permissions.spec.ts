@@ -62,7 +62,14 @@ test('approved accounts expose only their existing access workspaces', async ({ 
     expect(response.status()).toBe(200);
     const { user } = await response.json();
     observed.push({ account: index + 1, displayName: user.attributes.display_name, platformCapabilities: user.attributes.platform_capabilities || [], providers: user.attributes.provider_capabilities || [] });
-    await expect(page.getByRole('button', { name: 'Open account menu', exact: true })).toBeVisible();
+    const accountMenu = page.getByRole('button', { name: 'Open account menu', exact: true });
+    if (!(await accountMenu.isVisible().catch(() => false))) {
+      await expect(page.getByRole('heading', { name: 'This workspace is for authorized provider teams.', exact: true })).toBeVisible();
+      await expect(page.getByRole('alert')).toContainText('Customer activity must use the customer portal');
+      await page.getByRole('button', { name: 'Return to sign in', exact: true }).click();
+      await expect(page.getByRole('combobox', { name: 'Test email', exact: true })).toBeVisible();
+      continue;
+    }
     await page.goto('/#/platform/roles');
     if (!(user.attributes.platform_capabilities || []).includes('PLATFORM_ACCESS_READ')) {
       await expect(page.getByRole('button', { name: 'New Default Role', exact: true })).toHaveCount(0);

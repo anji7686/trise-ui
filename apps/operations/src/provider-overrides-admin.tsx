@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@trise/ui';
 import { operationsData, type PlatformProviderAttributes } from './data';
 import { SearchableSelect } from './searchable-select';
@@ -57,16 +57,25 @@ export function ProviderOverridesAdmin({ platformCapabilities = [], currentUserI
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const providerSearchRequest = useRef(0);
   const canReview = platformCapabilities.includes('PLATFORM_CONFIGURATION_REVIEW');
   const canRevokeReview = canReview && ['PENDING', 'APPROVED'].includes(reviewStatus);
 
   useEffect(() => {
-    operationsData.platformProviders().then((result) => {
-      const next = result.data.map((item) => ({ id: item.id, attributes: { display_name: item.attributes.display_name, provider_code: item.attributes.provider_code, business_name: item.attributes.business_name, status: item.attributes.status } }));
-      setProviders(next);
-      setProviderId((current) => current || next[0]?.id || '');
-    }).catch((cause) => setError(errorText(cause, 'Provider directory could not be loaded.')));
-  }, []);
+    const requestId = ++providerSearchRequest.current;
+    const query = providerSearch.trim();
+    const timer = window.setTimeout(() => {
+      operationsData.platformProviders({ q: query || undefined, limit: query ? 100 : 25 }).then((result) => {
+        if (requestId !== providerSearchRequest.current) return;
+        const next = result.data.map((item) => ({ id: item.id, attributes: { display_name: item.attributes.display_name, provider_code: item.attributes.provider_code, business_name: item.attributes.business_name, status: item.attributes.status } }));
+        setProviders(next);
+        if (!query) setProviderId((current) => current || next[0]?.id || '');
+      }).catch((cause) => {
+        if (requestId === providerSearchRequest.current) setError(errorText(cause, 'Provider directory could not be loaded.'));
+      });
+    }, query ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [providerSearch]);
 
   useEffect(() => {
     if (!providerId) return;
@@ -146,7 +155,7 @@ export function ProviderOverridesAdmin({ platformCapabilities = [], currentUserI
 
   return <section className="platform-reference-page platform-reference-overrides">
     <div className="reference-breadcrumb"><button type="button" onClick={() => { window.location.hash = 'platform/configuration'; }}>Configuration</button><SvgIcon name="chevron-right" size={14} /><strong>Provider overrides</strong></div>
-    <div className="reference-page-heading"><div><span className="reference-eyebrow">Provider configuration</span><h1>Provider overrides</h1><p>Choose a provider, then manage only the settings that differ from platform or business defaults.</p></div><div className="provider-override-selector-panel"><SearchableSelect label="Select provider" searchLabel="Search provider name or code" search={providerSearch} onSearch={setProviderSearch} value={providerId} onChange={(value) => { setProviderId(value); setMessage(''); }} options={providerOptions} placeholder="Choose a provider" disabled={busy === 'load'} /><span>Search by provider name, code, or business.</span></div></div>
+    <div className="reference-page-heading"><div><span className="reference-eyebrow">Provider configuration</span><h1>Provider overrides</h1><p>Choose a provider, then manage only the settings that differ from platform or business defaults.</p></div></div><section className="provider-override-selector-card" aria-label="Provider selection"><div className="provider-override-selector-copy"><span className="provider-override-step">1</span><div><strong>Select a provider</strong><p>Search the full provider directory by provider name, provider code, or Business. The provider summary and configuration details remain visible below the selector.</p></div></div><div className="provider-override-selector-field"><SearchableSelect label="Provider account" searchLabel="Search provider name or code" search={providerSearch} onSearch={setProviderSearch} value={providerId} onChange={(value) => { setProviderId(value); setMessage(''); }} options={providerOptions} placeholder="Choose a provider" disabled={busy === 'load'} /></div></section>
     <div className="reference-provider-banner"><span className="reference-summary-icon tone-purple"><SvgIcon name="building" size={21} /></span><div><strong>{providerName} <StatusPill value={selectedProvider?.attributes.status || 'Active'} /></strong><small>Provider · {selectedProvider?.attributes.business_name || 'Elevator &amp; Lift Services'}</small></div><dl><div><dt>Region</dt><dd>India</dd></div><div><dt>Timezone</dt><dd>Asia/Kolkata</dd></div><div><dt>Status</dt><dd>● {selectedProvider?.attributes.status || 'Active'}</dd></div></dl></div>
     <div className="reference-tabs"><button className="active" type="button">Configuration</button><button type="button" onClick={() => { window.location.hash = `platform/configuration/audit?provider_id=${encodeURIComponent(providerId)}`; }}>History</button></div>
     {reviewId && <section className="reference-review-panel"><div><span className="reference-eyebrow">Configuration review</span><h2>Provider override review <StatusPill value={reviewStatus || 'PENDING'} /></h2><p>{reviewStatus === 'PENDING' ? (canReview ? 'This draft is waiting for an authorized Global Administrator or platform reviewer.' : 'This draft is waiting for platform review.') : reviewStatus === 'APPROVED' ? 'This review is approved and ready to publish.' : reviewStatus === 'REVOKED' ? 'This review was revoked. Update the draft and submit it again.' : `Review status: ${reviewStatus}.`}</p>{currentUserId && reviewStatus === 'PENDING' && <small>{'The reviewer action is recorded in the platform audit trail, including self-approval when applicable.'}</small>}</div>{canReview && reviewStatus === 'PENDING' && <div className="reference-review-actions"><Button disabled={Boolean(busy)} title="Self-approval is recorded in the audit trail when the submitter approves their own review." onClick={() => void approveReview()}>{busy === 'approve' ? 'Approving…' : 'Approve review'}</Button>{canRevokeReview && <Button variant="danger" disabled={Boolean(busy)} onClick={() => void revokeReview()}>{busy === 'revoke' ? 'Revoking…' : 'Revoke review'}</Button>}</div>}{canRevokeReview && reviewStatus === 'APPROVED' && <div className="reference-review-actions"><Button variant="danger" disabled={Boolean(busy)} onClick={() => void revokeReview()}>{busy === 'revoke' ? 'Revoking…' : 'Revoke review'}</Button></div>}</section>}

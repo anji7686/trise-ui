@@ -13,8 +13,8 @@ describe('Operations capability navigation', () => {
   it.each([
     ['provider admin', ['customers', 'onboarding', 'configuration', 'business_profile', 'subscriptions', 'requests', 'bookings', 'jobs', 'workforce', 'audit', 'team_access', 'compliance', 'sales_marketing', 'quotations', 'projects', 'amc', 'reports'], ['overview', 'leads', 'requests', 'quotations', 'projects', 'bookings', 'jobs', 'customers', 'onboarding', 'amc', 'workforce', 'reports', 'configuration', 'business-profile', 'compliance', 'subscriptions', 'audit', 'team-access']],
     ['operations', ['requests', 'workforce', 'audit', 'reports'], ['overview', 'requests', 'workforce', 'reports', 'audit']],
-    ['dispatcher', ['bookings', 'jobs'], ['bookings', 'jobs']],
-    ['agent', ['my_work'], ['my-work']]
+    ['dispatcher', ['bookings', 'jobs'], ['overview', 'bookings', 'jobs']],
+    ['agent', ['my_work'], ['overview', 'my-work']]
   ])('%s receives only capabilities returned for the selected context', (_name, capabilities, expectedKeys) => {
     const navigation = navigationForSession({ platformAdmin: false, providerCapabilities: [context(capabilities)] }, 'provider-1');
     expect(navigation.provider.map((item) => item.key)).toEqual(expectedKeys);
@@ -44,7 +44,7 @@ describe('Operations capability navigation', () => {
 
   it('keeps business profile restricted to the returned provider capability', () => {
     expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['requests'])] }, 'provider-1').provider.some((item) => item.key === 'business-profile')).toBe(false);
-    expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['business_profile'])] }, 'provider-1').provider.map((item) => item.key)).toEqual(['business-profile']);
+    expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['business_profile'])] }, 'provider-1').provider.map((item) => item.key)).toEqual(['overview', 'business-profile']);
   });
 
   it('allows the leads route from the sales marketing capability', () => {

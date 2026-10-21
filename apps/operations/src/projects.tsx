@@ -13,8 +13,8 @@ import {
   type ServiceCaseAttributes,
   type ShipmentAttributes,
 } from "./data";
-import { OperationsStatus as Status } from "./operations-status";
-import { ActionFeedback, EmptyState } from "./operations-shared";
+import { OperationsPriority as Priority, OperationsStatus as Status } from "./operations-status";
+import { ActionFeedback, EmptyState, ProviderActionMenu } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
 import { sha256Hex } from "./provider-document-upload";
 import { indiaDateTimeToIso } from './subscription-support';
@@ -89,7 +89,7 @@ export function ProjectsWorkspace({ providerId }: { providerId: string }) {
                       <td data-label="Type">{project.attributes.project_classification_key || "Service project"}</td>
                       <td data-label="Revision">{project.attributes.revision}</td>
                       <td data-label="Status"><Status>{project.attributes.status}</Status></td>
-                      <td data-label="Actions"><Button variant="secondary" onClick={() => setSelected(project)}>Open project</Button></td>
+                      <td data-label="Actions"><ProviderActionMenu label={`Actions for ${project.attributes.title || project.id.slice(0, 8)}`} actions={[{ id: 'open', label: 'Open project', onSelect: () => setSelected(project) }]} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -934,7 +934,7 @@ function QualityFindingPanel({
                 {finding.attributes.finding_number} · {finding.attributes.title}
               </strong>
               <span>
-                {finding.attributes.severity} · {finding.attributes.description}
+                <Priority>{finding.attributes.severity}</Priority> · {finding.attributes.description}
               </span>
               <small>
                 Corrective action: {finding.attributes.corrective_action}

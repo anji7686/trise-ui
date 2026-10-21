@@ -132,8 +132,10 @@ test('authenticated Provider Admin Operations workflows render at the configured
     await expect(page.locator('.operations-main .state-error')).toHaveCount(0);
     await expect(page.locator('.operations-main .state-forbidden')).toHaveCount(0);
     if (hash === 'leads') {
-      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
       await expect(page.getByRole('heading', { name: 'Select a lead' })).toHaveCount(0);
+      await page.locator('.lead-register tbody tr').first().getByRole('button', { name: 'View', exact: true }).click();
+      await expect(page.getByRole('dialog').filter({ hasText: 'Lead details' })).toBeVisible();
+      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
       await page.getByRole('tab', { name: 'Site Survey' }).click();
       await page.getByRole('button', { name: 'Start survey', exact: true }).click();
       const surveyWizard = page.locator('.site-survey-wizard');
@@ -142,7 +144,8 @@ test('authenticated Provider Admin Operations workflows render at the configured
       await page.getByRole('tab', { name: 'Overview' }).click();
     }
     if (hash === 'quotations') {
-      await expect(page.locator('.quotation-detail-panel')).toBeVisible();
+      await page.locator('.quotation-register tbody tr').first().locator('.quotation-row-select').click();
+      await expect(page.getByRole('dialog').filter({ hasText: 'Quotation detail' })).toBeVisible();
       await page.getByRole('button', { name: /New quotation/i }).click();
       const quotationDialog = page.getByRole('dialog', { name: 'Create quotation' });
       await expect(quotationDialog).toBeVisible();

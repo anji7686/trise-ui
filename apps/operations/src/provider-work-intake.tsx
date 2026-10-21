@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Button, FilterToolbar, PageHeader } from '@trise/ui';
 import { OperationsDialog } from './operations-dialog';
-import { ActionFeedback, EmptyState } from './operations-shared';
+import { ActionFeedback, EmptyState, ProviderActionMenu } from './operations-shared';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type Collection, type WorkIntakeAttributes, type WorkIntakeMatch, type Resource } from './data';
 import type { OperationsRoute } from './operations-pages';
@@ -67,7 +67,7 @@ export function ProviderWorkIntakeWorkspace({ providerId, route, canCreate, canE
         <td data-label="Relationship"><Status>{label(item.attributes.relationship_status)}</Status>{item.attributes.relationship_status === 'UNRESOLVED' && <small>Assessment required</small>}{item.attributes.relationship_status === 'SUGGESTED' && <small>{item.attributes.match_suggestions.length} possible match(es)</small>}</td>
         <td data-label="Assessment"><Status>{label(item.attributes.assessment_task.status)}</Status></td>
         <td data-label="Status"><Status>{label(item.attributes.status)}</Status></td>
-        <td data-label="Actions"><Button variant="secondary" onClick={() => open(item.id)}>Review</Button></td>
+        <td data-label="Actions"><ProviderActionMenu label={`Actions for ${item.attributes.reference_code}`} actions={[{ id: 'review', label: 'Review intake', onSelect: () => open(item.id) }]} /></td>
       </tr>)}</tbody></table></div> : <EmptyState title="No work intake records found" description="Create an intake or change the server-side filters. A possible duplicate never blocks intake creation." />)}
       {items && <div className="server-pagination" aria-label="Work intake pages"><label className="page-size-control">Rows per page<select aria-label="Work intake rows per page" value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setCursor({}); }}>{LIMITS.map((size) => <option value={size} key={size}>{size}</option>)}</select></label><div><Button type="button" variant="secondary" disabled={!items.page?.previous} onClick={() => setCursor({ before: items.page?.previous || undefined })}>Previous</Button><Button type="button" disabled={!items.page?.next} onClick={() => setCursor({ after: items.page?.next || undefined })}>Next</Button></div></div>}
       {createOpen && <IntakeCreateDialog providerId={providerId} close={() => setCreateOpen(false)} saved={(record) => void saved(record)} />}

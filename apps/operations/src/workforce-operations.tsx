@@ -83,8 +83,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
       operationsData.certificationTypes(providerId),
     ]);
     setAgents(a);
-    if (selectedAgent && !a.data.some((agent) => agent.id === selectedAgent)) setSelectedAgent(a.data[0]?.id || "");
-    else if (!selectedAgent && a.data[0]) setSelectedAgent(a.data[0].id);
+    if (selectedAgent && !a.data.some((agent) => agent.id === selectedAgent)) setSelectedAgent("");
     setTeams(t);
     setLeave(l);
     setSkills(s);
@@ -537,13 +536,13 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             </div>
           </div>
         </section>}
-        {tab === "team" && <section className="detail-card workforce-detail-panel">
-          <div className="workforce-detail-heading"><h2>{selected ? label(selected) : "Team member details"}{selected && <small>Provider-scoped workforce record</small>}</h2>{canManageAccess && <Button variant="secondary" onClick={() => { window.location.hash = "team-access"; }}>Manage provider access</Button>}</div>
+        {tab === "team" && selected && <OperationsDialog title={label(selected)} onClose={() => setSelectedAgent("")} className="workforce-detail-dialog"><section className="detail-card workforce-detail-panel">
+          <div className="workforce-detail-heading"><h2>{label(selected)}<small>Provider-scoped workforce record</small></h2>{canManageAccess && <Button variant="secondary" onClick={() => { window.location.hash = "team-access"; }}>Manage provider access</Button>}</div>
           {selected ? <dl className="workforce-facts"><dt>Member ID</dt><dd>{selected.id}</dd><dt>Role</dt><dd>{String(attrs(selected).role_name || attrs(selected).role || "Not returned by the provider directory")}</dd><dt>Status</dt><dd><Status>{String(attrs(selected).status || "ACTIVE")}</Status></dd><dt>Team</dt><dd>{String(attrs(selected).team_name || "Not assigned")}</dd></dl> : <p>Select a member to review their provider-scoped details.</p>}
           {canManageAccess && <p className="workforce-access-note">Role grants and membership permissions are managed in Team &amp; Access, separately from workforce qualifications. Select the member there before changing access.</p>}
           <h3>Provider teams</h3>
           {teams.data.length ? teams.data.map((team) => <article className="workforce-team-row" key={team.id}><span><strong>{label(team)}</strong><small>{String(attrs(team).description || "")}</small></span><Status>{String(attrs(team).status || "ACTIVE")}</Status></article>) : <p>No teams are available in this provider workspace.</p>}
-        </section>}
+        </section></OperationsDialog>}
         {tab === "leave" && <section className="detail-card workforce-leave-panel">
           <h2>Leave requests</h2>
           {leave.data.length ? leave.data.map((item) => (

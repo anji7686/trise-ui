@@ -8,7 +8,7 @@ import {
   type Resource,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
-import { EmptyState } from "./operations-shared";
+import { EmptyState, ProviderActionMenu } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
 import { formatIndiaDate, formatIndiaDateTime } from "./subscription-support";
 
@@ -77,7 +77,6 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
         ...(expiryFilter === "90" ? { expiresAfter: new Date().toISOString().slice(0, 10), expiresBefore: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10) } : {}),
       });
       setContracts(result);
-      if (!selected && result.data[0]) void open(result.data.find((row) => Number(row.attributes.asset_count || 0) > 0) || result.data[0]);
     } finally { setLoading(false); }
   }
   useEffect(() => {
@@ -274,18 +273,16 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
             <Button type="submit" variant="secondary">Search</Button>
             <Button type="button" variant="quiet" onClick={() => { setSelected(null); setSearchDraft(""); setSearch(""); setStatusFilter(""); setExpiryFilter(""); setAfter(""); setBefore(""); }}>Clear</Button>
           </form>
-          <div className="amc-workspace">
+          <div className="amc-workspace amc-workspace--full">
           <div className="amc-register-panel">
             <div className="section-heading"><div><h3>AMC contracts</h3><p>Provider-scoped contract register · filters and page size are applied by the API.</p></div><label className="amc-page-size">Rows per page<select aria-label="Rows per page" value={limit} onChange={(event) => { setSelected(null); setLimit(Number(event.target.value)); setAfter(""); setBefore(""); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label></div>
-            {contracts.data.length ? <div className="amc-table-wrap"><table className="amc-contract-table" aria-label="AMC contracts"><thead><tr><th>Contract No.</th><th>Customer</th><th>Assets</th><th>Plan</th><th>Expiry date</th><th>Status</th><th>Renewal</th><th></th></tr></thead><tbody>{contracts.data.map((contract) => { const expiry = contract.attributes.effective_to; const remaining = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null; return <tr key={contract.id} aria-current={selected?.id === contract.id ? "true" : undefined}><td><strong>{String(contract.attributes.contract_number || label(contract.attributes))}</strong></td><td>{String(contract.attributes.customer_name || "Authorized customer")}</td><td>{String(contract.attributes.asset_count ?? "—")}</td><td>{String(contract.attributes.plan_code || "Service plan")}</td><td>{date(expiry)}</td><td><Status>{String(contract.attributes.status || "VISIBLE")}</Status></td><td>{remaining !== null && remaining <= 90 ? remaining <= 0 ? "Expired" : `${remaining} days` : "Not due"}</td><td><Button variant="quiet" onClick={() => void open(contract)}>View</Button></td></tr>; })}</tbody></table></div> : <EmptyState title={loading ? "Loading contracts" : "No maintenance contracts"} description={loading ? "Loading the selected provider's authorized contracts." : "No contracts match these server-side filters. New AMC creation remains governed by quotation conversion."} />}
+            {contracts.data.length ? <div className="amc-table-wrap"><table className="amc-contract-table" aria-label="AMC contracts"><thead><tr><th>Contract No.</th><th>Customer</th><th>Assets</th><th>Plan</th><th>Expiry date</th><th>Status</th><th>Renewal</th><th>Actions</th></tr></thead><tbody>{contracts.data.map((contract) => { const expiry = contract.attributes.effective_to; const remaining = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null; return <tr key={contract.id} aria-current={selected?.id === contract.id ? "true" : undefined}><td><strong>{String(contract.attributes.contract_number || label(contract.attributes))}</strong></td><td>{String(contract.attributes.customer_name || "Authorized customer")}</td><td>{String(contract.attributes.asset_count ?? "—")}</td><td>{String(contract.attributes.plan_code || "Service plan")}</td><td>{date(expiry)}</td><td><Status>{String(contract.attributes.status || "VISIBLE")}</Status></td><td>{remaining !== null && remaining <= 90 ? remaining <= 0 ? "Expired" : `${remaining} days` : "Not due"}</td><td><ProviderActionMenu label={`Actions for contract ${String(contract.attributes.contract_number || contract.id.slice(0, 8))}`} actions={[{ id: 'view', label: 'View contract', onSelect: () => void open(contract) }]} /></td></tr>; })}</tbody></table></div> : <EmptyState title={loading ? "Loading contracts" : "No maintenance contracts"} description={loading ? "Loading the selected provider's authorized contracts." : "No contracts match these server-side filters. New AMC creation remains governed by quotation conversion."} />}
             <div className="server-pagination"><span>Showing {contracts.data.length} records · {limit} per page</span><div><Button variant="secondary" disabled={!contracts.page?.previous || loading} onClick={() => { setAfter(""); setBefore(contracts.page?.previous || ""); }}>Previous</Button><Button variant="secondary" disabled={!contracts.page?.next || loading} onClick={() => { setBefore(""); setAfter(contracts.page?.next || ""); }}>Next</Button></div></div>
           </div>
       
       {selected && (
+        <OperationsDialog title={String(selected.attributes.contract_number || label(selected.attributes))} onClose={() => setSelected(null)} className="amc-detail-dialog">
         <section className="amc-detail-panel">
-          <button className="text-button" onClick={() => { setSelected(null); void reload().catch((cause) => setError(fail(cause))); }}>
-            ← AMC &amp; maintenance
-          </button>
           <div className="amc-detail-heading"><div><Status>{String(selected.attributes.status || "VISIBLE")}</Status><h2>{String(selected.attributes.contract_number || label(selected.attributes))}</h2><p>{String(selected.attributes.customer_name || "Authorized customer")} · Revision {String(selected.attributes.revision || "server-managed")}</p></div><div className="amc-detail-dates"><span>Effective {date(selected.attributes.effective_from)}</span><strong>Expires {date(selected.attributes.effective_to)}</strong></div></div>
           <div className="amc-detail-stats"><div><strong>{String(selected.attributes.asset_count ?? activeScopes.length)}</strong><span>Covered assets</span></div><div><strong>{String(selected.attributes.plan_code || "—")}</strong><span>Service plan</span></div><div><strong>v{String(selected.attributes.version || 1)}</strong><span>Contract version</span></div><div><strong>{String(iterations?.data.length ?? "—")}</strong><span>Maintenance iterations</span></div></div>
           {canManage && <div className="provider-form-actions amc-actions">
@@ -457,6 +454,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
             </OperationsDialog>
           )}
         </section>
+        </OperationsDialog>
       )}
       </div>
       </>}

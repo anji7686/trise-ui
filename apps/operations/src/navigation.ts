@@ -28,7 +28,7 @@ export const platformNavigation: OperationsNavigationItem[] = [
 ];
 
 const providerItems: OperationsNavigationItem[] = [
-  { key: 'overview', label: 'Overview', hash: 'overview', capability: 'requests', group: 'Overview' },
+  { key: 'overview', label: 'Overview', hash: 'overview', group: 'Overview' },
   { key: 'work-intake', label: 'Work Intake', hash: 'work-intake', capability: 'work_intake', group: 'Work Intake' },
   { key: 'leads', label: 'Marketing Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Work Intake' },
   { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Work Intake' },
@@ -60,7 +60,7 @@ export function navigationForSession(session: Pick<Session, 'platformAdmin' | 'p
   const capabilities = new Set(context?.capabilities || []);
   return {
     platform: session.platformAdmin ? platformNavigation.filter((item) => !item.capability || session.platformCapabilities?.includes(item.capability)) : [],
-    provider: providerItems.filter((item) => item.capability && capabilities.has(item.capability)),
+    provider: context ? providerItems.filter((item) => !item.capability || capabilities.has(item.capability)) : [],
     context
   };
 }
@@ -78,5 +78,5 @@ export function requiredProviderCapability(section: string): string | undefined 
 export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string): boolean {
   const navigation = navigationForSession(session, providerId);
   const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : requiredProviderCapability(section) || section;
-  return navigation.provider.some((item) => item.capability === capability && (item.hash === section || (section === 'jobs' && routeId === 'my-work' && item.hash === 'jobs/my-work')));
+  return navigation.provider.some((item) => (!item.capability || item.capability === capability) && (item.hash === section || (section === 'jobs' && routeId === 'my-work' && item.hash === 'jobs/my-work')));
 }

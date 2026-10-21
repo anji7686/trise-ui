@@ -555,7 +555,7 @@ describe("operations execution contracts", () => {
     });
 
     const url = String(fetchMock.mock.calls[0][0]);
-    expect(url).toContain("page%5Blimit%5D=25");
+    expect(url).toContain("page%5Blimit%5D=15");
     expect(url).toContain("q=Lift+Rise");
     expect(url).toContain("filter%5Bstatus%5D=ACTIVE");
     expect(url).toContain("page%5Bafter%5D=cursor-1");
@@ -828,10 +828,10 @@ describe("operations execution contracts", () => {
     );
 
     expect(String(fetchMock.mock.calls[0][0])).toContain(
-      "/platform/providers/provider-1/onboarding/contacts?page[limit]=25",
+      "/platform/providers/provider-1/onboarding/contacts?page[limit]=15",
     );
     expect(String(fetchMock.mock.calls[2][0])).toContain(
-      "/platform/providers/provider-1/onboarding/locations?page[limit]=25",
+      "/platform/providers/provider-1/onboarding/locations?page[limit]=15",
     );
     for (const [, init] of fetchMock.mock.calls
       .slice(1)

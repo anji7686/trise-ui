@@ -8,10 +8,11 @@ import {
   type ProviderDocumentAttributes,
   type Resource,
 } from "./data";
-import { OperationsStatus as Status } from "./operations-status";
+import { OperationsPriority as Priority, OperationsStatus as Status } from "./operations-status";
 import { OperationsDialog } from "./operations-dialog";
 import { sha256Hex } from "./provider-document-upload";
 import { SiteSurveyWizard } from "./site-survey-wizard";
+import { ProviderActionMenu } from "./operations-shared";
 
 type Props = { providerId: string };
 const EVIDENCE_MEDIA_TYPES = [
@@ -68,9 +69,6 @@ export function MarketingLeads({ providerId }: Props) {
         if (!active) return;
         setLeads(leadRows);
         setRelationships(relationshipRows as Collection<GenericAttributes>);
-        if (automaticLeadSelection.current && leadRows.data[0]) {
-          setSelected((current) => current ?? leadRows.data[0]);
-        }
       })
       .catch((cause) => { if (active) setError((cause as Error).message); });
     return () => { active = false; };
@@ -385,22 +383,23 @@ export function MarketingLeads({ providerId }: Props) {
           </form>
         </OperationsDialog>
       )}
-      <div className="leads-workspace">
+      <div className="leads-workspace leads-workspace--full">
       <section className="leads-list-panel">
-        <div className="section-heading"><div><h3>Leads ({leads.data.length})</h3><p>All prospects and survey opportunities</p></div></div>
+        <div className="section-heading"><div><h3>Leads ({leads.data.length})</h3><p>All prospects and survey opportunities. Choose View to open the authorized lead workspace.</p></div></div>
         <div className="leads-filters"><input aria-label="Search leads" placeholder="Search by name, company or location…" value={search} onChange={(event) => setSearch(event.target.value)} /><select aria-label="Filter leads by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option>{Array.from(new Set(leads.data.map((lead) => lead.attributes.status))).map((status) => <option key={status} value={status}>{status}</option>)}</select><select aria-label="Filter leads by source" value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}><option value="ALL">All sources</option>{Array.from(new Set(leads.data.map((lead) => lead.attributes.source))).map((source) => <option key={source} value={source}>{source}</option>)}</select><select aria-label="Filter leads by priority" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}><option value="ALL">All priorities</option>{Array.from(new Set(leads.data.map((lead) => lead.attributes.priority))).map((priority) => <option key={priority} value={priority}>{priority}</option>)}</select><label className="page-size-control">Rows per page<select aria-label="Rows per page" value={pageLimit} onChange={(event) => { setPageLimit(Number(event.target.value)); setPageCursor({}); setSelected(null); automaticLeadSelection.current = true; }}><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label></div>
       {filteredLeads.length === 0 ? (
         <p className="notice">No leads match the current filters in this Provider workspace.</p>
       ) : (
         <div className="lead-register-scroll">
           <table className="lead-register">
-            <thead><tr><th scope="col">Lead / prospect</th><th scope="col">Reference / source</th><th scope="col">Priority</th><th scope="col">Status</th></tr></thead>
+            <thead><tr><th scope="col">Lead / prospect</th><th scope="col">Reference / source</th><th scope="col">Priority</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
             <tbody>{filteredLeads.map((lead) => (
               <tr key={lead.id} className={selected?.id === lead.id ? "is-selected" : undefined}>
                 <td data-label="Lead / prospect"><button type="button" className="lead-register-select" aria-pressed={selected?.id === lead.id} onClick={() => { automaticLeadSelection.current = false; setSelected(lead); }}>{lead.attributes.title}</button><small>{lead.attributes.prospect_name}</small></td>
                 <td data-label="Reference / source">{lead.attributes.reference_code}<small>{lead.attributes.source}</small></td>
-                <td data-label="Priority"><Status>{lead.attributes.priority}</Status></td>
+                <td data-label="Priority"><Priority>{lead.attributes.priority}</Priority></td>
                 <td data-label="Status"><Status>{lead.attributes.status}</Status></td>
+                <td data-label="Actions"><ProviderActionMenu label={`Actions for lead ${lead.id.slice(0, 8)}`} actions={[{ id: 'view', label: 'View lead', onSelect: () => { automaticLeadSelection.current = false; setSelected(lead); } }]} /></td>
               </tr>
             ))}</tbody>
           </table>
@@ -409,16 +408,12 @@ export function MarketingLeads({ providerId }: Props) {
       <div className="server-pagination" aria-label="Lead pages"><span>Showing {filteredLeads.length} of this provider page</span><div><Button type="button" variant="secondary" disabled={!leads.page?.previous} onClick={() => { automaticLeadSelection.current = true; setSelected(null); setPageCursor({ before: leads.page?.previous || undefined }); }}>Previous</Button><Button type="button" disabled={!leads.page?.next} onClick={() => { automaticLeadSelection.current = true; setSelected(null); setPageCursor({ after: leads.page?.next || undefined }); }}>Next</Button></div></div>
       </section>
       {selected && (
+        <OperationsDialog
+          title={String(selected.attributes.title)}
+          onClose={() => { automaticLeadSelection.current = false; setSelected(null); }}
+          className="lead-detail-dialog"
+        >
         <aside className="detail-card lead-detail-panel" aria-label="Lead details">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">Lead detail</span>
-              <h3>{selected.attributes.title}</h3>
-            </div>
-            <button className="text-button" onClick={() => { automaticLeadSelection.current = false; setSelected(null); }}>
-              Close
-            </button>
-          </div>
           <nav className="lead-detail-tabs" aria-label="Lead detail sections" role="tablist">
             {(["Overview", "Activity", "Site Survey", "Requirements", "Attachments"] as const).map((tab) => {
               const tabId = tab.toLowerCase().replaceAll(" ", "-");
@@ -435,7 +430,7 @@ export function MarketingLeads({ providerId }: Props) {
             <dt>Status</dt>
             <dd>{selected.attributes.status}</dd>
             <dt>Priority</dt>
-            <dd>{selected.attributes.priority}</dd>
+            <dd><Priority>{selected.attributes.priority}</Priority></dd>
             <dt>Revision</dt>
             <dd>{selected.attributes.revision}</dd>
           </dl>
@@ -544,8 +539,8 @@ export function MarketingLeads({ providerId }: Props) {
             </form>
           </section>
         </aside>
+        </OperationsDialog>
       )}
-      {!selected && <aside className="lead-detail-placeholder"><strong>Select a lead</strong><p>Choose a prospect to review activity, site survey details, requirements and attachments.</p></aside>}
       </div>
       {editOpen && selected && <OperationsDialog title="Update lead" busy={busy} className="lead-workflow-dialog" onClose={() => setEditOpen(false)}>
         <p className="lead-dialog-intro">Changes are revision checked. Previously captured surveys and requirement revisions remain preserved.</p>

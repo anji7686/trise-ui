@@ -88,7 +88,7 @@ test('provider leads register is populated, selectable and responsive', async ({
   await expect(leadRows).not.toHaveCount(0);
   const firstLead = page.locator('.lead-register-select').first();
   await firstLead.click();
-  await expect(firstLead).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('dialog').filter({ hasText: 'Lead details' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute('aria-selected', 'true');
   if ((page.viewportSize()?.width || 1440) <= 700) {
     await expect.poll(() => page.locator('.lead-register-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -114,7 +114,7 @@ test('provider quotations register and detail are populated and responsive', asy
   await expect(quotationRows.first().locator('[data-label="Quote No."]')).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
   await expect(quotationRows.first().locator('td').nth(1)).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
   await quotationRows.first().locator('.quotation-row-select').click();
-  await expect(page.getByRole('complementary', { name: 'Quotation detail' })).toBeVisible();
+  await expect(page.getByRole('dialog').filter({ hasText: 'Quotation detail' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Quotation rows per page', exact: true })).toHaveValue('10');
   if ((page.viewportSize()?.width || 1440) <= 700) {
     await expect.poll(() => page.locator('.quotations-workspace').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);

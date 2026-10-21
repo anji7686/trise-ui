@@ -57,7 +57,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await page.screenshot({ path: info.outputPath('quotation-create-draft.png') });
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
-  const quotationNumber = (await page.locator('.quotation-detail-panel h3').textContent())?.trim();
+  const quotationNumber = (await page.locator('.quotation-detail-dialog h2').textContent())?.trim();
   expect(quotationNumber).toBeTruthy();
   const quotationRowsResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers: { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
   expect(quotationRowsResponse.ok()).toBeTruthy();
@@ -329,7 +329,7 @@ test('Marketing Manager creates a new immutable quotation revision from the work
   await page.getByLabel('Total (INR)', { exact: true }).fill('100000');
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quotation draft created by the server.');
-  const createdLabel = (await page.locator('.quotation-detail-panel h3').textContent())?.trim();
+  const createdLabel = (await page.locator('.quotation-detail-dialog h2').textContent())?.trim();
   expect(createdLabel).toBeTruthy();
   const quotesResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers });
   expect(quotesResponse.ok()).toBeTruthy();

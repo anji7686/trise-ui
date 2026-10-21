@@ -121,9 +121,9 @@ test('Business detail Change Request publishes v2 and preserves approved v1', as
   await expect(page.getByRole('heading', { name: 'Approval Inbox', exact: true })).toBeVisible();
   await page.getByPlaceholder('Business name, request or reference…').fill('Synthetic Business v1 to v2 Change Request browser gate');
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  const row = page.locator('button.approval-request-row').filter({ hasText: /Business trade name/i }).first();
+  const row = page.getByRole('row').filter({ hasText: /Business trade name/i }).first();
   await expect(row).toBeVisible({ timeout: 10_000 });
-  await row.click();
+  await row.getByRole('button', { name: 'View', exact: true }).click();
   const assign = page.getByLabel('Authorized reviewer');
   if (await assign.count()) {
     await assign.selectOption({ label: 'Demo Dispatcher' });

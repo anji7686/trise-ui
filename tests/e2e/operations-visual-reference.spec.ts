@@ -33,12 +33,11 @@ test('authorized Operations routes match the approved structural UI contract', a
     await page.screenshot({ path: `/tmp/trise-operations-visual-${route.name}.png`, fullPage: true });
     if (route.name === 'requests') {
       const register = page.getByRole('region', { name: 'Service request register' });
-      const selectRequest = register.getByRole('button', { name: /^Select request / }).first();
-      const selectedRequestName = await selectRequest.getAttribute('aria-label');
-      const requestId = selectedRequestName?.replace(/^Select request /, '');
+      const firstRequestRow = register.locator('tbody tr').first();
+      const requestId = await firstRequestRow.locator('[data-label="Request ID"] span').getAttribute('title');
       expect(requestId).toBeTruthy();
-      await selectRequest.click();
-      const detailPanel = page.getByRole('complementary', { name: 'Selected service request details' });
+      await firstRequestRow.getByRole('button', { name: 'View', exact: true }).click();
+      const detailPanel = page.getByRole('dialog').filter({ hasText: 'Selected request' });
       await expect(detailPanel.getByRole('heading').first()).toBeVisible();
       await detailPanel.getByRole('button', { name: 'Open full details', exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`#requests/${requestId}$`));
