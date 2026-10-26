@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
-import { operationsData, type Collection, type ConfigurationAudit, type ConfigurationImpact, type ConfigurationReview, type GenericAttributes, type Resource } from './data';
+import { operationsData, PLATFORM_PAGE_SIZE, type Collection, type ConfigurationAudit, type ConfigurationImpact, type ConfigurationReview, type GenericAttributes, type Resource } from './data';
 import { SearchableSelect, type LookupOption } from './searchable-select';
+import { OperationsDialog } from './operations-dialog';
 import { formatIndiaDateTime, indiaDateTimeToIso, localDateTime } from './subscription-support';
 
 type T = (key: string) => string;
+
+function ConfigurationReturnBanner({ returnTo }: { returnTo?: string }) {
+  if (!returnTo) return null;
+  return <div className="configuration-return-banner" role="status"><div><strong>Provider setup in progress</strong><small>Resolve this requirement, then return to the selected provider’s readiness checklist.</small></div><Button type="button" variant="secondary" onClick={() => { window.location.hash = returnTo; }}>Back to provider setup</Button></div>;
+}
 
 type FieldKind = 'text' | 'number' | 'boolean' | 'date' | 'select' | 'lines';
 type Field = { key: string; label: string; kind?: FieldKind; required?: boolean; options?: string[]; lookup?: string };
@@ -18,6 +24,29 @@ const configurationLabel = (value: string) => ({
   'reference-data-imports': 'Reference Data Import',
   'provider-configuration-overrides': 'Provider Configuration Override'
 }[value] || value.replaceAll('-', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()));
+const CONFIGURATION_TYPE_LABEL_OVERRIDES: Record<string, string> = {
+  'asset-families': 'Asset families',
+  'asset-types': 'Asset types',
+  'asset-definitions': 'Asset definitions',
+  'service-types': 'Service types',
+  'checklist-templates': 'Checklist templates',
+  'notification-triggers': 'Notification triggers',
+  'notification-policies': 'Notification policies',
+  'notification-templates': 'Notification templates',
+  skills: 'Skills',
+  'certification-types': 'Certification types',
+  'working-calendars': 'Working calendars',
+  'holiday-calendars': 'Holiday calendars',
+  'service-territories': 'Service territories',
+  'assignment-policies': 'Assignment policies',
+  'asset-criticalities': 'Asset criticalities',
+  'service-priorities': 'Service priorities',
+  'emergency-rules': 'Emergency rules',
+  'sla-policies': 'SLA policies',
+  'identifier-policies': 'Identifier policies',
+  'maintenance-policies': 'Maintenance policies'
+};
+const configurationTypeLabel = (value: string) => CONFIGURATION_TYPE_LABEL_OVERRIDES[value] || configurationLabel(value);
 
 export const CONFIGURATION_TYPES = [
   'asset-families', 'asset-types', 'asset-definitions', 'service-types', 'checklist-templates',
@@ -33,6 +62,61 @@ export const PLATFORM_CONFIGURATION_TYPES = [
   'certification-types', 'holiday-calendars', 'asset-criticalities', 'service-priorities',
   'sla-policies', 'identifier-policies', 'maintenance-policies'
 ] as const;
+
+// Provider operators choose a business name. The API creates the stable
+// technical identifier and keeps it immutable for integrations and audit.
+const PROVIDER_GENERATED_CODE_TYPES = new Set([
+  'asset-families', 'asset-types', 'asset-definitions', 'service-types', 'checklist-templates',
+  'skills', 'certification-types', 'working-calendars', 'holiday-calendars', 'service-territories',
+  'assignment-policies', 'asset-criticalities', 'service-priorities', 'emergency-rules',
+  'sla-policies', 'maintenance-policies'
+]);
+
+export const CONFIGURATION_TYPE_GROUPS: Array<{ label: string; options: Array<{ value: string; label: string; description: string }> }> = [
+  {
+    label: 'Assets & service catalogue',
+    options: [
+      { value: 'asset-families', label: 'Asset families', description: 'Group related equipment and site assets.' },
+      { value: 'asset-types', label: 'Asset types', description: 'Define the equipment categories providers can use.' },
+      { value: 'asset-definitions', label: 'Asset definitions', description: 'Configure equipment attributes, identifiers and safety rules.' },
+      { value: 'service-types', label: 'Service types', description: 'Define supported installation, repair and maintenance services.' },
+      { value: 'checklist-templates', label: 'Checklist templates', description: 'Create reusable inspection and execution checklists.' },
+    ],
+  },
+  {
+    label: 'Communication & notifications',
+    options: [
+      { value: 'notification-triggers', label: 'Notification triggers', description: 'Define events that can start a notification.' },
+      { value: 'notification-policies', label: 'Notification policies', description: 'Control recipients, channels and delivery behavior.' },
+      { value: 'notification-templates', label: 'Notification templates', description: 'Manage reusable message content for platform events.' },
+    ],
+  },
+  {
+    label: 'Workforce & scheduling',
+    options: [
+      { value: 'skills', label: 'Skills', description: 'Maintain skills used for assignment and eligibility.' },
+      { value: 'certification-types', label: 'Certification types', description: 'Maintain certifications required for authorized work.' },
+      { value: 'working-calendars', label: 'Working calendars', description: 'Define working windows used by schedules and SLA timing.' },
+      { value: 'holiday-calendars', label: 'Holiday calendars', description: 'Define non-working holidays for India operations.' },
+      { value: 'assignment-policies', label: 'Assignment policies', description: 'Control how work is proposed and assigned.' },
+    ],
+  },
+  {
+    label: 'Governance & service controls',
+    options: [
+      { value: 'asset-criticalities', label: 'Asset criticalities', description: 'Set the impact ranking used for service decisions.' },
+      { value: 'service-priorities', label: 'Service priorities', description: 'Define service urgency and linked response controls.' },
+      { value: 'emergency-rules', label: 'Emergency rules', description: 'Route emergency work using priority, SLA and assignment rules.' },
+      { value: 'sla-policies', label: 'SLA policies', description: 'Set response, assignment, dispatch and resolution targets.' },
+      { value: 'identifier-policies', label: 'Identifier policies', description: 'Control how equipment and operational references are formed.' },
+      { value: 'maintenance-policies', label: 'Maintenance policies', description: 'Schedule preventive maintenance due work.' },
+      { value: 'service-territories', label: 'Service territories', description: 'Define operational areas used for provider coverage.' },
+    ],
+  },
+];
+
+const CONFIGURATION_TYPE_OPTIONS = CONFIGURATION_TYPE_GROUPS.flatMap((group) => group.options);
+const configurationTypeDescription = (value: string) => CONFIGURATION_TYPE_OPTIONS.find((option) => option.value === value)?.description || 'Authoritative configuration managed through the approved lifecycle.';
 
 const common = (extra: Field[] = []): Field[] => [
   { key: 'code', label: 'Code', required: true },
@@ -59,9 +143,9 @@ const FIELDS: Record<string, Field[]> = {
   'assignment-policies': common([{ key: 'mode', label: 'Mode', kind: 'select', options: ['MANUAL', 'ASSISTED', 'AUTOMATIC'], required: true }, { key: 'scope', label: 'Scope kind', required: true }, { key: 'precedence', label: 'Precedence', kind: 'number', required: true }, { key: 'rules', label: 'Rules: key|value (one per line)', kind: 'lines', required: true }, { key: 'capacity', label: 'Capacity: key|value (one per line)', kind: 'lines', required: true }, { key: 'fallback_mode', label: 'Fallback mode', kind: 'select', options: ['MANUAL', 'ASSISTED'], required: true }, { key: 'tie_break_reference', label: 'Tie-break reference', required: true }, { key: 'acceptance_required', label: 'Acceptance required', kind: 'boolean', required: true }, { key: 'proposal_hold_minutes', label: 'Proposal hold minutes', kind: 'number', required: true }, { key: 'acceptance_timeout_minutes', label: 'Acceptance timeout minutes', kind: 'number', required: true }]),
   'asset-criticalities': common([{ key: 'rank', label: 'Rank', kind: 'number', required: true }]),
   'service-priorities': common([{ key: 'rank', label: 'Rank', kind: 'number', required: true }, { key: 'description', label: 'Description', kind: 'lines' }, { key: 'sla_policy_id', label: 'SLA policy', kind: 'select', lookup: 'sla-policies' }, { key: 'assignment_policy_id', label: 'Assignment policy', kind: 'select', lookup: 'assignment-policies' }]),
-  'emergency-rules': common([{ key: 'priority_id', label: 'Priority', kind: 'select', lookup: 'service-priorities', required: true }, { key: 'sla_policy_id', label: 'SLA policy', kind: 'select', lookup: 'sla-policies', required: true }, { key: 'escalation_policy_id', label: 'Escalation policy (no authorized lookup operation)', kind: 'select', lookup: 'escalation-policies', required: true }, { key: 'assignment_policy_id', label: 'Assignment policy', kind: 'select', lookup: 'assignment-policies', required: true }, { key: 'required_response', label: 'Required response', kind: 'lines' }]),
+  'emergency-rules': common([{ key: 'priority_id', label: 'Priority', kind: 'select', lookup: 'service-priorities', required: true }, { key: 'sla_policy_id', label: 'SLA policy', kind: 'select', lookup: 'sla-policies', required: true }, { key: 'escalation_policy_id', label: 'Escalation policy reference', required: true }, { key: 'assignment_policy_id', label: 'Assignment policy', kind: 'select', lookup: 'assignment-policies', required: true }, { key: 'required_response', label: 'Required response', kind: 'lines' }]),
   'sla-policies': common([{ key: 'response_target_minutes', label: 'Response target minutes', kind: 'number' }, { key: 'assignment_target_minutes', label: 'Assignment target minutes', kind: 'number' }, { key: 'acceptance_target_minutes', label: 'Acceptance target minutes', kind: 'number' }, { key: 'dispatch_target_minutes', label: 'Dispatch target minutes', kind: 'number' }, { key: 'arrival_target_minutes', label: 'Arrival target minutes', kind: 'number' }, { key: 'work_start_target_minutes', label: 'Work-start target minutes', kind: 'number' }, { key: 'resolution_target_minutes', label: 'Resolution target minutes', kind: 'number' }, { key: 'business_hours_policy_reference', label: 'Business-hours policy reference', required: true }, { key: 'pause_resume_policy_reference', label: 'Pause/resume policy reference', required: true }]),
-  'identifier-policies': [{ key: 'identifier_kind', label: 'Identifier kind', required: true }, { key: 'normalization_version', label: 'Normalization version', required: true }, { key: 'name', label: 'Name', required: true }, { key: 'strategy', label: 'Strategy', kind: 'select', options: ['PROVIDED', 'GENERATED', 'COMPOSITE', 'OPTIONAL'], required: true }, { key: 'effective_from', label: 'Effective from (India time)', kind: 'date', required: true }, { key: 'effective_to', label: 'Effective to (India time)', kind: 'date' }, { key: 'composite_fields', label: 'Composite fields (one per line)', kind: 'lines' }],
+  'identifier-policies': [{ key: 'identifier_kind', label: 'Identifier type', required: true }, { key: 'normalization_version', label: 'Normalization version', required: true }, { key: 'name', label: 'Name', required: true }, { key: 'strategy', label: 'Strategy', kind: 'select', options: ['PROVIDED', 'GENERATED', 'COMPOSITE', 'OPTIONAL'], required: true }, { key: 'effective_from', label: 'Effective from (India time)', kind: 'date', required: true }, { key: 'effective_to', label: 'Effective to (India time)', kind: 'date' }, { key: 'composite_fields', label: 'Composite fields (one per line)', kind: 'lines' }],
   'maintenance-policies': common([{ key: 'source', label: 'Policy source', required: true }, { key: 'recurrence_policy', label: 'Recurrence policy', kind: 'select', options: ['from_due', 'from_completion', 'explicit_schedule', 'none'], required: true }, { key: 'maintenance_rules', label: 'Rules: sequence|code|trigger_kind (one per line)', kind: 'lines', required: true }, { key: 'asset_definition_id', label: 'Asset definition', kind: 'select', lookup: 'asset-definitions' }])
 };
 
@@ -137,6 +221,18 @@ function formatValue(field: Field, value: unknown): string {
   return value == null ? '' : String(value);
 }
 
+function configurationFieldValue(kind: string, field: Field, definition: Record<string, unknown>): unknown {
+  if (kind === 'notification-policies' && field.key === 'channels') {
+    return (definition.channel_rules as { channels?: unknown } | undefined)?.channels;
+  }
+  if (kind === 'notification-templates' && field.key === 'body') return definition.content;
+  if (kind === 'service-types' && ['fulfilment_modes', 'category'].includes(field.key)) {
+    return (definition.metadata as Record<string, unknown> | undefined)?.[field.key];
+  }
+  if (kind === 'maintenance-policies' && field.key === 'maintenance_rules') return definition.rules;
+  return definition[field.key];
+}
+
 function RepeatableRows({ field, value, onChange, disabled }: { field: Field; value: string; onChange: (value: string) => void; disabled: boolean }) {
   const schema = repeatableSchema(field.key);
   if (TOKEN_OPTIONS[field.key]) return <TokenOptions field={field} value={value} onChange={onChange} disabled={disabled} />;
@@ -155,6 +251,8 @@ function RepeatableRows({ field, value, onChange, disabled }: { field: Field; va
 
 export function ConfigurationReviewInbox({ platformCapabilities = [], currentUserId = '' }: { platformCapabilities?: string[]; currentUserId?: string }) {
   const [reviews, setReviews] = useState<ConfigurationReview[]>([]);
+  const [page, setPage] = useState<{ next?: string | null; previous?: string | null }>({});
+  const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -162,9 +260,9 @@ export function ConfigurationReviewInbox({ platformCapabilities = [], currentUse
   const canReview = platformCapabilities.includes('PLATFORM_CONFIGURATION_REVIEW');
   async function load() {
     setLoading(true);
-    try { setError(''); setReviews((await operationsData.configurationReviewInbox(status)).data); } catch (cause) { setError((cause as { message?: string }).message || 'Configuration approval queue could not be loaded.'); } finally { setLoading(false); }
+    try { setError(''); const result = await operationsData.configurationReviewInbox(status, cursor); setReviews(result.data); setPage(result.page || {}); } catch (cause) { setError((cause as { message?: string }).message || 'Configuration approval queue could not be loaded.'); } finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, [status]);
+  useEffect(() => { void load(); }, [status, cursor]);
   async function decide(review: ConfigurationReview, action: 'approve' | 'revoke') {
     setBusy(true); setError('');
     try {
@@ -188,7 +286,7 @@ export function ConfigurationReviewInbox({ platformCapabilities = [], currentUse
     } catch (cause) { setError((cause as { message?: string }).message || `Configuration review could not be ${action}d.`); } finally { setBusy(false); }
   }
   const tabs: Array<[typeof status, string]> = [['PENDING', 'Pending'], ['APPROVED', 'Approved'], ['REVOKED', 'Rejected'], ['CONSUMED', 'Published']];
-  return <section className="platform-reference-page configuration-review-inbox"><div className="reference-breadcrumb"><span>Platform administration</span><span>›</span><strong>Approvals</strong></div><div className="reference-page-heading"><div><span className="reference-eyebrow">Platform administration / Governance</span><h1>Approval inbox</h1><p>Review configuration changes before they become available to providers. Global Administrators may self-approve when required; the action is recorded in the audit trail.</p></div><div className="reference-heading-actions"><select aria-label="Approval status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="PENDING">Pending review</option><option value="APPROVED">Approved</option><option value="REVOKED">Rejected</option><option value="CONSUMED">Published</option></select><select aria-label="Approval scope"><option>All scopes</option><option>Platform rules</option><option>Elevator &amp; Lift Services</option><option>Provider overrides</option></select></div></div><div className="reference-tabs">{tabs.map(([value, label]) => <button className={status === value ? 'active' : ''} type="button" key={value} onClick={() => setStatus(value)}>{label}</button>)}</div>{error && <p className="error" role="alert">{error}</p>}{loading ? <p className="notice">Loading configuration approvals…</p> : !reviews.length && !error ? <p className="notice">No {status.toLowerCase()} platform configuration reviews.</p> : <div className="reference-table-card"><div className="reference-table-scroll"><table className="reference-table"><caption className="sr-only">Configuration reviews</caption><thead><tr><th>Configuration</th><th>Candidate</th><th>Submitted</th><th>Reason</th><th>Actions</th></tr></thead><tbody>{reviews.map((review) => { const ownReview = Boolean(currentUserId) && review.attributes.submitted_by_user_id === currentUserId; const configurationId = String(review.attributes.configuration_id || ''); const openPath = review.attributes.configuration_type === 'business-operation-types' ? '#platform/business-operations' : review.attributes.configuration_type === 'reference-data-imports' ? '#platform/configuration/reference-data' : review.attributes.configuration_type === 'provider-configuration-overrides' ? `#platform/configuration/provider-overrides?provider_id=${encodeURIComponent(String(review.attributes.provider_id || configurationId))}` : `#platform/configuration/${review.attributes.configuration_type}`; return <tr key={review.id}><td><strong>{configurationLabel(review.attributes.configuration_type)}</strong><small>{configurationId ? <span title={configurationId}>Reference {shortReference(configurationId)}</span> : 'Reference not returned'}</small>{ownReview && <small>Self-approval will be recorded in the audit trail</small>}</td><td>Version {review.attributes.candidate_version} · Revision {review.attributes.candidate_revision}</td><td>{formatIndiaDateTime(review.attributes.submitted_at)}</td><td>{review.attributes.reason || 'No reason provided'}</td><td className="platform-form-actions"><Button variant="quiet" disabled={busy} onClick={() => { window.location.hash = openPath; }}>Open</Button>{status === 'PENDING' && canReview && <Button disabled={busy} title={ownReview ? 'Self-approval will be recorded in the audit trail.' : undefined} onClick={() => void decide(review, 'approve')}>Approve</Button>}{status === 'PENDING' && canReview && <Button variant="danger" disabled={busy} onClick={() => void decide(review, 'revoke')}>Revoke</Button>}</td></tr>; })}</tbody></table></div></div>}</section>;
+  return <section className="platform-reference-page configuration-review-inbox"><div className="reference-breadcrumb"><span>Platform administration</span><span>›</span><strong>Approvals</strong></div><div className="reference-page-heading"><div><span className="reference-eyebrow">Platform administration / Governance</span><h1>Approval inbox</h1><p>Review configuration changes before they become available to providers. Global Administrators may self-approve when required; the action is recorded in the audit trail.</p></div><div className="reference-heading-actions"><select aria-label="Approval status" value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setCursor({}); }}><option value="PENDING">Pending review</option><option value="APPROVED">Approved</option><option value="REVOKED">Rejected</option><option value="CONSUMED">Published</option></select><select aria-label="Approval scope"><option>All scopes</option><option>Platform rules</option><option>Elevator &amp; Lift Services</option><option>Provider overrides</option></select></div></div><div className="reference-tabs">{tabs.map(([value, label]) => <button className={status === value ? 'active' : ''} type="button" key={value} onClick={() => { setStatus(value); setCursor({}); }}>{label}</button>)}</div>{error && <p className="error" role="alert">{error}</p>}{loading ? <p className="notice">Loading configuration approvals…</p> : !reviews.length && !error ? <p className="notice">No {status.toLowerCase()} platform configuration reviews.</p> : <div className="reference-table-card"><div className="reference-table-scroll"><table className="reference-table"><caption className="sr-only">Configuration reviews</caption><thead><tr><th>Configuration</th><th>Candidate</th><th>Submitted</th><th>Reason</th><th>Actions</th></tr></thead><tbody>{reviews.map((review) => { const ownReview = Boolean(currentUserId) && review.attributes.submitted_by_user_id === currentUserId; const configurationId = String(review.attributes.configuration_id || ''); const openPath = review.attributes.configuration_type === 'business-operation-types' ? '#platform/business-operations' : review.attributes.configuration_type === 'reference-data-imports' ? '#platform/configuration/reference-data' : review.attributes.configuration_type === 'provider-configuration-overrides' ? `#platform/configuration/provider-overrides?provider_id=${encodeURIComponent(String(review.attributes.provider_id || configurationId))}` : `#platform/configuration/${review.attributes.configuration_type}`; return <tr key={review.id}><td><strong>{configurationLabel(review.attributes.configuration_type)}</strong><small>{configurationId ? <span title={configurationId}>Reference {shortReference(configurationId)}</span> : 'Reference not returned'}</small>{ownReview && <small>Self-approval will be recorded in the audit trail</small>}</td><td>Version {review.attributes.candidate_version} · Revision {review.attributes.candidate_revision}</td><td>{formatIndiaDateTime(review.attributes.submitted_at)}</td><td>{review.attributes.reason || 'No reason provided'}</td><td className="platform-form-actions"><Button variant="quiet" disabled={busy} onClick={() => { window.location.hash = openPath; }}>Open</Button>{status === 'PENDING' && canReview && <Button disabled={busy} title={ownReview ? 'Self-approval will be recorded in the audit trail.' : undefined} onClick={() => void decide(review, 'approve')}>Approve</Button>}{status === 'PENDING' && canReview && <Button variant="danger" disabled={busy} onClick={() => void decide(review, 'revoke')}>Revoke</Button>}</td></tr>; })}</tbody></table></div></div>}{!loading && !error && reviews.length > 0 && <div className="server-pagination" aria-label="Configuration approval pages"><span>Showing {reviews.length} records · {PLATFORM_PAGE_SIZE} per page</span><div><Button type="button" variant="secondary" disabled={!page.previous || loading} onClick={() => setCursor({ before: page.previous || undefined })}>Previous</Button><Button type="button" disabled={!page.next || loading} onClick={() => setCursor({ after: page.next || undefined })}>Next</Button></div></div>}</section>;
 }
 
 export function ConfigurationAuditInbox() {
@@ -197,24 +295,51 @@ export function ConfigurationAuditInbox() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [action, setAction] = useState('ALL');
+  const [source, setSource] = useState<'ALL' | 'AUDIT' | 'EVENT'>('ALL');
+  const [resourceKind, setResourceKind] = useState('ALL');
+  const [filters, setFilters] = useState({ query: '', action: 'ALL', source: 'ALL' as 'ALL' | 'AUDIT' | 'EVENT', resourceKind: 'ALL' });
+  const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   async function load() {
     setLoading(true);
-    try { setError(''); setAudit(await operationsData.configurationAuditInbox()); } catch (cause) { setError((cause as { message?: string }).message || 'Configuration audit history could not be loaded.'); } finally { setLoading(false); }
+    try {
+      setError('');
+      setAudit(await operationsData.configurationAuditInbox({ q: filters.query, action: filters.action, source: filters.source, resourceKind: filters.resourceKind, ...cursor }));
+    } catch (cause) { setError((cause as { message?: string }).message || 'Configuration audit history could not be loaded.'); } finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, []);
-  const rows = audit ? [...audit.audit.map((entry) => ({ id: `audit-${entry.id}`, timestamp: entry.occurred_at, label: entry.action, detail: `${entry.resource_kind} · ${entry.resource_id}`, kind: 'Audit' })), ...audit.events.map((entry) => ({ id: `event-${entry.id}`, timestamp: entry.occurred_at, label: entry.event_type, detail: `${entry.aggregate_type} · ${entry.aggregate_id}`, kind: 'Event' }))].sort((left, right) => String(right.timestamp || '').localeCompare(String(left.timestamp || ''))) : [];
-  const filteredRows = rows.filter((row) => (!query.trim() || `${row.label} ${row.detail} ${row.kind}`.toLowerCase().includes(query.trim().toLowerCase())) && (action === 'ALL' || row.label.toLowerCase().includes(action.toLowerCase())));
-  return <section className="platform-reference-page configuration-audit-inbox"><div className="reference-breadcrumb"><span>Platform administration</span><span>›</span><strong>Audit log</strong></div><div className="reference-page-heading"><div><span className="reference-eyebrow">Platform administration / Governance</span><h1>Configuration audit log</h1><p>Immutable configuration, review, publication, restore and reference-data events.</p></div><div className="reference-heading-actions"><label className="reference-search"><input aria-label="Search audit log" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search audit log..." /></label><select aria-label="Audit status" value={action} onChange={(event) => setAction(event.target.value)}><option value="ALL">All actions</option><option value="DRAFT">Draft</option><option value="APPROVED">Approved</option><option value="PUBLISHED">Published</option><option value="RESTORED">Restored</option></select></div></div><div className="reference-table-card"><div className="reference-table-scroll">{error && <p className="error" role="alert">{error}</p>}{loading ? <p className="notice">Loading configuration audit history…</p> : !error && !filteredRows.length ? <p className="notice">No platform configuration events match the selected filters.</p> : <table className="reference-table"><caption className="sr-only">Configuration audit history</caption><thead><tr><th>Event</th><th>Action</th><th>Resource</th><th>Occurred (India time)</th></tr></thead><tbody>{filteredRows.map((row) => <tr key={row.id}><td><Status>{row.kind}</Status></td><td><strong>{row.label}</strong></td><td>{row.detail}</td><td>{row.timestamp ? formatIndiaDateTime(row.timestamp) : 'Time unavailable'}</td></tr>)}</tbody></table>}</div></div></section>;
+  useEffect(() => { void load(); }, [filters, cursor]);
+  const rows = audit?.data || [];
+  const resourceLabel = (value: string) => value.replaceAll('_', ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCursor({});
+    setFilters({ query: query.trim(), action, source, resourceKind });
+  }
+  function clearFilters() {
+    setQuery(''); setAction('ALL'); setSource('ALL'); setResourceKind('ALL'); setCursor({});
+    setFilters({ query: '', action: 'ALL', source: 'ALL', resourceKind: 'ALL' });
+  }
+  const resourceOptions = [
+    ['ALL', 'All resource types'], ['ServiceType', 'Service type'], ['ChecklistDefinition', 'Checklist template'],
+    ['SkillDefinition', 'Skill'], ['CertificationDefinition', 'Certification type'], ['WorkingCalendar', 'Working calendar'],
+    ['HolidayCalendar', 'Holiday calendar'], ['AssignmentPolicy', 'Assignment policy'], ['AssetCriticalityDefinition', 'Asset criticality'],
+    ['ServicePriority', 'Service priority'], ['SlaPolicy', 'SLA policy'], ['EmergencyRule', 'Emergency rule'],
+    ['ConfigurationReview', 'Configuration review'], ['ReferenceDataImport', 'Reference-data import'], ['BusinessOperationType', 'Business operation'],
+    ['BusinessOperationTypeDraft', 'Business operation draft']
+  ];
+  return <section className="platform-reference-page configuration-audit-inbox"><div className="reference-breadcrumb"><span>Platform administration</span><span>›</span><strong>Audit log</strong></div><div className="reference-page-heading"><div><span className="reference-eyebrow">Platform administration / Governance</span><h1>Configuration audit log</h1><p>Immutable configuration, review, publication, restore and reference-data events.</p></div></div><form className="reference-heading-actions configuration-audit-filters" onSubmit={applyFilters}><label className="reference-search"><input aria-label="Search audit log" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search event, action or resource…" /></label><label>Source<select aria-label="Filter audit log by source" value={source} onChange={(event) => setSource(event.target.value as typeof source)}><option value="ALL">Audit and events</option><option value="AUDIT">Audit records</option><option value="EVENT">Domain events</option></select></label><label>Action<select aria-label="Filter audit log by action" value={action} onChange={(event) => setAction(event.target.value)}><option value="ALL">All actions</option><option value="DRAFT">Draft changes</option><option value="APPROVED">Approvals</option><option value="PUBLISHED">Published</option><option value="RESTORED">Restored</option></select></label><label>Resource<select aria-label="Filter audit log by resource" value={resourceKind} onChange={(event) => setResourceKind(event.target.value)}>{resourceOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><Button type="submit">Apply filters</Button>{(query || action !== 'ALL' || source !== 'ALL' || resourceKind !== 'ALL') && <Button type="button" variant="quiet" onClick={clearFilters}>Clear</Button>}</form><div className="reference-table-card"><div className="reference-table-scroll">{error && <p className="error" role="alert">{error}</p>}{loading ? <p className="notice">Loading configuration audit history…</p> : !rows.length ? <p className="notice">No platform configuration events match the selected filters.</p> : <table className="reference-table"><caption className="sr-only">Configuration audit history</caption><thead><tr><th>Source</th><th>Action / event</th><th>Resource</th><th>Occurred (India time)</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><Status>{row.attributes.source === 'EVENT' ? 'Event' : 'Audit'}</Status></td><td><strong>{row.attributes.label}</strong></td><td><strong>{resourceLabel(row.attributes.resource_kind)}</strong><small>Configuration record</small></td><td>{row.attributes.occurred_at ? formatIndiaDateTime(row.attributes.occurred_at) : 'Time unavailable'}</td></tr>)}</tbody></table>}</div></div><div className="server-pagination" aria-label="Configuration audit pages"><span>Showing {rows.length} records · {PLATFORM_PAGE_SIZE} per page</span><div><Button type="button" variant="secondary" disabled={!audit?.page?.previous || loading} onClick={() => setCursor({ before: audit?.page?.previous || undefined })}>Previous</Button><Button type="button" disabled={!audit?.page?.next || loading} onClick={() => setCursor({ after: audit?.page?.next || undefined })}>Next</Button></div></div></section>;
 }
 
 export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = false, platformCapabilities = [] }: { providerId: string; t: T; initialKind?: string; platformOnly?: boolean; platformCapabilities?: string[] }) {
   void t;
+  const returnTo = new URLSearchParams(window.location.hash.split('?')[1] || '').get('return_to') || undefined;
   const availableTypes: readonly string[] = platformOnly ? PLATFORM_CONFIGURATION_TYPES : CONFIGURATION_TYPES;
   const readOnly = platformOnly && !platformCapabilities.includes('PLATFORM_CONFIGURATION_WRITE');
   const canReview = !platformOnly || platformCapabilities.includes('PLATFORM_CONFIGURATION_REVIEW');
   const canPublish = !platformOnly || platformCapabilities.includes('PLATFORM_CONFIGURATION_PUBLISH');
   const [kind, setKind] = useState<string>(availableTypes.includes(initialKind || '') ? initialKind! : availableTypes[0]);
   const [items, setItems] = useState<Collection<GenericAttributes> | null>(null);
+  const [configurationPage, setConfigurationPage] = useState<{ next?: string | null; previous?: string | null }>({});
+  const [configurationCursor, setConfigurationCursor] = useState<{ after?: string; before?: string }>({});
   const [selected, setSelected] = useState<Resource<GenericAttributes> | null>(null);
   const [lookups, setLookups] = useState<Record<string, Collection<GenericAttributes>>>({});
   const [lookupSearch, setLookupSearch] = useState<Record<string, string>>({});
@@ -226,16 +351,48 @@ export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = 
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const loadSequence = useRef(0);
+  // The shell keeps ConfigurationAdmin mounted while a child navigation item
+  // changes the hash. Sync the route-selected catalogue into local state so
+  // the page follows the clicked menu item instead of remaining on the first
+  // catalogue loaded after login.
+  useEffect(() => {
+    const nextKind = availableTypes.includes(initialKind || '') ? initialKind! : availableTypes[0];
+    if (nextKind === kind) return;
+    setKind(nextKind);
+    setConfigurationCursor({});
+    setSelected(null);
+    setReviewId('');
+    setReviews([]);
+    setAudit(null);
+    setImpact(null);
+    setValues({});
+    setMessage('');
+    setError('');
+  }, [initialKind, platformOnly]);
   const fields = (FIELDS[kind] || common()).map((field) => {
     const options = FIELD_OPTION_OVERRIDES[kind]?.[field.key];
     return options ? { ...field, kind: 'select' as const, options } : field;
-  });
+  }).filter((field) => field.key !== 'code')
+    .filter((field) => !platformOnly || !field.lookup || availableTypes.includes(field.lookup));
+  const providerGeneratedCode = !platformOnly && PROVIDER_GENERATED_CODE_TYPES.has(kind);
   const lookupTypes = useMemo(() => [...new Set(fields.flatMap((field) => field.lookup ? [field.lookup] : []))], [fields]);
-  async function load() {
-    setError(''); setSelected(null); setReviewId(''); setReviews([]); setAudit(null); setImpact(null);
-    try { setItems(await operationsData.configuration(providerId, kind)); const loaded = await Promise.all(lookupTypes.map(async (type) => [type, await operationsData.configuration(providerId, type, 'ACTIVE')] as const)); setLookups(Object.fromEntries(loaded)); } catch (cause) { setError((cause as { message?: string }).message || 'Configuration records could not be loaded.'); }
+  async function load(preserveSelection = false) {
+    const sequence = ++loadSequence.current;
+    setError('');
+    if (!preserveSelection) { setSelected(null); setReviewId(''); setReviews([]); setAudit(null); setImpact(null); }
+    try {
+      const result = await operationsData.configuration(providerId, kind, undefined, configurationCursor);
+      const loaded = await Promise.all(lookupTypes.map(async (type) => [type, await operationsData.configuration(providerId, type, 'ACTIVE')] as const));
+      if (sequence !== loadSequence.current) return;
+      setItems(result);
+      setConfigurationPage(result.page || {});
+      setLookups(Object.fromEntries(loaded));
+    } catch (cause) {
+      if (sequence === loadSequence.current) setError((cause as { message?: string }).message || 'Configuration records could not be loaded.');
+    }
   }
-  useEffect(() => { void load(); }, [providerId, kind]);
+  useEffect(() => { void load(); }, [providerId, kind, configurationCursor.after, configurationCursor.before]);
   async function loadReviews(recordId: string) {
     try {
       const result = await operationsData.configurationReviews(providerId, kind, recordId);
@@ -244,7 +401,8 @@ export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = 
       setReviewId(current?.id || '');
     } catch (cause) {
       setReviews([]);
-      setError((cause as { message?: string }).message || 'Configuration reviews could not be loaded.');
+      const message = (cause as { message?: string }).message || '';
+      if (!message.toLowerCase().includes('not found')) setError(message || 'Configuration reviews could not be loaded.');
     }
   }
   async function loadAudit(recordId: string) {
@@ -254,7 +412,7 @@ export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = 
     try { setImpact((await operationsData.configurationImpact(providerId, kind, recordId)).data.attributes); } catch { setImpact(null); }
   }
   function select(record: Resource<GenericAttributes>) {
-    setSelected(record); const definition = (record.attributes.definition || {}) as Record<string, unknown>; setValues(Object.fromEntries(fields.map((field) => [field.key, formatValue(field, definition[field.key])]))); setMessage(''); setError(''); void loadReviews(record.id); void loadAudit(record.id); void loadImpact(record.id);
+    setSelected(record); const definition = (record.attributes.definition || {}) as Record<string, unknown>; setValues(Object.fromEntries(fields.map((field) => [field.key, formatValue(field, configurationFieldValue(kind, field, definition))]))); setMessage(''); setError(''); void loadReviews(record.id); void loadAudit(record.id); void loadImpact(record.id);
   }
   function setValue(key: string, value: string) { setValues((current) => ({ ...current, [key]: value })); }
   function buildDefinition() {
@@ -288,10 +446,375 @@ export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = 
     });
     return definition;
   }
-  async function save(event: FormEvent) { event.preventDefault(); setError(''); setMessage(''); try { const definition = buildDefinition(); const result = selected ? await operationsData.updateConfiguration(providerId, kind, selected.id, { definition, expected_revision: selected.attributes.revision }, crypto.randomUUID()) : await operationsData.createConfiguration(providerId, kind, { name: String(values.name || values.code || 'Draft configuration'), definition }, crypto.randomUUID()); setSelected(result); setValues(Object.fromEntries(fields.map((field) => [field.key, formatValue(field, (result.attributes.definition as Record<string, unknown> | undefined)?.[field.key])] ))); setMessage('Draft saved by the server'); await load(); } catch (cause) { setError((cause as { message?: string }).message || 'Draft could not be saved. Review the fields and retry.'); } }
-  async function command(action: 'submit' | 'approve' | 'revoke' | 'activate' | 'archive' | 'restore') { if (!selected) return; setError(''); setMessage(''); try { let result: Resource<GenericAttributes> | undefined; if (action === 'submit') { result = await operationsData.submitConfigurationReview(providerId, kind, selected.id, { expected_revision: selected.attributes.revision, reason: reason || undefined }, crypto.randomUUID()); setReviewId(result.id); } else if (action === 'approve') result = await operationsData.approveConfigurationReview(providerId, kind, selected.id, reviewId, crypto.randomUUID()); else if (action === 'revoke') result = await operationsData.revokeConfigurationReview(providerId, kind, selected.id, reviewId, { reason: reason || 'Revoked from operations workspace' }, crypto.randomUUID()); else if (action === 'activate') result = await operationsData.activateConfiguration(providerId, kind, selected.id, { expected_revision: selected.attributes.revision, review_reference: reviewId }, crypto.randomUUID()); else if (action === 'restore') result = await operationsData.restoreConfiguration(providerId, kind, selected.id, { reason: reason || 'Restored from platform catalogue' }, crypto.randomUUID()); else result = await operationsData.archiveConfiguration(providerId, kind, selected.id, { expected_revision: selected.attributes.revision }, crypto.randomUUID()); setMessage(`Configuration ${action} request accepted by the server`); await load(); if (action !== 'submit' && result?.attributes?.kind) select(result); } catch (cause) { setError((cause as { message?: string }).message || `Configuration ${action} was rejected.`); } }
+  async function save(event: FormEvent): Promise<boolean> { event.preventDefault(); setError(''); setMessage(''); try { const definition = buildDefinition(); const result = selected ? await operationsData.updateConfiguration(providerId, kind, selected.id, { definition, expected_revision: selected.attributes.revision }, crypto.randomUUID()) : await operationsData.createConfiguration(providerId, kind, { name: String(values.name || values.code || 'Draft configuration'), definition }, crypto.randomUUID()); setSelected(result); setValues(Object.fromEntries(fields.map((field) => [field.key, formatValue(field, configurationFieldValue(kind, field, (result.attributes.definition || {}) as Record<string, unknown>))]))); setMessage('Configuration draft saved.'); await load(true); return true; } catch (cause) { setError((cause as { message?: string }).message || 'Draft could not be saved. Review the fields and retry.'); return false; } }
+  async function command(action: 'submit' | 'approve' | 'revoke' | 'activate' | 'archive' | 'restore') { if (!selected) return; setError(''); setMessage(''); try { let result: Resource<GenericAttributes> | undefined; if (action === 'submit') { result = await operationsData.submitConfigurationReview(providerId, kind, selected.id, { expected_revision: selected.attributes.revision, reason: reason || undefined }, crypto.randomUUID()); setReviewId(result.id); } else if (action === 'approve') result = await operationsData.approveConfigurationReview(providerId, kind, selected.id, reviewId, crypto.randomUUID()); else if (action === 'revoke') result = await operationsData.revokeConfigurationReview(providerId, kind, selected.id, reviewId, { reason: reason || 'Revoked from operations workspace' }, crypto.randomUUID()); else if (action === 'activate') result = await operationsData.activateConfiguration(providerId, kind, selected.id, { expected_revision: selected.attributes.revision, review_reference: reviewId }, crypto.randomUUID()); else if (action === 'restore') result = await operationsData.restoreConfiguration(providerId, kind, selected.id, { reason: reason || 'Restored from platform catalogue' }, crypto.randomUUID()); else result = await operationsData.archiveConfiguration(providerId, kind, selected.id, { expected_revision: selected.attributes.revision }, crypto.randomUUID()); setMessage(`Configuration ${action.replaceAll('_', ' ').toLowerCase()} completed.`); await load(true); if (action === 'submit') await loadReviews(selected.id); else { const refreshed = await operationsData.configurationDetail(providerId, kind, selected.id); select(refreshed); } } catch (cause) { setError((cause as { message?: string }).message || `Configuration ${action} was rejected.`); } }
   const maintenancePolicy = kind === 'maintenance-policies';
   const selectedStatus = String(selected?.attributes.status || '').toLowerCase();
   const canDisable = !readOnly && selectedStatus !== 'archived' && impact?.can_archive === true;
-  return <section className={`content configuration-admin${maintenancePolicy ? ' maintenance-policy-configuration' : ''}`}><div className="section-heading configuration-heading"><div><h2>{maintenancePolicy ? 'Preventive maintenance policies' : platformOnly ? 'Platform business catalogue' : 'Typed configuration administration'}</h2><p>{maintenancePolicy ? 'Versioned maintenance schedules. Only fields supported by the configuration API are editable here.' : platformOnly ? 'Platform-owned catalogue only. Providers can select published entries where supported; canonical rows cannot be edited from provider workspaces.' : 'Explicit adapters for the accepted registry; no executable or arbitrary JSON input.'}</p></div><label>Type<select aria-label="Configuration type" value={kind} onChange={(event) => setKind(event.target.value)}>{availableTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label></div>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<div className="configuration-layout"><div className="record-grid">{items?.data.map((item) => <button className="record-card" key={item.id} onClick={() => select(item)}><Status>{String(item.attributes.status)}</Status><strong>{String(item.attributes.name || item.attributes.kind || item.id)}</strong><small>Version {String(item.attributes.version)} · revision {String(item.attributes.revision)}</small></button>)}{items && items.data.length === 0 && <p className="notice">No records for this type. Create a draft with the typed form.</p>}</div><form className={`detail-card typed-form${maintenancePolicy ? ' maintenance-policy-editor' : ''}`} onSubmit={save}><h3>{selected ? 'Edit draft' : maintenancePolicy ? 'Create maintenance policy draft' : 'Create draft'}</h3>{maintenancePolicy && <p className="notice">Policy rules schedule maintenance due records; they do not imply job acceptance or customer entitlement.</p>}{fields.map((field) => field.kind === 'select' && field.lookup ? <SearchableSelect key={field.key} label={field.label} searchLabel={`Search ${field.label.toLowerCase()}`} search={lookupSearch[field.lookup] || ''} onSearch={(value) => setLookupSearch((current) => ({ ...current, [field.lookup!]: value }))} value={values[field.key] || ''} onChange={(value) => setValue(field.key, value)} options={(lookups[field.lookup]?.data || []).map((record): LookupOption => ({ id: record.id, label: String(record.attributes.name || record.attributes.code || record.id), detail: `v${String(record.attributes.version || '')}` }))} placeholder="Select an authorized record" required={field.required} disabled={readOnly} /> : <label key={field.key}>{field.label}{field.kind === 'select' ? <select required={field.required} disabled={readOnly} value={values[field.key] || ''} onChange={(event) => setValue(field.key, event.target.value)}><option value="">{field.options ? `Select ${field.label.toLowerCase()}` : 'Select an authorized record'}</option>{field.options?.map((option) => <option value={option} key={option}>{option}</option>)}</select> : field.kind === 'boolean' ? <span className="configuration-radio-group"><label><input type="radio" name={`${kind}-${field.key}`} required={field.required} disabled={readOnly} checked={values[field.key] === 'true'} onChange={() => setValue(field.key, 'true')} /> Yes</label><label><input type="radio" name={`${kind}-${field.key}`} required={field.required} disabled={readOnly} checked={values[field.key] === 'false'} onChange={() => setValue(field.key, 'false')} /> No</label></span> : field.kind === 'lines' ? <RepeatableRows field={field} value={values[field.key] || ''} onChange={(value) => setValue(field.key, value)} disabled={readOnly} /> : <input required={field.required} disabled={readOnly} type={field.kind === 'number' ? 'number' : field.kind === 'date' ? 'datetime-local' : 'text'} value={values[field.key] || ''} onChange={(event) => setValue(field.key, event.target.value)} />}</label>)}{!readOnly && <Button type="submit">{selected ? 'Save draft' : 'Create draft'}</Button>}{readOnly && <p className="notice">Read-only catalogue access. Draft and lifecycle changes require platform capability.</p>}{selected && <><div className="configuration-impact" aria-label="Configuration impact"><h4>Impact preview</h4>{impact ? <><p>{impact.total_dependents} dependent configuration(s), {impact.provider_adoptions} provider-scoped match(es).</p>{impact.warnings.length ? <ul>{impact.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : <p className="notice">No active dependency blocks archival.</p>}</> : <p className="notice">Impact preview unavailable.</p>}</div><div className="configuration-commands">{reviews.length ? <label>Review<select aria-label="Configuration review" value={reviewId} onChange={(event) => setReviewId(event.target.value)}>{reviews.map((review) => <option value={review.id} key={review.id}>{String(review.attributes.status)} · {review.id.slice(0, 8)} · revision {String(review.attributes.candidate_revision || '')}</option>)}</select></label> : <p className="notice">No review exists for this revision. Submit the draft for review first.</p>}<label>Review reason<input disabled={!canReview} aria-label="Review reason" placeholder="Optional reason or decision note" value={reason} onChange={(event) => setReason(event.target.value)} /> </label>{canReview && <Button type="button" onClick={() => void command('submit')}>Submit review</Button>}{canReview && <Button type="button" disabled={!reviewId} onClick={() => void command('approve')}>Approve review</Button>}{canReview && <Button type="button" disabled={!reviewId} onClick={() => void command('revoke')}>Revoke review</Button>}{canPublish && <Button type="button" disabled={!reviewId} onClick={() => void command('activate')}>Activate approved revision</Button>}{!readOnly && <Button type="button" disabled={!canDisable} onClick={() => void command('archive')}>Archive</Button>}</div>{audit && <section className="configuration-audit" aria-label="Configuration audit history"><h4>Change history</h4>{audit.audit.length ? audit.audit.slice(0, 20).map((entry) => <p key={entry.id}><Status>{entry.action}</Status> · {entry.occurred_at ? formatIndiaDateTime(entry.occurred_at) : 'Time unavailable'}</p>) : <p className="notice">No audit entries returned.</p>}</section>}</>}</form></div></section>;
+  function newDraft() {
+    setSelected(null); setReviewId(''); setReason(''); setValues(Object.fromEntries(fields.map((field) => [field.key, '']))); setMessage(''); setError('');
+  }
+  function newRevision() {
+    if (!selected) return;
+    setSelected(null);
+    setReviewId('');
+    setReviews([]);
+    setAudit(null);
+    setImpact(null);
+    setReason('');
+    setMessage('');
+    setError('');
+  }
+  if (kind === 'notification-policies') return <><ConfigurationReturnBanner returnTo={returnTo} /><NotificationPolicyWorkspace
+    availableTypes={availableTypes}
+    kind={kind}
+    onKindChange={(nextKind) => { setKind(nextKind); setConfigurationCursor({}); }}
+    platformOnly={platformOnly}
+    readOnly={readOnly}
+    canReview={canReview}
+    canPublish={canPublish}
+    canDisable={canDisable}
+    items={items}
+    selected={selected}
+    values={values}
+    setValue={setValue}
+    select={select}
+    newDraft={newDraft}
+    save={save}
+    reviews={reviews}
+    reviewId={reviewId}
+    setReviewId={setReviewId}
+    reason={reason}
+    setReason={setReason}
+    command={command}
+    impact={impact}
+    audit={audit}
+    error={error}
+    message={message}
+  /></>;
+  return <><ConfigurationReturnBanner returnTo={returnTo} /><ConfigurationCatalogueWorkspace
+    key={kind}
+    kind={kind}
+    availableTypes={availableTypes}
+    platformOnly={platformOnly}
+    providerGeneratedCode={providerGeneratedCode}
+    maintenancePolicy={maintenancePolicy}
+    readOnly={readOnly}
+    canReview={canReview}
+    canPublish={canPublish}
+    canDisable={canDisable}
+    items={items}
+    selected={selected}
+    fields={fields}
+    values={values}
+    lookups={lookups}
+    lookupSearch={lookupSearch}
+    reviews={reviews}
+    reviewId={reviewId}
+    reason={reason}
+    impact={impact}
+    audit={audit}
+    error={error}
+    message={message}
+    configurationPage={configurationPage}
+    onKindChange={(nextKind) => { setKind(nextKind); setConfigurationCursor({}); }}
+    onLookupSearchChange={(fieldKey, value) => setLookupSearch((current) => ({ ...current, [fieldKey]: value }))}
+    onValueChange={setValue}
+    onSelect={select}
+    onNewDraft={newDraft}
+    onNewRevision={newRevision}
+    onSave={save}
+    onCommand={command}
+    onReviewChange={setReviewId}
+    onReasonChange={setReason}
+    onPageChange={setConfigurationCursor}
+  /></>;
+}
+
+type ConfigurationDialogMode = 'view' | 'edit' | 'new';
+
+function configurationDisplayLabel(value: unknown): string {
+  return String(value || 'Not set').replaceAll('_', ' ').replaceAll('-', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function configurationEffectiveDates(record: Resource<GenericAttributes>): string {
+  const definition = record.attributes.definition && typeof record.attributes.definition === 'object' ? record.attributes.definition as Record<string, unknown> : {};
+  const from = definition.effective_from ? String(definition.effective_from) : '';
+  const to = definition.effective_to ? String(definition.effective_to) : '';
+  if (!from && !to) return 'Effective date not set';
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : formatIndiaDateTime(date.toISOString());
+  };
+  return `${from ? formatDate(from) : 'Open'} → ${to ? formatDate(to) : 'Open'}`;
+}
+
+function ConfigurationStructuredValue({ value }: { value: string }) {
+  const text = value.trim();
+  if (!text) return <span className="configuration-view-empty">Not configured</span>;
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { parsed = undefined; }
+  if (Array.isArray(parsed)) {
+    return <div className="configuration-view-chips">{parsed.map((item, index) => <span className="configuration-view-chip" key={`${index}-${String(item)}`}>{typeof item === 'object' && item !== null ? Object.entries(item as Record<string, unknown>).map(([key, entry]) => `${configurationDisplayLabel(key)}: ${String(entry)}`).join(' · ') : configurationDisplayLabel(item)}</span>)}</div>;
+  }
+  if (parsed && typeof parsed === 'object') {
+    return <div className="configuration-view-chips">{Object.entries(parsed as Record<string, unknown>).map(([key, entry]) => <span className="configuration-view-chip" key={key}>{configurationDisplayLabel(key)}: {String(entry)}</span>)}</div>;
+  }
+  return <span>{text.split('\n').filter(Boolean).map(configurationDisplayLabel).join(' · ')}</span>;
+}
+
+function ConfigurationValueView({ field, value, lookups }: { field: Field; value: string; lookups: Record<string, Collection<GenericAttributes>> }) {
+  if (field.lookup) {
+    const record = lookups[field.lookup]?.data.find((item) => item.id === value);
+    return <span>{record ? String(record.attributes.name || record.attributes.code || record.id) : value || 'Not selected'}</span>;
+  }
+  if (field.kind === 'boolean') return <Status>{value === 'true' ? 'Enabled' : value === 'false' ? 'Disabled' : 'Not set'}</Status>;
+  if (field.kind === 'lines') return <ConfigurationStructuredValue value={value} />;
+  if (field.kind === 'select') return <span>{value ? configurationDisplayLabel(value) : 'Not selected'}</span>;
+  if (field.kind === 'date' && value) {
+    const date = new Date(value);
+    return <span>{Number.isNaN(date.getTime()) ? value : formatIndiaDateTime(date.toISOString())}</span>;
+  }
+  return <span>{value || 'Not set'}</span>;
+}
+
+type ConfigurationCatalogueWorkspaceProps = {
+  kind: string;
+  availableTypes: readonly string[];
+  platformOnly: boolean;
+  providerGeneratedCode: boolean;
+  maintenancePolicy: boolean;
+  readOnly: boolean;
+  canReview: boolean;
+  canPublish: boolean;
+  canDisable: boolean;
+  items: Collection<GenericAttributes> | null;
+  selected: Resource<GenericAttributes> | null;
+  fields: Field[];
+  values: Record<string, string>;
+  lookups: Record<string, Collection<GenericAttributes>>;
+  lookupSearch: Record<string, string>;
+  reviews: Resource<GenericAttributes>[];
+  reviewId: string;
+  reason: string;
+  impact: ConfigurationImpact['data']['attributes'] | null;
+  audit: ConfigurationAudit | null;
+  error: string;
+  message: string;
+  configurationPage: { next?: string | null; previous?: string | null };
+  onKindChange: (value: string) => void;
+  onLookupSearchChange: (key: string, value: string) => void;
+  onValueChange: (key: string, value: string) => void;
+  onSelect: (record: Resource<GenericAttributes>) => void;
+  onNewDraft: () => void;
+  onNewRevision: () => void;
+  onSave: (event: FormEvent) => Promise<boolean>;
+  onCommand: (action: 'submit' | 'approve' | 'revoke' | 'activate' | 'archive' | 'restore') => Promise<void>;
+  onReviewChange: (value: string) => void;
+  onReasonChange: (value: string) => void;
+  onPageChange: (cursor: { after?: string; before?: string }) => void;
+};
+
+function ConfigurationGovernancePanel({ selected, readOnly, canReview, canPublish, canDisable, reviews, reviewId, reason, impact, audit, onReviewChange, onReasonChange, onCommand }: Pick<ConfigurationCatalogueWorkspaceProps, 'selected' | 'readOnly' | 'canReview' | 'canPublish' | 'canDisable' | 'reviews' | 'reviewId' | 'reason' | 'impact' | 'audit' | 'onReviewChange' | 'onReasonChange' | 'onCommand'>) {
+  if (!selected) return null;
+  const configurationStatus = String(selected.attributes.status || 'DRAFT').toUpperCase();
+  const reviewStatus = String(reviews.find((review) => review.id === reviewId)?.attributes.status || '').toUpperCase();
+  const canSubmit = canReview && configurationStatus === 'DRAFT' && !['PENDING', 'APPROVED'].includes(reviewStatus);
+  const canApprove = canReview && reviewStatus === 'PENDING';
+  const canReject = canReview && ['PENDING', 'APPROVED'].includes(reviewStatus);
+  const canEnable = canPublish && configurationStatus === 'DRAFT' && reviewStatus === 'APPROVED';
+  return <section className="configuration-governance-panel" aria-label="Configuration lifecycle controls">
+    <div className="configuration-dialog-section-heading"><div><span className="section-kicker">Governance</span><h3>Review, enable &amp; disable</h3></div><Status>{String(selected.attributes.status || 'DRAFT')}</Status></div>
+    <p className="configuration-dialog-muted">Changes remain versioned. Submit a draft for review, enable an approved revision, or disable it after the dependency check.</p>
+    <div className="configuration-impact" aria-label="Configuration impact"><h4>Impact preview</h4>{impact ? <><p>{impact.total_dependents} dependent configuration(s) · {impact.provider_adoptions} provider-scoped match(es).</p>{impact.warnings.length ? <ul>{impact.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul> : <p className="notice">No active dependency blocks were returned.</p>}</> : <p className="notice">Impact preview is loading or unavailable.</p>}</div>
+    <div className="configuration-governance-grid">
+      {reviews.length ? <label>Review revision<select aria-label="Configuration review" value={reviewId} onChange={(event) => onReviewChange(event.target.value)}>{reviews.map((review) => <option value={review.id} key={review.id}>{configurationDisplayLabel(review.attributes.status)} · Revision {String(review.attributes.candidate_revision || '—')}</option>)}</select></label> : <p className="notice">No review exists for this revision. Submit the draft for review first.</p>}
+      <label>Decision note<input disabled={!canReview} aria-label="Review reason" placeholder="Optional reason or decision note" value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
+    </div>
+    <div className="configuration-governance-actions">
+      {canSubmit && <Button type="button" variant="secondary" onClick={() => void onCommand('submit')}>Submit for review</Button>}
+      {canApprove && <Button type="button" onClick={() => void onCommand('approve')}>Approve revision</Button>}
+      {canReject && <Button type="button" variant="danger" onClick={() => void onCommand('revoke')}>Reject review</Button>}
+      {canEnable && <Button type="button" onClick={() => void onCommand('activate')}>Enable approved revision</Button>}
+      {!readOnly && configurationStatus !== 'ARCHIVED' && <Button type="button" variant="danger" disabled={!canDisable} title={canDisable ? 'Disable this configuration' : 'Resolve active dependencies before disabling'} onClick={() => void onCommand('archive')}>Disable</Button>}
+    </div>
+    <details className="configuration-audit"><summary>View change history</summary>{audit?.audit.length ? <div>{audit.audit.slice(0, 20).map((entry) => <p key={entry.id}><Status>{entry.action}</Status><span>{entry.occurred_at ? formatIndiaDateTime(entry.occurred_at) : 'Time unavailable'}</span></p>)}</div> : <p className="notice">No audit entries returned.</p>}</details>
+  </section>;
+}
+
+function ConfigurationCatalogueWorkspace({ kind, availableTypes, platformOnly, providerGeneratedCode, maintenancePolicy, readOnly, canReview, canPublish, canDisable, items, selected, fields, values, lookups, lookupSearch, reviews, reviewId, reason, impact, audit, error, message, configurationPage, onKindChange, onLookupSearchChange, onValueChange, onSelect, onNewDraft, onNewRevision, onSave, onCommand, onReviewChange, onReasonChange, onPageChange }: ConfigurationCatalogueWorkspaceProps) {
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [dialogMode, setDialogMode] = useState<ConfigurationDialogMode | null>(null);
+  const records = items?.data || [];
+  const filteredRecords = records.filter((record) => {
+    const definition = record.attributes.definition && typeof record.attributes.definition === 'object' ? record.attributes.definition as Record<string, unknown> : {};
+    const searchText = [record.attributes.name, record.attributes.code, definition.category, definition.description].map((value) => String(value || '')).join(' ').toLowerCase();
+    return (!query.trim() || searchText.includes(query.trim().toLowerCase())) && (statusFilter === 'ALL' || String(record.attributes.status || '').toUpperCase() === statusFilter);
+  });
+  const openRecord = (mode: ConfigurationDialogMode, record: Resource<GenericAttributes>) => { onSelect(record); setDialogMode(mode); };
+  const openNew = () => { onNewDraft(); setDialogMode('new'); };
+  const openNewRevision = () => { onNewRevision(); setDialogMode('new'); };
+  const submit = async (event: FormEvent) => { if (await onSave(event)) setDialogMode('edit'); };
+  const selectedDefinition = selected?.attributes.definition && typeof selected.attributes.definition === 'object' ? selected.attributes.definition as Record<string, unknown> : {};
+  const selectedName = String(selected?.attributes.name || selectedDefinition.name || selectedDefinition.code || configurationTypeLabel(kind));
+  const selectedCode = String(selectedDefinition.code || 'Generated by server');
+  const selectedLifecycleStatus = String(selected?.attributes.status || 'DRAFT').toUpperCase();
+  const editingAllowed = !readOnly && (!selected || selectedLifecycleStatus === 'DRAFT');
+  const description = maintenancePolicy ? 'Versioned maintenance schedules used to create preventive maintenance due work.' : platformOnly ? 'Manage global catalogue definitions. Providers can read and adopt published entries but cannot edit canonical platform rows.' : 'Use approved master data to keep provider operations consistent and auditable.';
+  const renderEditorField = (field: Field) => {
+    if (field.kind === 'select' && field.lookup) return <SearchableSelect key={field.key} label={field.label} searchLabel={`Search ${field.label.toLowerCase()}`} search={lookupSearch[field.lookup] || ''} onSearch={(value) => onLookupSearchChange(field.lookup!, value)} value={values[field.key] || ''} onChange={(value) => onValueChange(field.key, value)} options={(lookups[field.lookup]?.data || []).map((record): LookupOption => ({ id: record.id, label: String(record.attributes.name || record.attributes.code || record.id), detail: `v${String(record.attributes.version || '')}` }))} placeholder="Search and select an authorized record" required={field.required} disabled={!editingAllowed} />;
+    if (field.kind === 'boolean') return <fieldset className="configuration-choice-field" key={field.key}><legend>{field.label}</legend><div className="configuration-radio-group"><label><input type="radio" name={`${kind}-${field.key}`} required={field.required} disabled={!editingAllowed} checked={values[field.key] === 'true'} onChange={() => onValueChange(field.key, 'true')} /> Enabled / Yes</label><label><input type="radio" name={`${kind}-${field.key}`} required={field.required} disabled={!editingAllowed} checked={values[field.key] === 'false'} onChange={() => onValueChange(field.key, 'false')} /> Disabled / No</label></div></fieldset>;
+    return <label key={field.key}><span>{field.label}</span>{field.kind === 'select' ? <select required={field.required} disabled={!editingAllowed} value={values[field.key] || ''} onChange={(event) => onValueChange(field.key, event.target.value)}><option value="">{field.options ? `Select ${field.label.toLowerCase()}` : 'Select an authorized record'}</option>{field.options?.map((option) => <option value={option} key={option}>{configurationDisplayLabel(option)}</option>)}</select> : field.kind === 'lines' ? <RepeatableRows field={field} value={values[field.key] || ''} onChange={(value) => onValueChange(field.key, value)} disabled={!editingAllowed} /> : <input required={field.required} disabled={!editingAllowed} type={field.kind === 'number' ? 'number' : field.kind === 'date' ? 'datetime-local' : 'text'} value={values[field.key] || ''} onInput={(event) => onValueChange(field.key, event.currentTarget.value)} onChange={(event) => onValueChange(field.key, event.target.value)} />}</label>;
+  };
+  return <section className={`content configuration-admin configuration-admin-modern${maintenancePolicy ? ' maintenance-policy-configuration' : ''}`}>
+    <header className="configuration-catalogue-hero"><div><span className="page-eyebrow">{platformOnly ? 'Platform administration' : 'Provider configuration · Master data'}</span><h1>{maintenancePolicy ? 'Preventive maintenance policies' : platformOnly ? 'Business configuration' : configurationTypeLabel(kind)}</h1><p>{platformOnly ? description : configurationTypeDescription(kind)}</p></div>{platformOnly && <div className="configuration-catalogue-actions"><label className="configuration-type-selector"><span>Configuration area</span><select aria-label="Configuration type" value={kind} onChange={(event) => { setDialogMode(null); onKindChange(event.target.value); }}>{CONFIGURATION_TYPE_GROUPS.map((group) => <optgroup label={group.label} key={group.label}>{group.options.filter((option) => availableTypes.includes(option.value)).map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</optgroup>)}</select><small>{configurationTypeDescription(kind)}</small></label></div>}</header>
+    {error && <p className="error configuration-feedback" role="alert">{error}</p>}{message && <p className="success configuration-feedback" role="status">{message}</p>}
+    <div className="configuration-catalogue-toolbar"><label className="configuration-catalogue-search"><span className="sr-only">Search {configurationTypeLabel(kind)}</span><input aria-label={`Search ${configurationTypeLabel(kind)}`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${configurationTypeLabel(kind).toLowerCase()}…`} /></label><label><span className="sr-only">Filter by status</span><select aria-label="Filter configuration status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option><option value="ACTIVE">Enabled</option><option value="DRAFT">Draft</option><option value="ARCHIVED">Disabled</option></select></label><span className="configuration-catalogue-result-count">{filteredRecords.length} {filteredRecords.length === 1 ? 'record' : 'records'}</span></div>
+    <section className="configuration-catalogue-list-card" aria-labelledby="configuration-catalogue-list-title"><div className="configuration-catalogue-card-heading"><div><span className="section-kicker">Authoritative catalogue</span><h3 id="configuration-catalogue-list-title">{configurationTypeLabel(kind)}</h3></div><div className="configuration-catalogue-card-actions"><span className="configuration-catalogue-card-hint">{platformOnly ? 'Publish governed platform defaults for provider workspaces.' : 'Published platform defaults already apply. Add a provider override only when your operating policy needs a change.'}</span>{!readOnly && <Button type="button" variant={platformOnly ? 'primary' : 'secondary'} onClick={openNew}>{platformOnly ? '＋ New draft' : '＋ Add provider override'}</Button>}</div></div><div className="configuration-catalogue-table" role="table" aria-label={`${configurationTypeLabel(kind)} records`}><div className="configuration-catalogue-table-head" role="row"><span>Configuration</span><span>Status</span><span>Revision</span><span>Effective window</span><span>Actions</span></div>{!items && <p className="notice">Loading {configurationTypeLabel(kind).toLowerCase()}…</p>}{items && !filteredRecords.length && <div className="configuration-catalogue-empty"><strong>No records match these filters</strong><p>{platformOnly ? 'No published or draft platform records match these filters.' : 'No provider-specific values match these filters. Published platform defaults, when available, are already used by this provider.'}</p>{!readOnly && <Button type="button" variant="secondary" onClick={openNew}>{platformOnly ? 'Create draft' : 'Add provider override'}</Button>}</div>}{filteredRecords.map((record) => <div className="configuration-catalogue-row" role="row" key={record.id}><div className="configuration-catalogue-primary"><strong>{String(record.attributes.name || record.attributes.code || 'Unnamed configuration')}</strong><span className={`configuration-scope-chip is-${String(record.attributes.scope || 'provider')}`}>{record.attributes.scope === 'platform' ? 'Platform default' : 'Provider setting'}</span><small>{record.attributes.code && record.attributes.code !== record.attributes.name ? String(record.attributes.code) : 'Master data record'}</small></div><Status>{String(record.attributes.status || 'DRAFT')}</Status><span className="configuration-catalogue-revision">Version {String(record.attributes.version || '—')} · Rev {String(record.attributes.revision || '—')}</span><span className="configuration-catalogue-effective">{configurationEffectiveDates(record)}</span><div className="configuration-catalogue-row-actions"><Button type="button" variant="quiet" onClick={() => openRecord('view', record)}>View</Button>{!readOnly && record.attributes.scope !== 'platform' && String(record.attributes.status || '').toUpperCase() === 'DRAFT' && <Button type="button" variant="secondary" onClick={() => openRecord('edit', record)}>Edit</Button>}</div></div>)}</div></section>
+    {items && <div className="server-pagination configuration-catalogue-pagination" aria-label="Configuration records pages"><span>Showing {filteredRecords.length} records · {PLATFORM_PAGE_SIZE} per page</span><div><Button type="button" variant="secondary" disabled={!configurationPage.previous} onClick={() => onPageChange({ before: configurationPage.previous || undefined })}>Previous</Button><Button type="button" disabled={!configurationPage.next} onClick={() => onPageChange({ after: configurationPage.next || undefined })}>Next</Button></div></div>}
+    {dialogMode && <OperationsDialog title={dialogMode === 'view' ? `View ${configurationTypeLabel(kind)}` : dialogMode === 'edit' ? `Edit ${configurationTypeLabel(kind)}` : `New ${configurationTypeLabel(kind)} draft`} onClose={() => setDialogMode(null)} className="configuration-catalogue-dialog"><section className="configuration-dialog-body"><div className="configuration-dialog-intro"><div><span className="section-kicker">{dialogMode === 'view' ? 'Read-only view' : dialogMode === 'edit' ? 'Versioned editor' : 'New draft'}</span><h3>{selectedName}</h3>{selected && <small className="configuration-generated-code">System identifier: <code>{selectedCode}</code></small>}<p>{dialogMode === 'view' ? 'Review the current values, lifecycle state and audit history.' : editingAllowed ? 'Use controlled fields and related master records. Save a draft before review or publication.' : 'This configuration is no longer a draft. Review its lifecycle state and audit history below.'}</p></div>{selected && <Status>{String(selected.attributes.status || 'DRAFT')}</Status>}</div>{providerGeneratedCode && dialogMode !== 'view' && <p className="configuration-generated-code-note">The system identifier is generated from the name, for example <code>Test Elevator</code> becomes <code>TEST_ELEVATOR</code>. It remains stable when the name is edited.</p>}{dialogMode === 'view' ? <><div className="configuration-view-grid">{fields.map((field) => <div className="configuration-view-field" key={field.key}><dt>{field.label}</dt><dd><ConfigurationValueView field={field} value={values[field.key] || ''} lookups={lookups} /></dd></div>)}</div>{selected && selectedLifecycleStatus !== 'DRAFT' && <p className="notice">This revision is immutable. Create a new revision to update it; the current record remains available for audit and existing references.</p>}{selected && <ConfigurationGovernancePanel selected={selected} readOnly={readOnly} canReview={canReview} canPublish={canPublish} canDisable={canDisable} reviews={reviews} reviewId={reviewId} reason={reason} impact={impact} audit={audit} onReviewChange={onReviewChange} onReasonChange={onReasonChange} onCommand={onCommand} />}<div className="configuration-dialog-actions"><Button type="button" variant="quiet" onClick={() => setDialogMode(null)}>Close</Button>{selected && !readOnly && selectedLifecycleStatus === 'DRAFT' && <Button type="button" onClick={() => setDialogMode('edit')}>Edit draft</Button>}{selected && !readOnly && selectedLifecycleStatus !== 'DRAFT' && <Button type="button" onClick={openNewRevision}>{selected.attributes.scope === 'platform' ? 'Create provider override' : 'Create new revision'}</Button>}</div></> : <form className="configuration-editor-form" onSubmit={submit}><div className="configuration-editor-grid">{fields.map(renderEditorField)}</div>{maintenancePolicy && <p className="notice">Policy rules schedule maintenance due records; they do not imply job acceptance or customer entitlement.</p>}{readOnly && <p className="notice">Read-only catalogue access. Draft and lifecycle changes require platform capability.</p>}{selected && !editingAllowed && <p className="notice">Only draft configurations can be edited. This record is read-only after lifecycle activation or archival.</p>}<div className="configuration-dialog-actions"><Button type="button" variant="quiet" onClick={() => setDialogMode(null)}>Cancel</Button>{editingAllowed && <Button type="submit">{selected ? 'Save draft' : 'Create draft'}</Button>}</div>{selected && <ConfigurationGovernancePanel selected={selected} readOnly={readOnly} canReview={canReview} canPublish={canPublish} canDisable={canDisable} reviews={reviews} reviewId={reviewId} reason={reason} impact={impact} audit={audit} onReviewChange={onReviewChange} onReasonChange={onReasonChange} onCommand={onCommand} />}</form>}</section></OperationsDialog>}
+  </section>;
+}
+
+type NotificationPolicyCommand = (action: 'submit' | 'approve' | 'revoke' | 'activate' | 'archive' | 'restore') => Promise<void>;
+
+type NotificationPolicyWorkspaceProps = {
+  availableTypes: readonly string[];
+  kind: string;
+  onKindChange: (kind: string) => void;
+  platformOnly: boolean;
+  readOnly: boolean;
+  canReview: boolean;
+  canPublish: boolean;
+  canDisable: boolean;
+  items: Collection<GenericAttributes> | null;
+  selected: Resource<GenericAttributes> | null;
+  values: Record<string, string>;
+  setValue: (key: string, value: string) => void;
+  select: (record: Resource<GenericAttributes>) => void;
+  newDraft: () => void;
+  save: (event: FormEvent) => Promise<boolean>;
+  reviews: Resource<GenericAttributes>[];
+  reviewId: string;
+  setReviewId: (value: string) => void;
+  reason: string;
+  setReason: (value: string) => void;
+  command: NotificationPolicyCommand;
+  impact: ConfigurationImpact['data']['attributes'] | null;
+  audit: ConfigurationAudit | null;
+  error: string;
+  message: string;
+};
+
+function notificationPolicyLabel(value: unknown): string {
+  return String(value || 'Not set').replaceAll('_', ' ').replaceAll('.', ' · ').replace(/\b\w/g, (letter) => letter.toUpperCase()).replace(/\bIn\b/g, 'in');
+}
+
+function notificationPolicyChannels(record: Resource<GenericAttributes> | null): string[] {
+  if (!record) return [];
+  const definition = record.attributes.definition && typeof record.attributes.definition === 'object' ? record.attributes.definition as Record<string, unknown> : {};
+  const value = configurationFieldValue('notification-policies', { key: 'channels', label: 'Channels', kind: 'lines' }, definition);
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+function NotificationPolicyWorkspace({ availableTypes, kind, onKindChange, platformOnly, readOnly, canReview, canPublish, canDisable, items, selected, values, setValue, select, newDraft, save, reviews, reviewId, setReviewId, reason, setReason, command, impact, audit, error, message }: NotificationPolicyWorkspaceProps) {
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const records = items?.data || [];
+  const categories = [...new Set(records.map((record) => String((record.attributes.definition as Record<string, unknown> | undefined)?.category || '')).filter(Boolean))].sort();
+  const filteredRecords = records.filter((record) => {
+    const definition = record.attributes.definition && typeof record.attributes.definition === 'object' ? record.attributes.definition as Record<string, unknown> : {};
+    const searchable = [record.attributes.name, record.attributes.code, definition.event_type, definition.category].map((value) => String(value || '')).join(' ').toLowerCase();
+    return (!query.trim() || searchable.includes(query.trim().toLowerCase())) && (statusFilter === 'ALL' || String(record.attributes.status || '').toUpperCase() === statusFilter) && (categoryFilter === 'ALL' || String(definition.category || '') === categoryFilter);
+  });
+  const activeCount = records.filter((record) => ['ACTIVE', 'PUBLISHED'].includes(String(record.attributes.status || '').toUpperCase())).length;
+  const mandatoryCount = records.filter((record) => Boolean((record.attributes.definition as Record<string, unknown> | undefined)?.mandatory)).length;
+  const channelCount = new Set(records.flatMap((record) => notificationPolicyChannels(record))).size;
+  const selectedStatus = String(selected?.attributes.status || '').toUpperCase();
+  const currentReview = reviews.find((review) => review.id === reviewId);
+  const eventOptions = [...new Set(records.map((record) => String((record.attributes.definition as Record<string, unknown> | undefined)?.event_type || '')).filter(Boolean))].sort();
+  const channelValues = new Set((values.channels || '').split('\n').map((value) => value.trim()).filter(Boolean));
+  const toggleChannel = (channel: string, checked: boolean) => {
+    const next = TOKEN_OPTIONS.channels.filter((option) => checked ? channelValues.has(option) || option === channel : channelValues.has(option) && option !== channel);
+    setValue('channels', next.join('\n'));
+  };
+  const openNew = () => { newDraft(); setEditorOpen(true); };
+  const openRecord = (record: Resource<GenericAttributes>) => { select(record); setEditorOpen(true); };
+  const field = (key: string, label: string, input: ReactNode) => <label className="notification-policy-field" key={key}><span>{label}</span>{input}</label>;
+  return <section className="content notification-policy-workspace">
+    <header className="notification-policy-hero">
+      <div>
+        <span className="page-eyebrow">{platformOnly ? 'Platform administration' : 'Provider configuration · Communication controls'}</span>
+        <h1>{platformOnly ? 'Business configuration' : 'Notification policies'}</h1>
+        <p>{platformOnly ? 'Manage global catalogue definitions. Providers can read and adopt published entries but cannot edit canonical platform rows.' : 'Decide which operational events notify people, where the message is delivered, and which notices cannot be turned off.'}</p>
+      </div>
+      <div className="notification-policy-hero-actions">
+        {platformOnly && <label className="configuration-type-selector notification-policy-type-select"><span>Configuration area</span><select aria-label="Configuration type" value={kind} onChange={(event) => onKindChange(event.target.value)}>{CONFIGURATION_TYPE_GROUPS.map((group) => <optgroup label={group.label} key={group.label}>{group.options.filter((option) => availableTypes.includes(option.value)).map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</optgroup>)}</select><small>{configurationTypeDescription(kind)}</small></label>}
+        {!readOnly && <Button type="button" variant="primary" onClick={openNew}>＋ New policy</Button>}
+      </div>
+    </header>
+    {error && <p className="error notification-policy-feedback" role="alert">{error}</p>}
+    {message && <p className="success notification-policy-feedback" role="status">{message}</p>}
+    <div className="notification-policy-stat-grid" aria-label="Notification policy summary">
+      <div className="notification-policy-stat"><span>All policies</span><strong>{records.length}</strong><small>Available in this configuration area</small></div>
+      <div className="notification-policy-stat notification-policy-stat-success"><span>Active</span><strong>{activeCount}</strong><small>Currently eligible for delivery</small></div>
+      <div className="notification-policy-stat notification-policy-stat-warning"><span>Required</span><strong>{mandatoryCount}</strong><small>Cannot be opted out of</small></div>
+      <div className="notification-policy-stat notification-policy-stat-accent"><span>Channels</span><strong>{channelCount}</strong><small>Delivery methods configured</small></div>
+    </div>
+    <div className="notification-policy-toolbar">
+      <label className="notification-policy-search"><span className="sr-only">Search notification policies</span><input aria-label="Search notification policies" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by policy or event" /></label>
+      <label><span className="sr-only">Filter by status</span><select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="DRAFT">Draft</option><option value="ARCHIVED">Archived</option></select></label>
+      <label><span className="sr-only">Filter by category</span><select aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="ALL">All categories</option>{categories.map((category) => <option key={category} value={category}>{notificationPolicyLabel(category)}</option>)}</select></label>
+      <span className="notification-policy-result-count">{filteredRecords.length} {filteredRecords.length === 1 ? 'policy' : 'policies'}</span>
+    </div>
+    <div className="notification-policy-main notification-policy-main-list-only">
+      <section className="notification-policy-list-card" aria-labelledby="notification-policy-list-title">
+        <div className="notification-policy-card-heading"><div><span className="section-kicker">Policy catalogue</span><h2 id="notification-policy-list-title">Delivery rules</h2></div><span className="notification-policy-card-hint">Select a policy to review its scope</span></div>
+        {!items && <p className="notice">Loading notification policies…</p>}
+        {items && !filteredRecords.length && <div className="notification-policy-empty"><strong>No policies match these filters</strong><p>Clear the search or create a new policy draft for this configuration area.</p>{!readOnly && <Button type="button" variant="secondary" onClick={openNew}>Create policy draft</Button>}</div>}
+        <div className="notification-policy-record-list">{filteredRecords.map((record) => {
+          const definition = record.attributes.definition && typeof record.attributes.definition === 'object' ? record.attributes.definition as Record<string, unknown> : {};
+          const channels = notificationPolicyChannels(record);
+          const isSelected = record.id === selected?.id;
+          const rawName = String(record.attributes.name || '');
+          const rawCode = String(record.attributes.code || '');
+          const technicalName = /^[A-Z0-9_-]+$/.test(rawName);
+          const displayName = rawName && rawName !== rawCode && !technicalName ? rawName : notificationPolicyLabel(definition.event_type || rawName || rawCode || 'Unnamed policy');
+          return <button type="button" className={`notification-policy-record${isSelected ? ' selected' : ''}`} aria-label={`Open ${displayName}`} key={record.id} onClick={() => openRecord(record)}>
+            <span className="notification-policy-record-title"><strong>{displayName}</strong><small>{notificationPolicyLabel(definition.event_type || rawCode)}</small></span>
+            <span className="notification-policy-record-meta"><small>Category</small><strong>{notificationPolicyLabel(definition.category)}</strong></span>
+            <span className="notification-policy-record-meta"><small>Delivery</small><strong>{channels.length ? channels.map(notificationPolicyLabel).join(' · ') : 'Not configured'}</strong></span>
+            <span className="notification-policy-record-meta"><small>Required</small><strong>{definition.mandatory ? 'Yes' : 'No'}</strong></span>
+            <span className="notification-policy-record-status"><Status>{String(record.attributes.status || 'DRAFT')}</Status><small>Revision {String(record.attributes.revision || '—')}</small></span>
+            <span className="notification-policy-record-chevron" aria-hidden="true">›</span>
+          </button>;
+        })}</div>
+      </section>
+      {editorOpen && <OperationsDialog title={selected ? 'Edit notification policy' : 'Create notification policy'} onClose={() => setEditorOpen(false)} className="notification-policy-dialog"><section className="notification-policy-editor-card" aria-labelledby="notification-policy-editor-title">
+        <div className="notification-policy-card-heading"><div><span className="section-kicker">{selected ? 'Selected policy' : 'New policy'}</span><h2 id="notification-policy-editor-title">{selected ? 'Policy details' : 'Create a draft'}</h2></div>{selected && <Status>{selectedStatus || 'DRAFT'}</Status>}</div>
+        {readOnly && <div className="notification-policy-readonly"><strong>Read-only access</strong><span>This catalogue is visible here, but your current role cannot create or publish policy changes.</span></div>}
+        {!selected && <div className="notification-policy-guidance"><strong>Start with the event and delivery channels</strong><p>Save a draft first. Review and publication controls appear after the policy has been created.</p></div>}
+        <form className="notification-policy-editor-form" onSubmit={save}>
+          <div className="notification-policy-field-grid">
+            {field('code', 'Policy code', <input required value={values.code || ''} disabled={readOnly} onChange={(event) => setValue('code', event.target.value)} placeholder="Example: WORK_INTAKE_ASSIGNMENT" />)}
+            {field('name', 'Policy name', <input required value={values.name || ''} disabled={readOnly} onChange={(event) => setValue('name', event.target.value)} placeholder="A clear name for operators" />)}
+            {field('event_type', 'Event type', <><input required list="notification-policy-event-options" value={values.event_type || ''} disabled={readOnly} onChange={(event) => setValue('event_type', event.target.value)} placeholder="Choose or enter an event" /><datalist id="notification-policy-event-options">{eventOptions.map((option) => <option value={option} key={option} />)}</datalist></>)}
+            {field('category', 'Category', <select required value={values.category || ''} disabled={readOnly} onChange={(event) => setValue('category', event.target.value)}><option value="">Select category</option>{['TRANSACTIONAL', 'SERVICE', 'OPERATIONAL', 'MARKETING'].map((option) => <option value={option} key={option}>{notificationPolicyLabel(option)}</option>)}</select>)}
+            {field('effective_from', 'Effective from (India time)', <input required type="datetime-local" value={values.effective_from || ''} disabled={readOnly} onChange={(event) => setValue('effective_from', event.target.value)} />)}
+            {field('effective_to', 'Effective to (optional)', <input type="datetime-local" value={values.effective_to || ''} disabled={readOnly} onChange={(event) => setValue('effective_to', event.target.value)} />)}
+          </div>
+          <fieldset className="notification-policy-fieldset"><legend>Policy behavior</legend><div className="notification-policy-field-grid"><div className="notification-policy-choice-field"><span>Mandatory notice</span><small>Required notices remain enabled for the intended audience.</small><div className="notification-policy-radio-row"><label><input type="radio" name="notification-policy-mandatory" checked={values.mandatory === 'true'} disabled={readOnly} onChange={() => setValue('mandatory', 'true')} /> Required</label><label><input type="radio" name="notification-policy-mandatory" checked={values.mandatory === 'false'} disabled={readOnly} onChange={() => setValue('mandatory', 'false')} /> Optional</label></div></div><div className="notification-policy-choice-field"><span>Delivery channels</span><small>Choose where the notification is delivered.</small><div className="notification-policy-channel-grid">{TOKEN_OPTIONS.channels.map((channel) => <label key={channel}><input type="checkbox" checked={channelValues.has(channel)} disabled={readOnly} onChange={(event) => toggleChannel(channel, event.target.checked)} /> <span>{notificationPolicyLabel(channel)}</span></label>)}</div></div></div></fieldset>
+          {!readOnly && <div className="notification-policy-form-actions"><Button type="submit">{selected ? 'Save changes' : 'Save draft'}</Button>{selected && <Button type="button" variant="quiet" onClick={openNew}>New policy</Button>}</div>}
+        </form>
+        {selected && <>
+          <section className="notification-policy-lifecycle" aria-labelledby="notification-policy-lifecycle-title"><div className="notification-policy-card-heading"><div><span className="section-kicker">Governance</span><h3 id="notification-policy-lifecycle-title">Review &amp; publication</h3></div>{currentReview && <Status>{String(currentReview.attributes.status || 'PENDING')}</Status>}</div><p className="notification-policy-muted">A policy becomes available only after the configured review and publication controls complete.</p>{reviews.length ? <label className="notification-policy-review-select"><span>Review revision</span><select aria-label="Configuration review" value={reviewId} onChange={(event) => setReviewId(event.target.value)}>{reviews.map((review) => <option value={review.id} key={review.id}>{notificationPolicyLabel(review.attributes.status)} · Revision {String(review.attributes.candidate_revision || '—')}</option>)}</select></label> : <p className="notice">No review exists for this revision. Submit the draft for review first.</p>}<label className="notification-policy-review-reason"><span>Decision note</span><input disabled={!canReview} aria-label="Review reason" placeholder="Optional reason or decision note" value={reason} onChange={(event) => setReason(event.target.value)} /></label><div className="notification-policy-lifecycle-actions">{canReview && <Button type="button" variant="secondary" onClick={() => void command('submit')}>Submit for review</Button>}{canReview && <Button type="button" disabled={!reviewId} onClick={() => void command('approve')}>Approve revision</Button>}{canReview && <Button type="button" variant="danger" disabled={!reviewId} onClick={() => void command('revoke')}>Reject review</Button>}{canPublish && <Button type="button" disabled={!reviewId} onClick={() => void command('activate')}>Enable policy</Button>}{!readOnly && selectedStatus === 'ARCHIVED' && <Button type="button" variant="secondary" onClick={() => void command('restore')}>Restore policy</Button>}{!readOnly && selectedStatus !== 'ARCHIVED' && <Button type="button" variant="quiet" disabled={!canDisable} onClick={() => void command('archive')}>Disable policy</Button>}</div></section>
+          <section className="notification-policy-impact" aria-label="Policy impact"><div><span className="section-kicker">Safety check</span><h3>Before disabling</h3></div>{impact ? <p>{impact.total_dependents} dependent configuration(s) · {impact.provider_adoptions} provider adoption(s). {impact.warnings.length ? impact.warnings.join(' ') : 'No active dependency blocks were returned.'}</p> : <p>Impact information is loading or unavailable.</p>}</section>
+          <details className="notification-policy-audit"><summary>View change history</summary>{audit?.audit.length ? <div>{audit.audit.slice(0, 20).map((entry) => <p key={entry.id}><Status>{entry.action}</Status><span>{entry.occurred_at ? formatIndiaDateTime(entry.occurred_at) : 'Time unavailable'}</span></p>)}</div> : <p className="notice">No audit entries returned.</p>}</details>
+        </>}
+      </section></OperationsDialog>}
+    </div>
+  </section>;
 }

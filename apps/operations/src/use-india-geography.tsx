@@ -7,24 +7,30 @@ const optionsFor = (items: IndiaGeographyEntry[]): LookupOption[] => items.map((
   label: item.attributes.name,
   detail: item.attributes.kind === 'STATE_UT' ? (item.attributes.state_code || item.attributes.code) : item.attributes.code,
 }));
-let stateOptionsPromise: Promise<LookupOption[]> | null = null;
-function loadStateOptions() {
-  if (!stateOptionsPromise) {
-    stateOptionsPromise = operationsData.indiaLocations({ kind: 'STATE_UT', limit: 50 }).then((result) => optionsFor(result.data)).catch((error) => {
-      stateOptionsPromise = null;
+let geographyCataloguePromise: Promise<IndiaGeographyEntry[]> | null = null;
+function loadGeographyCatalogue() {
+  if (!geographyCataloguePromise) {
+    geographyCataloguePromise = operationsData.indiaLocations({ limit: 500 }).then((result) => result.data).catch((error) => {
+      geographyCataloguePromise = null;
       throw error;
     });
   }
-  return stateOptionsPromise;
+  return geographyCataloguePromise;
 }
+
+const entriesFor = (entries: IndiaGeographyEntry[], kind: IndiaGeographyEntry['attributes']['kind'], parentCode?: string) => entries.filter((entry) => entry.attributes.kind === kind && (!parentCode || entry.attributes.parent_code === parentCode));
 
 export function useIndiaGeography(address: Record<string, unknown> = {}) {
   const stateName = String(address.state || '');
-  const stateIdentity = String(address.state_code || '');
+  // Customer edit forms keep the selected reference IDs in camelCase local
+  // state, while API payloads use snake_case. Accept both shapes so dependent
+  // District and City lookups remain usable when an existing billing address
+  // is opened for editing.
+  const stateIdentity = String(address.state_code || address.stateCode || '');
   const districtName = String(address.district || '');
-  const districtIdentity = String(address.district_code || '');
+  const districtIdentity = String(address.district_code || address.districtCode || '');
   const cityName = String(address.city || '');
-  const cityIdentity = String(address.city_code || '');
+  const cityIdentity = String(address.city_code || address.cityCode || '');
   const [stateOptions, setStateOptions] = useState<LookupOption[]>([]);
   const [districtOptions, setDistrictOptions] = useState<LookupOption[]>([]);
   const [cityOptions, setCityOptions] = useState<LookupOption[]>([]);
@@ -34,8 +40,8 @@ export function useIndiaGeography(address: Record<string, unknown> = {}) {
 
   useEffect(() => {
     let current = true;
-    void loadStateOptions().then((options) => {
-      if (current) setStateOptions(options);
+    void loadGeographyCatalogue().then((entries) => {
+      if (current) setStateOptions(optionsFor(entriesFor(entries, 'STATE_UT')));
     }).catch(() => undefined);
     return () => { current = false; };
   }, []);
@@ -48,40 +54,20 @@ export function useIndiaGeography(address: Record<string, unknown> = {}) {
   useEffect(() => {
     if (!stateCode) { setDistrictOptions([]); setCityOptions([]); return undefined; }
     let current = true;
-    void operationsData.indiaLocations({ kind: 'DISTRICT', parentCode: stateCode, limit: 50 }).then((result) => {
-      if (current) setDistrictOptions(optionsFor(result.data));
+    void loadGeographyCatalogue().then((entries) => {
+      if (current) setDistrictOptions(optionsFor(entriesFor(entries, 'DISTRICT', stateCode)));
     }).catch(() => undefined);
     return () => { current = false; };
   }, [stateCode]);
 
   useEffect(() => {
-    const query = districtSearch.trim();
-    if (query.length < 3 || !stateCode) return undefined;
-    let current = true;
-    void operationsData.indiaLocations({ kind: 'DISTRICT', q: query, parentCode: stateCode, limit: 50 }).then((result) => {
-      if (current) setDistrictOptions(optionsFor(result.data));
-    }).catch(() => undefined);
-    return () => { current = false; };
-  }, [districtSearch, stateCode]);
-
-  useEffect(() => {
     if (!stateCode || !districtCode) { setCityOptions([]); return undefined; }
     let current = true;
-    void operationsData.indiaLocations({ kind: 'CITY', parentCode: districtCode, limit: 50 }).then((result) => {
-      if (current) setCityOptions(optionsFor(result.data));
+    void loadGeographyCatalogue().then((entries) => {
+      if (current) setCityOptions(optionsFor(entriesFor(entries, 'CITY', districtCode)));
     }).catch(() => undefined);
     return () => { current = false; };
   }, [districtCode, stateCode]);
-
-  useEffect(() => {
-    const query = citySearch.trim();
-    if (query.length < 3 || !stateCode || !districtCode) return undefined;
-    let current = true;
-    void operationsData.indiaLocations({ kind: 'CITY', q: query, parentCode: districtCode, limit: 50 }).then((result) => {
-      if (current) setCityOptions(optionsFor(result.data));
-    }).catch(() => undefined);
-    return () => { current = false; };
-  }, [citySearch, districtCode, stateCode]);
 
   return { stateOptions, districtOptions, cityOptions, stateSearch, setStateSearch, districtSearch, setDistrictSearch, citySearch, setCitySearch, stateCode, districtCode, cityCode };
 }
@@ -91,8 +77,8 @@ export function IndiaStateSelect({ label = 'State / UT', value, onChange, requir
   const [search, setSearch] = useState('');
   useEffect(() => {
     let current = true;
-    void loadStateOptions().then((options) => {
-      if (current) setOptions(options);
+    void loadGeographyCatalogue().then((entries) => {
+      if (current) setOptions(optionsFor(entriesFor(entries, 'STATE_UT')));
     }).catch(() => undefined);
     return () => { current = false; };
   }, []);

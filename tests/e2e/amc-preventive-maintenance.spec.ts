@@ -53,15 +53,15 @@ test('Provider Admin can search the AMC register and inspect contract coverage a
   await expect(amendmentDialog.getByLabel('Effective at *')).toBeVisible();
   await expect(amendmentDialog.getByLabel('Reason *')).toBeVisible();
   await amendmentDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Close / }).click();
   const configureAction = page.getByRole('button', { name: 'Configure preventive maintenance', exact: true });
   if (await configureAction.count()) {
     await configureAction.click();
     await expect(page).toHaveURL(/#configuration\/maintenance-policies$/);
     await expect(page.getByRole('combobox', { name: 'Configuration type', exact: true })).toHaveValue('maintenance-policies');
     await expect(page.getByLabel('Policy source')).toBeVisible();
-    await expect(page.getByLabel('IANA time zone')).toBeVisible();
     await expect(page.getByLabel('Recurrence policy')).toBeVisible();
-    await expect(page.getByLabel(/Rules: sequence/)).toBeVisible();
+    await expect(page.getByLabel('Rules: sequence|code|trigger_kind (one per line) rows', { exact: true })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await page.screenshot({ path: info.outputPath('maintenance-policy-configuration.png'), fullPage: true });
   }

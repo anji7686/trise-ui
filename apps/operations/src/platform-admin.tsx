@@ -9,7 +9,7 @@ import { operationsData, type BusinessAuditEvent, type BusinessOperation, type B
 import { SvgIcon } from './icons';
 import { normalizePlatformHash, parsePlatformProviderRoute, providerOnboardingRoute } from './platform-provider-routing';
 import { stableSubmissionKey, validateOnboardingContact, validateOnboardingLocation, type FieldErrors } from './provider-onboarding-validation';
-import { ProviderLogoEditor } from './provider-business-profile';
+import { ProviderBusinessProfileReadDetails, ProviderLogoEditor } from './provider-business-profile';
 import { ProviderDocumentsStep } from './provider-documents';
 import { activationBlocker, lifecycleActions, type ProviderLifecycleAction } from './provider-lifecycle';
 import { PlatformPlansPage } from './platform-plans';
@@ -30,11 +30,11 @@ import { administratorSetupLabel, onboardingStateLabel, providerDetailAccess, pr
 import { confirmOnboardingNavigation, OnboardingEmptyState, OnboardingErrorSummary, OnboardingFormSection, ProviderOnboardingStepper, useOnboardingUnsavedChanges } from './provider-onboarding-ui';
 import { ProviderOnboardingReviewDashboard } from './provider-onboarding-review';
 import { AdminActionMenu, AdminEmptyState, AdminPageHeader } from './platform-admin-ui';
-import { ConfigurationAdmin, ConfigurationAuditInbox, ConfigurationReviewInbox } from './configuration';
+import { ConfigurationAdmin, ConfigurationAuditInbox, ConfigurationReviewInbox, PLATFORM_CONFIGURATION_TYPES } from './configuration';
 import { ReferenceDataAdmin } from './reference-data-admin';
 import { PlatformBusinessOperationsPage } from './platform-business-operations';
 import { useIndiaGeography } from './use-india-geography';
-import { ElevatorBusinessConfigurationReference, PlatformConfigurationRegistry } from './platform-configuration-reference';
+import { PlatformConfigurationRegistry } from './platform-configuration-reference';
 import { ProviderOverridesAdmin } from './provider-overrides-admin';
 import { PlatformMaintenancePage } from './platform-maintenance';
 
@@ -243,10 +243,9 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
       <div className="platform-provider-table-wrap"><table className="platform-provider-table"><caption className="sr-only">Saved provider onboarding contacts</caption><thead><tr><th scope="col">Name</th><th scope="col">Responsibility</th><th scope="col">Designation</th><th scope="col">Contact</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>{contacts.map((item) => <tr key={item.id}><td><strong>{item.attributes.display_name}</strong></td><td>{item.attributes.responsibility_type.replaceAll('_', ' ')}</td><td>{item.attributes.designation}</td><td>{item.attributes.contact_methods.email || item.attributes.contact_methods.phone}</td><td><Status>{item.attributes.status}</Status></td><td>{item.attributes.status === 'ACTIVE' && <AdminActionMenu label={`Actions for ${item.attributes.display_name}`}><button type="button" disabled={Boolean(busy) || ending.busy || paging} onClick={() => editContact(item)}>Edit</button><button type="button" disabled={Boolean(busy) || ending.busy || paging} onClick={() => void endContact(item)}>End contact</button></AdminActionMenu>}</td></tr>)}</tbody></table>{!contacts.length && <OnboardingEmptyState title="No provider contacts yet" description="Contacts support coordination and do not create a provider login or membership." action={<Button variant="quiet" onClick={() => editContact(null)}>Add contact</Button>} />}</div>
     </DetailSection> : <DetailSection title="Registered and operating offices" description="Select country, State/UT, district and city from canonical India reference data. Enter only the premises-specific address details and PIN.">
       <div className="onboarding-list-toolbar"><span>{locations.length} office records loaded</span><Button onClick={() => editLocation(null)} disabled={Boolean(busy) || ending.busy || paging}>New office</Button></div>
-      {locationDialog && <OperationsDialog title={editingLocation ? 'Edit office location' : 'New office location'} busy={Boolean(busy)} onClose={() => { if (confirmOnboardingNavigation()) { setLocationDialog(false); setEditingLocation(null); } }}>{error && <OnboardingErrorSummary title="Office details need attention" errors={[error]} />}<form className="platform-form-grid" onSubmit={addLocation}>
+      {locationDialog && <OperationsDialog title={editingLocation ? 'Edit office location' : 'New office location'} busy={Boolean(busy)} onClose={() => { if (confirmOnboardingNavigation()) { setLocationDialog(false); setEditingLocation(null); } }}>{error && <OnboardingErrorSummary title="Office details need attention" errors={[error]} />}<form className="platform-form-grid provider-office-location-form" onSubmit={addLocation}>
         <label>Office name <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required aria-invalid={Boolean(locationErrors.name)} value={location.name} onChange={(event) => changeLocation('name', event.target.value)} /><FieldError message={locationErrors.name} /></label>
         <label>Office type<select disabled={Boolean(busy) || ending.busy || paging} value={location.location_kind} onChange={(event) => changeLocation('location_kind', event.target.value)}><option value="REGISTERED_OFFICE">Registered office</option><option value="OPERATING_OFFICE">Operating office</option></select></label>
-        <label>Country<select disabled={Boolean(busy) || ending.busy || paging} value="IN"><option value="IN">India</option></select></label>
         <label className="admin-form-field--full">Address line<input disabled={Boolean(busy) || ending.busy || paging} value={location.address_line} onChange={(event) => changeLocation('address_line', event.target.value)} maxLength={200} /></label>
         <label>Locality / area<input disabled={Boolean(busy) || ending.busy || paging} value={location.locality} onChange={(event) => changeLocation('locality', event.target.value)} maxLength={200} /></label>
         <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={stateSearch} onSearch={setStateSearch} value={selectedStateCode} onChange={(id) => chooseLocationReference('state', id)} options={stateOptions} placeholder="Select state / UT" required disabled={Boolean(busy) || ending.busy || paging} />
@@ -254,6 +253,7 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
         <SearchableSelect label="City" searchLabel="Search cities in selected district" search={citySearch} onSearch={setCitySearch} value={selectedCityCode} onChange={(id) => chooseLocationReference('city', id)} options={cityOptions} placeholder="Select city" required disabled={!selectedDistrictCode || Boolean(busy) || ending.busy || paging} />
         <label>PIN code <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required aria-invalid={Boolean(locationErrors.pin_code)} value={location.pin_code} onChange={(event) => changeLocation('pin_code', event.target.value)} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} /><FieldError message={locationErrors.pin_code} /></label>
         <label>Landmark<input disabled={Boolean(busy) || ending.busy || paging} value={location.landmark} onChange={(event) => changeLocation('landmark', event.target.value)} maxLength={200} /></label>
+        <label>Country<select disabled={Boolean(busy) || ending.busy || paging} value="IN"><option value="IN">India</option></select></label>
         <label>Latitude <span className="platform-muted">(optional)</span><input disabled={Boolean(busy) || ending.busy || paging} inputMode="decimal" aria-invalid={Boolean(locationErrors.latitude || locationErrors.coordinates)} value={location.latitude} onChange={(event) => changeLocation('latitude', event.target.value)} /><FieldError message={locationErrors.latitude} /></label>
         <label>Longitude <span className="platform-muted">(optional)</span><input disabled={Boolean(busy) || ending.busy || paging} inputMode="decimal" aria-invalid={Boolean(locationErrors.longitude || locationErrors.coordinates)} value={location.longitude} onChange={(event) => changeLocation('longitude', event.target.value)} /><FieldError message={locationErrors.longitude} /></label>
         <div className="platform-form-note">Coordinates are kept as office coordinates. They are not replaced with post-office or PIN coordinates.<FieldError message={locationErrors.coordinates} /></div>
@@ -554,26 +554,32 @@ function PlatformBusinessProfileForm({ providerId, businessId, providerName, pro
           <div className="platform-form-actions"><Button type="button" onClick={() => void submitLegalIdentity()} disabled={legalSaving || Boolean(legalRequest) || canonicalBusiness?.legal_profile?.status === 'APPROVED'}>{legalSaving ? 'Submitting…' : legalRequest ? 'Awaiting review' : 'Submit legal identity for review'}</Button></div>
         </div>}
       </OnboardingFormSection>
-      <OnboardingFormSection title="Provider business profile" description="Compatibility fields for the provider account. These do not replace the authoritative Business Legal Identity above.">
-        <label className="admin-form-field--full">Legal name <span aria-hidden="true">*</span><input value={fields.legal_name || ''} onChange={(event) => change('legal_name', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} /></label>
-        <label>Registration number <span className="field-hint">(optional)</span><input value={fields.registration_number || ''} onChange={(event) => change('registration_number', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} /></label>
-        <label>Tax identifier <span className="field-hint">(optional)</span><input value={fields.tax_identifier || ''} onChange={(event) => change('tax_identifier', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} /></label>
+      <OnboardingFormSection title="Business details" description="Compatibility fields for the provider account. These do not replace the authoritative Business Legal Identity above.">
+        <label className="admin-form-field--full">Legal name <span aria-hidden="true">*</span><input value={fields.legal_name || ''} onChange={(event) => change('legal_name', event.target.value)} /></label>
+        <label>Registration number <span className="field-hint">(optional)</span><input value={fields.registration_number || ''} onChange={(event) => change('registration_number', event.target.value)} /></label>
       </OnboardingFormSection>
-      <OnboardingFormSection title="Registered address">
+      <OnboardingFormSection title="Business address">
         <div className="platform-form-grid">
-          <label className="admin-form-field--full">Address line<input value={String(fields.address?.address_line || '')} onChange={(event) => changeAddress('address_line', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
-          <label>Locality / area<input value={String(fields.address?.locality || '')} onChange={(event) => changeAddress('locality', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
-          <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={geography.stateSearch} onSearch={geography.setStateSearch} value={geography.stateCode} onChange={(id) => chooseAddressReference('state', id)} options={geography.stateOptions} placeholder="Select state / UT" required disabled={profile.verification_status === 'PENDING_REVIEW'} />
-          <SearchableSelect label="District" searchLabel="Search districts in selected state" search={geography.districtSearch} onSearch={geography.setDistrictSearch} value={geography.districtCode} onChange={(id) => chooseAddressReference('district', id)} options={geography.districtOptions} placeholder="Select district" required disabled={!geography.stateCode || profile.verification_status === 'PENDING_REVIEW'} />
-          <SearchableSelect label="City" searchLabel="Search cities in selected district" search={geography.citySearch} onSearch={geography.setCitySearch} value={geography.cityCode} onChange={(id) => chooseAddressReference('city', id)} options={geography.cityOptions} placeholder="Select city" required disabled={!geography.districtCode || profile.verification_status === 'PENDING_REVIEW'} />
-          <label>PIN code <span aria-hidden="true">*</span><input value={String(fields.address?.pin_code || '')} onChange={(event) => changeAddress('pin_code', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} /></label>
-          <label>Landmark<input value={String(fields.address?.landmark || '')} onChange={(event) => changeAddress('landmark', event.target.value)} disabled={profile.verification_status === 'PENDING_REVIEW'} maxLength={200} /></label>
+          <label className="admin-form-field--full">Address line<input value={String(fields.address?.address_line || '')} onChange={(event) => changeAddress('address_line', event.target.value)} maxLength={200} /></label>
+          <label>Locality / area<input value={String(fields.address?.locality || '')} onChange={(event) => changeAddress('locality', event.target.value)} maxLength={200} /></label>
+          <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={geography.stateSearch} onSearch={geography.setStateSearch} value={geography.stateCode} onChange={(id) => chooseAddressReference('state', id)} options={geography.stateOptions} placeholder="Select state / UT" required />
+          <SearchableSelect label="District" searchLabel="Search districts in selected state" search={geography.districtSearch} onSearch={geography.setDistrictSearch} value={geography.districtCode} onChange={(id) => chooseAddressReference('district', id)} options={geography.districtOptions} placeholder="Select district" required disabled={!geography.stateCode} />
+          <SearchableSelect label="City" searchLabel="Search cities in selected district" search={geography.citySearch} onSearch={geography.setCitySearch} value={geography.cityCode} onChange={(id) => chooseAddressReference('city', id)} options={geography.cityOptions} placeholder="Select city" required disabled={!geography.districtCode} />
+          <label>PIN code <span aria-hidden="true">*</span><input value={String(fields.address?.pin_code || '')} onChange={(event) => changeAddress('pin_code', event.target.value)} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} /></label>
+          <label>Landmark<input value={String(fields.address?.landmark || '')} onChange={(event) => changeAddress('landmark', event.target.value)} maxLength={200} /></label>
+          <label>Country<select value="IN" disabled><option value="IN">India</option></select></label>
         </div>
+      </OnboardingFormSection>
+      <OnboardingFormSection title="Indian tax registration" description="Capture GSTIN and PAN when they apply to this provider. Supporting evidence is uploaded in the document section below or from the dedicated Documents step.">
+        <label>GSTIN <span className="field-hint">(when applicable)</span><input value={fields.gstin || ''} onChange={(event) => change('gstin', event.target.value.toUpperCase())} maxLength={15} pattern="[0-9A-Z]{15}" /></label>
+        <label>PAN <span className="field-hint">(when applicable)</span><input value={fields.pan_number || ''} onChange={(event) => change('pan_number', event.target.value.toUpperCase())} maxLength={10} pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" /></label>
+        <label>Other tax identifier <span className="field-hint">(optional)</span><input value={fields.tax_identifier || ''} onChange={(event) => change('tax_identifier', event.target.value)} /></label>
       </OnboardingFormSection>
       {error && <OnboardingErrorSummary title="Business profile needs attention" errors={[error]} />}
       {message && <p className="platform-form-note" role="status">{message}</p>}
-      <div className="platform-form-actions"><Button type="button" variant="secondary" onClick={() => go(`platform/providers/${providerId}`)} disabled={saving || submitting}><SvgIcon name="arrow-left" size={16} /> Cancel</Button><Button type="submit" disabled={saving || submitting || operationLoading || profile.verification_status === 'PENDING_REVIEW'}>{saving ? 'Saving…' : <><SvgIcon name="save" size={16} /> Save draft</>}</Button></div>
+      <div className="platform-form-actions"><Button type="button" variant="secondary" onClick={() => go(`platform/providers/${providerId}`)} disabled={saving || submitting}><SvgIcon name="arrow-left" size={16} /> Cancel</Button><Button type="submit" disabled={saving || submitting || operationLoading}>{saving ? 'Saving…' : <><SvgIcon name="save" size={16} /> Save draft</>}</Button></div>
     </form>
+    <OnboardingFormSection title="Required business documents" description="Upload private verification evidence for the selected provider. Files are validated before upload, versioned, provider-scoped, and available to the review workflow."><ProviderDocumentsStep providerId={providerId} canUpload={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} scope="platform" showUploadHeading={false} showDocumentList={false} onChanged={onSaved} /></OnboardingFormSection>
     <OnboardingFormSection title="Branding and logo" description="Logo files use the existing private, versioned document upload workflow."><ProviderLogoEditor providerId={providerId} platform onChanged={onSaved} /></OnboardingFormSection>
     {confirmOperationChange && <OperationsDialog title="Confirm Business Operation change" busy={saving} onClose={() => setConfirmOperationChange(false)}><p>This changes the operation for this provider account and affects eligible subscription plans. The API validates subscription compatibility and audits the operation change.</p><div className="platform-form-actions"><Button type="button" variant="secondary" disabled={saving} onClick={() => setConfirmOperationChange(false)}>Cancel</Button><Button type="button" busy={saving} onClick={() => void persistSave()}>Confirm and save</Button></div></OperationsDialog>}
   </section>;
@@ -624,12 +630,12 @@ function PlatformDocumentList({ providerId, documents, canTransfer }: { provider
 
 function ProviderBusinessSections({ section = 'all', business, documents, reviews, canDecide, canTransfer = false, onDecision }: { section?: 'all' | 'business' | 'documents' | 'reviews'; business: ProviderBusinessProfile | null; documents: ProviderDocument[]; reviews: ProviderVerificationReview[]; canDecide: boolean; canTransfer?: boolean; onDecision: (review: ProviderVerificationReview, decision: string, reason: string) => Promise<void> }) {
   if (section === 'all') return <><ProviderBusinessSections section="business" business={business} documents={documents} reviews={reviews} canDecide={canDecide} canTransfer={canTransfer} onDecision={onDecision} /><ProviderBusinessSections section="documents" business={business} documents={documents} reviews={reviews} canDecide={canDecide} canTransfer={canTransfer} onDecision={onDecision} /><ProviderBusinessSections section="reviews" business={business} documents={documents} reviews={reviews} canDecide={canDecide} canTransfer={canTransfer} onDecision={onDecision} /></>;
-  if (section === 'business') return <DetailSection title="Business details" description="Review the submitted provider information. Verification does not activate the provider or grant access.">{!business ? <p className="platform-muted">Business profile is not available.</p> : <dl className="platform-definition-list"><dt>Verification status</dt><dd><Status>{humanStatus(business.verification_status)}</Status></dd><dt>Legal name</dt><dd>{business.profile.legal_name || 'Not supplied'}</dd><dt>Registration number</dt><dd>{business.profile.registration_number || 'Not supplied'}</dd><dt>Tax identifier</dt><dd>{business.profile.tax_identifier || 'Not supplied'}</dd><dt>Address</dt><dd>{Object.values(business.profile.address || {}).filter(Boolean).join(', ') || 'Not supplied'}</dd><dt>Profile revision</dt><dd>{business.revision}</dd></dl>}</DetailSection>;
+  if (section === 'business') return !business ? <DetailSection title="Business details" description="Review the submitted provider information. Verification does not activate the provider or grant access."><p className="platform-muted">Business profile is not available.</p></DetailSection> : <ProviderBusinessProfileReadDetails profile={business} />;
   if (section === 'documents') return <DetailSection title="Provider documents" description="Review authoritative metadata. Preview and download require the explicit provider-document capability."><PlatformDocumentList providerId={business?.provider_id || ''} documents={documents} canTransfer={canTransfer} /></DetailSection>;
   return <VerificationReviewList reviews={reviews} canDecide={canDecide} onDecision={onDecision} />;
 }
 
-type ProviderDetailTab = 'overview' | 'operations' | 'subscription' | 'documents' | 'access' | 'reviews' | 'audit';
+type ProviderDetailTab = 'overview' | 'business' | 'operations' | 'subscription' | 'documents' | 'access' | 'reviews' | 'audit';
 function PlatformProviderAuditHistory({ events = [], partyName }: { events?: NonNullable<PlatformProviderAttributes['audit_history']>; partyName: string }) {
   const [page, setPage] = useState(0);
   const [from, setFrom] = useState('');
@@ -677,11 +683,11 @@ type ProviderOnboardingProgressData = {
 };
 
 const providerTabs: { id: ProviderDetailTab; label: string }[] = [
-  { id: 'overview', label: 'Overview' }, { id: 'operations', label: 'Operations' }, { id: 'subscription', label: 'Subscription & Billing' },
+  { id: 'overview', label: 'Overview' }, { id: 'business', label: 'Business details' }, { id: 'operations', label: 'Operations' }, { id: 'subscription', label: 'Subscription & Billing' },
   { id: 'documents', label: 'Documents' }, { id: 'access', label: 'Team & Access' }, { id: 'reviews', label: 'Reviews & Approvals' }, { id: 'audit', label: 'Activity History' },
 ];
 const validProviderTab = (value: string | null): ProviderDetailTab => {
-  const legacyAliases: Record<string, ProviderDetailTab> = { business: 'overview', tax: 'overview', access: 'access', audit: 'audit', subscription: 'subscription' };
+  const legacyAliases: Record<string, ProviderDetailTab> = { tax: 'business', access: 'access', audit: 'audit', subscription: 'subscription' };
   const normalized = value ? legacyAliases[value] || value : 'overview';
   return providerTabs.some((item) => item.id === normalized) ? normalized as ProviderDetailTab : 'overview';
 };
@@ -803,7 +809,9 @@ function ProviderOperationsPanel({ providerId, providerStatus, verificationStatu
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const canChange = (capabilities.includes('PLATFORM_PROVIDER_PROFILE_WRITE') || capabilities.includes('PLATFORM_PROVIDER_BUSINESS_WRITE')) && ['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus !== undefined && verificationStatus !== 'PENDING_REVIEW';
+  const hasOperationWrite = capabilities.includes('PLATFORM_PROVIDER_PROFILE_WRITE') || capabilities.includes('PLATFORM_PROVIDER_BUSINESS_WRITE');
+  const initialActiveAssignment = providerStatus === 'ACTIVE' && operation === null;
+  const canChange = hasOperationWrite && (initialActiveAssignment || (['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus !== undefined && verificationStatus !== 'PENDING_REVIEW'));
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -836,6 +844,7 @@ function ProviderOperationsPanel({ providerId, providerStatus, verificationStatu
     {operation && current ? <div className="provider-operation-detail-card"><dl className="platform-definition-list"><dt>Business Operation</dt><dd><strong>{current.name}</strong><small>{current.code}</small></dd><dt>Industry</dt><dd>{industry ? humanStatus(industry) : 'Not available'}</dd><dt>Operation status</dt><dd><Status>{humanStatus(operation.attributes.status)}</Status></dd><dt>Subscription</dt><dd>{!capabilities.includes('PLATFORM_SUBSCRIPTION_READ') ? 'Not available to this role' : subscriptionError ? 'Unavailable' : subscription ? humanStatus(subscription.attributes.status) : 'No current subscription'}</dd><dt>Workspace readiness</dt><dd>Not available from the current API</dd></dl></div> : <AdminEmptyState title="No Business Operation assigned" description="Select one Business Operation before this provider account is submitted or activated." />}
     {editing && canChange && <div className="provider-operation-edit"><SearchableSelect label="Business Operation" searchLabel="Search Business Operations" search={search} onSearch={setSearch} value={selection} onChange={setSelection} options={options} placeholder="Select one Business Operation" required /><div className="platform-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => { setEditing(false); setSelection(current?.id || ''); }}>Cancel</Button><Button type="button" disabled={busy || !selection || selection === current?.id} onClick={() => setConfirmOpen(true)}>Save Business Operation</Button></div></div>}
     {!editing && canChange && <div className="provider-operation-actions"><Button variant="secondary" onClick={() => setEditing(true)}>Change Business Operation</Button></div>}
+    {initialActiveAssignment && canChange && <p className="platform-muted">This active provider has never had an operation assigned. Assigning its first operation repairs setup; changing an existing operation remains locked after activation.</p>}
     {!canChange && !['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && <p className="platform-muted">Business Operation changes are locked after provider activation. A controlled transition workflow is not currently available.</p>}
     {!canChange && ['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus === 'PENDING_REVIEW' && <p className="platform-muted">Business Operation changes are unavailable while the business profile is pending review.</p>}
     {!canChange && ['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus === undefined && <p className="platform-muted">Business Operation changes are unavailable until the business review state can be verified.</p>}
@@ -972,6 +981,12 @@ function LegacyProviderIdentityDomainsPanel({ businessId, businessName, capabili
 }
 
 /* eslint-enable @typescript-eslint/no-unused-vars */
+function ProviderSetupReturnBanner() {
+  const returnTo = new URLSearchParams(window.location.hash.split('?')[1] || '').get('return_to');
+  if (!returnTo) return null;
+  return <div className="configuration-return-banner" role="status"><div><strong>Provider setup in progress</strong><small>Resolve this requirement, then return to the selected provider’s readiness checklist.</small></div><Button type="button" variant="secondary" onClick={() => { window.location.hash = returnTo; }}>Back to provider setup</Button></div>;
+}
+
 function ProviderDetailView({ selected, business, documents, reviews, capabilities, sectionErrors, onDecision }: { selected: Resource<PlatformProviderAttributes>; business: ProviderBusinessProfile | null; documents: ProviderDocument[]; reviews: ProviderVerificationReview[]; capabilities: string[]; sectionErrors: Record<string, string>; onDecision: (review: ProviderVerificationReview, decision: string, reason: string) => Promise<void> }) {
   const access = providerDetailAccess(capabilities);
   const [tab, setTab] = useState<ProviderDetailTab>(() => { const requested = tabFromHash(selected.id); return requested === 'subscription' && !access.manageSubscription ? 'overview' : requested; });
@@ -1027,13 +1042,19 @@ function ProviderDetailView({ selected, business, documents, reviews, capabiliti
   const profileWriteAllowed = access.editBusiness;
   const subscriptionReadAllowed = access.manageSubscription;
   const panelId = `provider-detail-${tab}`;
-  function selectTab(next: ProviderDetailTab) { setTab(next); go(`platform/providers/${selected.id}?tab=${next}`); }
+  function selectTab(next: ProviderDetailTab) {
+    setTab(next);
+    const returnTo = new URLSearchParams(window.location.hash.split('?')[1] || '').get('return_to');
+    const returnQuery = returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '';
+    go(`platform/providers/${selected.id}?tab=${next}${returnQuery}`);
+  }
   function retryDetailData() { void loadDetailData(); }
   const setupComplete = providerSetupSummary(selected.attributes, states).complete;
   const readinessLabel = selected.attributes.provider_admin_setup === 'not_configured' || states.some((state) => state === 'rejected' || state === 'needs_attention') ? 'Needs attention' : setupComplete ? 'Complete' : states.includes('not_available') ? 'Evidence unavailable' : 'In progress';
   const primaryLabel = selected.attributes.status === 'ACTIVE' ? 'Review setup' : 'Continue setup';
   return <section className="platform-page provider-detail-page">
       <div className="provider-detail-breadcrumb"><button type="button" onClick={() => go('platform/overview')}>Platform administration</button><SvgIcon name="chevron-right" size={14} /><button type="button" onClick={() => go('platform/providers')}>Service Providers</button><SvgIcon name="chevron-right" size={14} /><strong>{selected.attributes.display_name}</strong></div>
+    <ProviderSetupReturnBanner />
     <header className="provider-identity-panel">
       <div className="provider-identity-copy"><p className="platform-eyebrow">Provider administration</p><h1 title={selected.attributes.display_name}>{selected.attributes.display_name}</h1><p className="provider-identity-meta"><span>{selected.attributes.provider_code || 'Provider code not supplied'}</span><span>{selected.attributes.representation || selected.attributes.representation_kind || 'Provider type unavailable'}</span><span>Registered {formatDate(selected.attributes.effective_from)}</span></p><div className="provider-identity-badges"><span><small>Lifecycle</small><Status>{humanStatus(selected.attributes.status)}</Status></span><span><small>Business verification</small><Status>{sectionErrors.business ? 'Unavailable' : selected.attributes.business_verification_status ? humanStatus(selected.attributes.business_verification_status) : 'Not available'}</Status></span><span><small>Onboarding readiness</small><Status>{readinessLabel}</Status></span></div></div>
       <div className="provider-identity-actions">{needsSetupReview && primaryAction && <Button onClick={() => go(primaryAction)}><SvgIcon name="arrow-right" size={15} /> {primaryLabel}</Button>}<details className="provider-actions-menu"><summary><span aria-hidden="true">•••</span> Actions</summary><div>
@@ -1048,6 +1069,7 @@ function ProviderDetailView({ selected, business, documents, reviews, capabiliti
     <nav className="provider-detail-tabs" role="tablist" aria-label="Provider detail sections">{providerTabs.filter((item) => item.id !== 'subscription' || access.manageSubscription).map((item, index, tabs) => <button key={item.id} id={`provider-tab-${item.id}`} role="tab" tabIndex={tab === item.id ? 0 : -1} aria-selected={tab === item.id} aria-controls={`provider-detail-${item.id}`} type="button" className={tab === item.id ? 'active' : ''} onClick={() => selectTab(item.id)} onKeyDown={(event) => { if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length; document.getElementById(`provider-tab-${tabs[next].id}`)?.focus(); selectTab(tabs[next].id); }}>{item.label}</button>)}</nav>
     <div id={panelId} className="platform-provider-detail-panel" role="tabpanel" aria-labelledby={`provider-tab-${tab}`}>
       {tab === 'overview' && <ProviderOverviewDashboard selected={selected} business={business} documents={documents} capabilities={capabilities} data={detailData} sectionErrors={sectionErrors} onRetry={retryDetailData} />}
+      {tab === 'business' && (sectionErrors.business ? <StatePanel title="Business profile unavailable"><span>{sectionErrors.business}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : <ProviderBusinessSections section="business" business={business} documents={documents} reviews={reviews} canDecide={capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE')} canTransfer={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} onDecision={onDecision} />)}
       {tab === 'subscription' && <PlatformProviderSubscription key={selected.id} providerId={selected.id} capabilities={capabilities} />}
       {tab === 'operations' && <ProviderOperationsPanel providerId={selected.id} providerStatus={selected.attributes.status} verificationStatus={business?.verification_status} capabilities={capabilities} subscription={detailData.subscription} subscriptionError={detailData.errors.subscription} />}
       {tab === 'documents' && (sectionErrors.documents ? <StatePanel title="Documents unavailable"><span>{sectionErrors.documents}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : <ProviderBusinessSections section="documents" business={business} documents={documents} reviews={reviews} canDecide={capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE')} canTransfer={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} onDecision={onDecision} />)}
@@ -1208,6 +1230,7 @@ export function PlatformRoute({ session }: { session: { userId?: string; platfor
   const hash = normalizePlatformHash(window.location.hash);
   const path = hash.split('?')[0];
   const capabilities = session.platformCapabilities || [];
+  const platformConfigurationKinds = new Set<string>(PLATFORM_CONFIGURATION_TYPES);
   const businessDetailsMatch = path.match(/^#platform\/businesses\/([^/]+)$/);
   if (businessDetailsMatch) return <BusinessCompliancePage businessId={decodeURIComponent(businessDetailsMatch[1])} capabilities={capabilities} />;
   if (hash.startsWith('#platform/configuration/reviews')) {
@@ -1224,7 +1247,7 @@ export function PlatformRoute({ session }: { session: { userId?: string; platfor
   }
   if (hash.startsWith('#platform/configuration/elevator')) {
     if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
-    return <ElevatorBusinessConfigurationReference />;
+    return <PlatformBusinessOperationsPage capabilities={capabilities} currentUserId={session.userId} />;
   }
   if (hash.startsWith('#platform/configuration/provider-overrides')) {
     if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
@@ -1239,12 +1262,13 @@ export function PlatformRoute({ session }: { session: { userId?: string; platfor
     return <PlatformMaintenancePage capabilities={capabilities} />;
   }
   if (hash.startsWith('#platform/configuration')) {
-    const kind = path.split('/')[2] || 'asset-families';
+    const kind = path.split('/')[2];
     if (!capabilities.includes('PLATFORM_CONFIGURATION_READ')) {
       return <section className="platform-page"><StatePanel title="Configuration access is restricted"><span>Your platform grant does not include catalogue read access.</span></StatePanel></section>;
     }
     if (!path.split('/')[2]) return <PlatformConfigurationRegistry />;
-    return <section className="platform-page"><PlatformBreadcrumb current="Business configuration" /><PageHeader eyebrow="Platform administration" title="Business configuration" description="Manage global catalogue definitions. Providers can read and adopt published entries but cannot edit canonical platform rows." /><ConfigurationAdmin providerId="" t={(key) => key} initialKind={kind} platformOnly platformCapabilities={capabilities} /></section>;
+    if (!platformConfigurationKinds.has(kind || '')) return <section className="platform-page"><StatePanel title="Configuration area not found"><span>This configuration area is not part of the platform catalogue. Use the registry to open an available, API-backed area.</span><Button variant="secondary" onClick={() => go('platform/configuration')}>Back to configuration</Button></StatePanel></section>;
+    return <section className="platform-page"><PlatformBreadcrumb current="Business configuration" /><ConfigurationAdmin providerId="" t={(key) => key} initialKind={kind} platformOnly platformCapabilities={capabilities} /></section>;
   }
   if (hash.startsWith('#platform/compliance')) { const params = new URLSearchParams(hash.split('?')[1] || ''); const businessId = params.get('business_id'); const providerId = params.get('provider_id'); return businessId ? <BusinessCompliancePage businessId={businessId} capabilities={capabilities} /> : providerId ? <PlatformCompliancePage capabilities={capabilities} /> : <PlatformApprovalInbox capabilities={capabilities} />; }
   if (hash.startsWith('#platform/team')) return <PlatformTeamPage capabilities={capabilities} />;

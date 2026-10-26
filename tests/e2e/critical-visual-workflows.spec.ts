@@ -70,7 +70,7 @@ test('authenticated Provider Admin Operations workflows render at the configured
   await navigateHash(page, 'overview');
   await expect(page).toHaveURL(/#overview$/);
   await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('heading', { name: "Today's operations" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Operations for / })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Urgent complaints' })).toBeVisible();
   await expect(page.locator('.dashboard-complaint-row')).toHaveCount(5);
   await expect(page.getByRole('heading', { name: 'Technician availability' })).toBeVisible();
@@ -145,7 +145,10 @@ test('authenticated Provider Admin Operations workflows render at the configured
     }
     if (hash === 'quotations') {
       await page.locator('.quotation-register tbody tr').first().locator('.quotation-row-select').click();
-      await expect(page.getByRole('dialog').filter({ hasText: 'Quotation detail' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Quotation details', exact: true })).toBeVisible();
+      await expect(page.getByRole('tablist', { name: 'Quotation lifecycle sections', exact: true }).getByRole('tab')).toHaveCount(3);
+      await page.getByRole('button', { name: '← Sales & Quotations', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
       await page.getByRole('button', { name: /New quotation/i }).click();
       const quotationDialog = page.getByRole('dialog', { name: 'Create quotation' });
       await expect(quotationDialog).toBeVisible();
@@ -155,7 +158,8 @@ test('authenticated Provider Admin Operations workflows render at the configured
         await paidAmcAction.click();
         const renewalDialog = page.getByRole('dialog', { name: 'Create paid AMC renewal quotation', exact: true });
         await expect(renewalDialog.getByLabel('Predecessor contract')).toBeVisible();
-        await expect(renewalDialog.getByLabel('Amount (INR)')).toBeVisible();
+        await expect(renewalDialog.getByLabel('AMC plan')).toBeVisible();
+        await expect(renewalDialog.getByLabel('Covered elevator asset')).toBeVisible();
         await expect(renewalDialog.getByRole('button', { name: 'Create renewal quotation', exact: true })).toBeVisible();
         await capture(page, testInfo, 'provider-admin-paid-amc-renewal-dialog');
         await renewalDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -181,7 +185,7 @@ test('authenticated Provider Admin Operations workflows render at the configured
       await expect(projectTable.locator('tbody tr').first()).toBeVisible();
       await expect(page.getByLabel('Project rows per page')).toHaveValue('10');
       await page.getByRole('button', { name: 'Open project' }).first().click();
-      await expect(page.getByRole('button', { name: '← Projects' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Add material requirement', exact: true })).toHaveCount(activePermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
       const editProject = page.getByRole('button', { name: 'Edit project', exact: true });
       if (await editProject.count()) {
@@ -231,7 +235,11 @@ test('authenticated Provider Admin Operations workflows render at the configured
       await capture(page, testInfo, 'provider-admin-configure-payment-stages-dialog');
       await paymentDialog.getByRole('button', { name: 'Close Configure payment stages' }).click();
       const projectTabs = page.getByRole('tablist', { name: 'Project work areas' });
-      await expect(projectTabs.getByRole('tab')).toHaveCount(4);
+      await expect(projectTabs.getByRole('tab')).toHaveCount(5);
+      await projectTabs.getByRole('tab', { name: 'Readiness & blockers' }).click();
+      await expect(page.getByRole('heading', { name: 'Site readiness & blockers', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Readiness checklist guidance', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Add blocker', exact: true })).toHaveCount(activePermissions.has('SERVICE_JOB_EDIT') ? 1 : 0);
       await projectTabs.getByRole('tab', { name: 'Stages & execution' }).click();
       await expect(page.getByRole('heading', { name: 'Installation milestones' })).toBeVisible();
       const createInstallationJob = page.getByRole('button', { name: 'Create installation job', exact: true });
@@ -507,15 +515,24 @@ test('authorized Provider Administrator can inspect a member effective-access pr
   await localSignOut(page);
 });
 
-test('Provider Admin subscription usage and change request follow the provider-scoped API contract', async ({ page }, testInfo) => {
+test('Provider Admin manages subscription details and activity from Business Profile', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith('operations'), 'Provider subscription visual workflow runs in Operations projects only.');
   await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   await requireProviderContext(page);
   await navigateHash(page, 'subscriptions');
-  await expect(page.getByRole('heading', { name: 'Review subscription / usage', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Business profile', exact: true })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('tab', { name: 'Subscription & activity', exact: true }).click();
   await expect(page.getByText('Current subscription', { exact: true })).toBeVisible();
   await expect(page.getByText('Capacity / action', { exact: true })).toBeVisible();
   await capture(page, testInfo, 'provider-subscription-usage');
+  await page.getByRole('tab', { name: /Activity/ }).click();
+  await expect(page.getByText('Subscription activity', { exact: true })).toBeVisible();
+  await expect(page.getByText('Subscription timeline', { exact: true })).toBeVisible();
+  await capture(page, testInfo, 'provider-subscription-activity');
+  await page.getByRole('tab', { name: /Plans & invoices/ }).click();
+  await expect(page.getByText('Published plans', { exact: true })).toBeVisible();
+  await expect(page.getByText('Invoices', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: /Overview & usage/ }).click();
   const openRequest = page.getByRole('button', { name: /Request (subscription change|a subscription)/ });
   await expect(openRequest).toBeVisible();
   await openRequest.click();

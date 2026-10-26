@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bell' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'search' | 'send' | 'settings' | 'shield' | 'upload' | 'users' | 'x';
+type IconName = 'activity' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bell' | 'building' | 'calendar' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'clipboard' | 'download' | 'eye' | 'filter' | 'grid' | 'info' | 'link' | 'map-pin' | 'pencil' | 'plus' | 'save' | 'search' | 'send' | 'settings' | 'shield' | 'upload' | 'users' | 'x';
 
 const paths: Record<IconName, string> = {
   activity: 'M3 12h4l2-8 4 16 2-8h6',
@@ -19,6 +19,8 @@ const paths: Record<IconName, string> = {
   eye: 'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   filter: 'M4 5h16l-6 7v5l-4 2v-7L4 5Z',
   grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  info: 'M12 10v7m0-11h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z',
+  link: 'M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1m3.2 5.8a5 5 0 0 0-7.1-.1l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1',
   'map-pin': 'M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   pencil: 'm4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm10-12 3 3',
   plus: 'M12 5v14M5 12h14',

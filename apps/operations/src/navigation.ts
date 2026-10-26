@@ -1,6 +1,6 @@
 import type { ProviderCapabilityContext, Session } from '@trise/auth';
 
-export type ProviderNavigationGroup = 'Overview' | 'Work Intake' | 'Sales & Quotations' | 'Projects & Delivery' | 'Field Operations' | 'Assets & Sites' | 'Service Programs' | 'Workforce' | 'Insights' | 'Provider Settings';
+export type ProviderNavigationGroup = 'Overview' | 'Intake' | 'Commercial' | 'Delivery' | 'Customers & Assets' | 'Service' | 'Workforce' | 'Governance' | 'Administration' | 'Insights';
 export type OperationsNavigationItem = { key: string; label: string; hash: string; capability?: string; group?: ProviderNavigationGroup };
 
 export const platformNavigation: OperationsNavigationItem[] = [
@@ -8,12 +8,15 @@ export const platformNavigation: OperationsNavigationItem[] = [
   { key: 'platform-businesses', label: 'Businesses', hash: 'platform/businesses', capability: 'PLATFORM_PROVIDER_READ' },
   { key: 'platform-providers', label: 'Service Providers', hash: 'platform/providers', capability: 'PLATFORM_PROVIDER_READ' },
   { key: 'platform-configuration-platform', label: 'Platform configuration', hash: 'platform/configuration', capability: 'PLATFORM_CONFIGURATION_READ' },
-  { key: 'platform-configuration-elevator', label: 'Elevator & Lift', hash: 'platform/configuration/elevator', capability: 'PLATFORM_CONFIGURATION_READ' },
   { key: 'platform-configuration-provider-overrides', label: 'Provider overrides', hash: 'platform/configuration/provider-overrides', capability: 'PLATFORM_CONFIGURATION_READ' },
   { key: 'platform-business-operations', label: 'Business Operations Catalogue', hash: 'platform/business-operations', capability: 'PLATFORM_CONFIGURATION_READ' },
   { key: 'platform-configuration-reviews', label: 'Approvals', hash: 'platform/configuration/reviews', capability: 'PLATFORM_CONFIGURATION_READ' },
   { key: 'platform-configuration-audit', label: 'Audit log', hash: 'platform/configuration/audit', capability: 'PLATFORM_CONFIGURATION_READ' },
   { key: 'platform-reference-data', label: 'Reference data', hash: 'platform/configuration/reference-data', capability: 'PLATFORM_CONFIGURATION_READ' },
+  // Platform notification access is authorized by the platform-admin session
+  // boundary in the API; there is no separate platform notification
+  // capability in the current contract.
+  { key: 'platform-notifications', label: 'Notifications', hash: 'platform/notifications' },
   { key: 'platform-compliance', label: 'Compliance Review', hash: 'platform/compliance', capability: 'PLATFORM_COMPLIANCE_READ' },
   { key: 'platform-provider-users', label: 'Provider Users', hash: 'platform/provider-users', capability: 'PLATFORM_PROVIDER_READ' },
   { key: 'platform-maintenance', label: 'Maintenance control', hash: 'platform/maintenance', capability: 'PLATFORM_MAINTENANCE_READ' },
@@ -29,43 +32,96 @@ export const platformNavigation: OperationsNavigationItem[] = [
 
 const providerItems: OperationsNavigationItem[] = [
   { key: 'overview', label: 'Overview', hash: 'overview', group: 'Overview' },
-  { key: 'work-intake', label: 'Work Intake', hash: 'work-intake', capability: 'work_intake', group: 'Work Intake' },
-  { key: 'leads', label: 'Marketing Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Work Intake' },
-  { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Work Intake' },
-  { key: 'quotations', label: 'Sales & Quotations', hash: 'quotations', capability: 'quotations', group: 'Sales & Quotations' },
-  { key: 'projects', label: 'Projects & Delivery', hash: 'projects', capability: 'projects', group: 'Projects & Delivery' },
-  { key: 'bookings', label: 'Appointments & Dispatch', hash: 'bookings', capability: 'bookings', group: 'Field Operations' },
-  { key: 'jobs', label: 'Jobs & Execution', hash: 'jobs', capability: 'jobs', group: 'Field Operations' },
-  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Field Operations' },
-  { key: 'customers', label: 'Customers, Sites & Assets', hash: 'customers', capability: 'customers', group: 'Assets & Sites' },
-  { key: 'onboarding', label: 'Site Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Assets & Sites' },
-  { key: 'amc', label: 'AMC & Service Programs', hash: 'amc', capability: 'amc', group: 'Service Programs' },
-  { key: 'workforce', label: 'Workforce', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
+  { key: 'work-intake', label: 'Work Intake', hash: 'work-intake', capability: 'work_intake', group: 'Intake' },
+  { key: 'leads', label: 'Leads & Surveys', hash: 'leads', capability: 'sales_marketing', group: 'Intake' },
+  { key: 'requests', label: 'Service Requests', hash: 'requests', capability: 'requests', group: 'Intake' },
+  { key: 'quotations', label: 'Quotations', hash: 'quotations', capability: 'quotations', group: 'Commercial' },
+  { key: 'billing', label: 'Payment & Billing', hash: 'billing', capability: 'billing', group: 'Commercial' },
+  { key: 'projects', label: 'Projects & Installation', hash: 'projects', capability: 'projects', group: 'Delivery' },
+  { key: 'bookings', label: 'Appointments & Dispatch', hash: 'bookings', capability: 'bookings', group: 'Delivery' },
+  { key: 'jobs', label: 'Jobs & Execution', hash: 'jobs', capability: 'jobs', group: 'Delivery' },
+  { key: 'my-work', label: 'My Work', hash: 'jobs/my-work', capability: 'my_work', group: 'Delivery' },
+  { key: 'customers', label: 'Customers', hash: 'customers', capability: 'customers', group: 'Customers & Assets' },
+  { key: 'sites', label: 'Sites & Locations', hash: 'sites', capability: 'customers', group: 'Customers & Assets' },
+  { key: 'assets', label: 'Assets', hash: 'assets', capability: 'customers', group: 'Customers & Assets' },
+  { key: 'onboarding', label: 'Site Onboarding', hash: 'onboarding', capability: 'onboarding', group: 'Customers & Assets' },
+  { key: 'amc', label: 'AMC & Service Programs', hash: 'amc', capability: 'amc', group: 'Service' },
+  { key: 'amc-plans', label: 'AMC Plan Catalogue', hash: 'amc/plans', capability: 'amc_plans', group: 'Service' },
+  { key: 'workforce', label: 'Directory', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
+  { key: 'attendance', label: 'My Attendance', hash: 'attendance', capability: 'attendance', group: 'Workforce' },
+  { key: 'my-leave', label: 'My Leave', hash: 'my-leave', capability: 'my_leave', group: 'Workforce' },
+  { key: 'compliance', label: 'Provider Compliance', hash: 'compliance', capability: 'compliance', group: 'Governance' },
+  { key: 'audit', label: 'Audit History', hash: 'audit', capability: 'audit', group: 'Governance' },
   { key: 'reports', label: 'Reports & Analytics', hash: 'reports', capability: 'reports', group: 'Insights' },
-  { key: 'configuration', label: 'Configuration', hash: 'configuration', capability: 'configuration', group: 'Provider Settings' },
-  { key: 'business-profile', label: 'Business profile', hash: 'business-profile', capability: 'business_profile', group: 'Provider Settings' },
-  { key: 'compliance', label: 'Provider compliance', hash: 'compliance', capability: 'compliance', group: 'Provider Settings' },
-  { key: 'subscriptions', label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', group: 'Provider Settings' },
-  { key: 'audit', label: 'Provider audit logs', hash: 'audit', capability: 'audit', group: 'Provider Settings' },
-  { key: 'team-access', label: 'Team & roles', hash: 'team-access', capability: 'team_access', group: 'Provider Settings' }
+  { key: 'configuration', label: 'Provider Configuration', hash: 'configuration', capability: 'configuration', group: 'Administration' },
+  { key: 'quotation-terms-templates', label: 'Quotation Templates', hash: 'configuration/quotation-terms-templates', capability: 'quotation_terms_admin', group: 'Administration' },
+  { key: 'business-profile', label: 'Business Profile', hash: 'business-profile', capability: 'business_profile', group: 'Administration' },
+  { key: 'team-access', label: 'Team & Roles', hash: 'team-access', capability: 'team_access', group: 'Administration' },
+  { key: 'notifications', label: 'Notification inbox', hash: 'notifications', capability: 'notifications', group: 'Administration' }
 ];
+
+// Typed configuration records are opened as deep links under the single
+// Provider Configuration menu item. Keep this allowlist explicit so an
+// arbitrary configuration hash cannot bypass the navigation capability gate.
+const providerConfigurationKinds = new Set([
+  'asset-families', 'asset-types', 'asset-definitions', 'service-types',
+  'checklist-templates', 'notification-triggers', 'notification-policies',
+  'notification-templates', 'skills', 'certification-types',
+  'working-calendars', 'holiday-calendars', 'service-territories',
+  'assignment-policies', 'asset-criticalities', 'service-priorities',
+  'emergency-rules', 'sla-policies', 'identifier-policies',
+  'maintenance-policies'
+]);
 
 export function providerContextFor(session: Pick<Session, 'providerCapabilities'>, providerId?: string): ProviderCapabilityContext | undefined {
   if (!providerId) return undefined;
   return session.providerCapabilities.find((context) => context.providerId === providerId);
 }
 
-export function navigationForSession(session: Pick<Session, 'platformAdmin' | 'platformCapabilities' | 'providerCapabilities'>, providerId?: string) {
+/**
+ * Return the safe landing route after an explicit sign-in. A previous hash is
+ * deliberately not reused here because it belongs to the account/workspace
+ * that was signed out. Ordinary page refreshes still preserve deep links.
+ */
+export function postLoginRoute(session: Pick<Session, 'platformAdmin' | 'providerCapabilities'>, providerId?: string): string {
+  if (session.platformAdmin) return 'platform/overview';
+  const context = providerContextFor(session, providerId);
+  if (context?.roleContext?.toUpperCase() === 'AGENT' && context.capabilities.includes('my_work')) return 'jobs/my-work';
+  return 'overview';
+}
+
+export function navigationForSession(session: Pick<Session, 'providerCapabilities'> & Partial<Pick<Session, 'platformAdmin' | 'platformCapabilities'>>, providerId?: string) {
   const context = providerContextFor(session, providerId);
   const capabilities = new Set(context?.capabilities || []);
   return {
-    platform: session.platformAdmin ? platformNavigation.filter((item) => !item.capability || session.platformCapabilities?.includes(item.capability)) : [],
-    provider: context ? providerItems.filter((item) => !item.capability || capabilities.has(item.capability)) : [],
+    platform: session.platformAdmin ? uniqueNavigationItems(platformNavigation.filter((item) => !item.capability || capabilitiesMatch(session.platformCapabilities, item.capability))) : [],
+    provider: context ? uniqueNavigationItems(providerItems.filter((item) => !item.capability || capabilities.has(item.capability))) : [],
     context
   };
 }
 
-export const providerNavigationGroups: ProviderNavigationGroup[] = ['Overview', 'Work Intake', 'Sales & Quotations', 'Projects & Delivery', 'Field Operations', 'Assets & Sites', 'Service Programs', 'Workforce', 'Insights', 'Provider Settings'];
+function capabilitiesMatch(capabilities: string[] | undefined, capability: string) {
+  return new Set(capabilities || []).has(capability);
+}
+
+/**
+ * Navigation is a projection of server capabilities, but a duplicated API
+ * capability or legacy menu record must never render duplicate destinations.
+ * Keep the first canonical item for each key/hash pair so existing ordering
+ * remains stable while the UI stays deterministic.
+ */
+function uniqueNavigationItems(items: OperationsNavigationItem[]) {
+  const seenKeys = new Set<string>();
+  const seenHashes = new Set<string>();
+  return items.filter((item) => {
+    if (seenKeys.has(item.key) || seenHashes.has(item.hash)) return false;
+    seenKeys.add(item.key);
+    seenHashes.add(item.hash);
+    return true;
+  });
+}
+
+export const providerNavigationGroups: ProviderNavigationGroup[] = ['Overview', 'Intake', 'Commercial', 'Delivery', 'Customers & Assets', 'Service', 'Workforce', 'Governance', 'Administration', 'Insights'];
 
 export function groupedProviderNavigation(items: OperationsNavigationItem[]) {
   return providerNavigationGroups.map((group) => ({ group, items: items.filter((item) => item.group === group) })).filter((entry) => entry.items.length > 0);
@@ -75,8 +131,17 @@ export function requiredProviderCapability(section: string): string | undefined 
   return providerItems.find((item) => item.hash === section || (section === 'overview' && item.key === 'overview'))?.capability;
 }
 
-export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string): boolean {
+export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string, routeKind?: string): boolean {
   const navigation = navigationForSession(session, providerId);
-  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : requiredProviderCapability(section) || section;
-  return navigation.provider.some((item) => (!item.capability || item.capability === capability) && (item.hash === section || (section === 'jobs' && routeId === 'my-work' && item.hash === 'jobs/my-work')));
+  if (section === 'configuration' && routeKind && providerConfigurationKinds.has(routeKind)) {
+    return navigation.provider.some((item) => item.hash === 'configuration');
+  }
+  const nestedHash = section === 'amc' && routeId === 'plans' ? 'amc/plans' : routeKind ? `${section}/${routeKind}` : undefined;
+  const matchingItem = section === 'jobs' && routeId === 'my-work'
+    ? navigation.provider.find((item) => item.hash === 'jobs/my-work')
+    : nestedHash
+      ? navigation.provider.find((item) => item.hash === nestedHash)
+      : navigation.provider.find((item) => item.hash === section);
+  const capability = section === 'jobs' && routeId === 'my-work' ? 'my_work' : matchingItem?.capability || requiredProviderCapability(section) || section;
+  return Boolean(matchingItem && (!matchingItem.capability || matchingItem.capability === capability));
 }

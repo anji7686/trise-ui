@@ -1,6 +1,15 @@
 export type RequestContext = { providerId?: string; signal?: AbortSignal };
 export type ApiError = { status: number; code: string; message: string; details?: unknown[] };
 
+const SESSION_REFRESH_LOCK = 'trise-session-refresh';
+const SESSION_REFRESH_STORAGE_LOCK = 'trise-session-refresh-lock';
+const SESSION_REFRESH_LOCK_TTL_MS = 10_000;
+const SESSION_REFRESH_LOCK_WAIT_MS = 50;
+
+type LockManagerLike = {
+  request<T>(name: string, options: { mode: 'exclusive' }, callback: () => Promise<T>): Promise<T>;
+};
+
 export class ApiClient {
   private accessToken: string | null = null;
   private refreshPromise: Promise<string | null> | null = null;
@@ -27,6 +36,7 @@ export class ApiClient {
     if (response.status === 401 && !path.startsWith('/session/')) {
       const token = await this.refresh();
       if (token) return this.requestBlob(path, init, context);
+      throw sessionExpiredError();
     }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -47,6 +57,7 @@ export class ApiClient {
     if (response.status === 401 && mayRefresh && !path.startsWith('/session/')) {
       const token = await this.refresh();
       if (token) return this.perform(path, init, context, false);
+      throw sessionExpiredError();
     }
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -57,19 +68,71 @@ export class ApiClient {
 
   async refresh(): Promise<string | null> {
     if (!this.refreshPromise) {
-      this.refreshPromise = fetch(`${this.baseUrl}/session/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Accept': 'application/json', 'X-CSRF-Token': readCookie('trise_csrf') || '' }
-      }).then(async (response) => {
-        if (!response.ok) return null;
-        const body = await response.json();
-        this.accessToken = body.access_token ?? null;
-        return this.accessToken;
-      }).catch(() => null).finally(() => { this.refreshPromise = null; });
+      this.refreshPromise = withRefreshLock(() => fetch(`${this.baseUrl}/session/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Accept': 'application/json', 'X-CSRF-Token': readCookie('trise_csrf') || '' }
+        }).then(async (response) => {
+          if (!response.ok) return null;
+          const body = await response.json();
+          this.accessToken = body.access_token ?? null;
+          return this.accessToken;
+        }))
+        .catch(() => null)
+        .finally(() => { this.refreshPromise = null; });
     }
-    return this.refreshPromise;
+    const token = await this.refreshPromise;
+    if (!token) notifySessionExpired();
+    return token;
   }
+}
+
+function withRefreshLock<T>(callback: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks) {
+    return (navigator.locks as LockManagerLike).request(SESSION_REFRESH_LOCK, { mode: 'exclusive' }, callback);
+  }
+  return withStorageRefreshLock(callback);
+}
+
+async function withStorageRefreshLock<T>(callback: () => Promise<T>): Promise<T> {
+  if (typeof window === 'undefined') return callback();
+
+  let storage: Storage;
+  try {
+    storage = window.localStorage;
+  } catch {
+    return callback();
+  }
+
+  const owner = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const value = JSON.stringify({ owner, expiresAt: Date.now() + SESSION_REFRESH_LOCK_TTL_MS });
+  for (let attempt = 0; attempt < SESSION_REFRESH_LOCK_TTL_MS / SESSION_REFRESH_LOCK_WAIT_MS; attempt += 1) {
+    try {
+      const existing = storage.getItem(SESSION_REFRESH_STORAGE_LOCK);
+      const expiresAt = existing ? Number(JSON.parse(existing).expiresAt) : 0;
+      if (!existing || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        storage.setItem(SESSION_REFRESH_STORAGE_LOCK, value);
+        if (storage.getItem(SESSION_REFRESH_STORAGE_LOCK) === value) {
+          try { return await callback(); }
+          finally {
+            if (storage.getItem(SESSION_REFRESH_STORAGE_LOCK) === value) storage.removeItem(SESSION_REFRESH_STORAGE_LOCK);
+          }
+        }
+      }
+    } catch {
+      return callback();
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, SESSION_REFRESH_LOCK_WAIT_MS));
+  }
+  return callback();
+}
+
+function notifySessionExpired() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('trise:session-expired'));
+}
+
+function sessionExpiredError(): ApiError {
+  return { status: 401, code: 'session_expired', message: 'Your session has expired. Sign in again to continue.' };
 }
 
 function readCookie(name: string): string | null {

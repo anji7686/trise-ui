@@ -1,8 +1,14 @@
-.button { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; min-height:2.5rem; white-space:nowrap; }
-.button-secondary { background:var(--surface); color:var(--primary); }
-.button-danger { background:#a33b3b; border-color:#a33b3b; }
-.button-quiet { border-color:transparent; background:transparent; color:var(--primary); }
+.button { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; width:auto; max-width:100%; min-height:2.25rem; flex:0 1 auto; justify-self:start; padding:.45rem .75rem; border:1px solid var(--primary); border-radius:.45rem; background:var(--primary); color:#fff; font:inherit; line-height:1.25; white-space:nowrap; cursor:pointer; transition:background-color .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease; }
+.button:hover:not(:disabled) { border-color:color-mix(in srgb,var(--primary) 82%,#000); background:color-mix(in srgb,var(--primary) 88%,#000); }
+.button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.button-secondary { border-color:var(--border); background:var(--surface); color:var(--primary); }
+.button-secondary:hover:not(:disabled) { border-color:var(--primary); background:color-mix(in srgb,var(--primary) 8%,var(--surface)); color:var(--primary); }
+.button-danger { border-color:var(--danger,#a33b3b); background:var(--danger,#a33b3b); color:#fff; }
+.button-danger:hover:not(:disabled) { border-color:color-mix(in srgb,var(--danger,#a33b3b) 82%,#000); background:color-mix(in srgb,var(--danger,#a33b3b) 86%,#000); }
+.button-quiet { min-height:2rem; padding:.35rem .5rem; border-color:transparent; background:transparent; color:var(--primary); }
+.button-quiet:hover:not(:disabled) { border-color:color-mix(in srgb,var(--primary) 22%,var(--border)); background:color-mix(in srgb,var(--primary) 8%,var(--surface)); }
 .button:disabled { opacity:.58; cursor:not-allowed; }
+[data-theme="dark"] .button-primary { color:#102139; }
 .state-panel { display:grid; gap:.5rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:1rem; }
 .state-panel p { margin:0; color:var(--secondary); }
 .field-hint { color:var(--secondary); font-size:.85rem; font-weight:400; }

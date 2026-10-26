@@ -5,6 +5,25 @@ export type WorkspaceTab = { id: string; label: string; disabled?: boolean };
 
 export type ProviderAction = { id: string; label: string; onSelect: () => void; disabled?: boolean; tone?: 'default' | 'danger' };
 
+const INTERNAL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DISPLAY_ACRONYMS = new Set(['AMC', 'API', 'CGST', 'GSTIN', 'INR', 'MRL', 'PAN', 'PDF', 'QA', 'SGST', 'SMS', 'UPI', 'XLS']);
+
+/**
+ * Convert server enum values into readable UI labels while keeping the raw
+ * value available to the request/transition layer. UUIDs are never useful to
+ * an operator, so callers get the supplied fallback instead of rendering one.
+ */
+export function displayLabel(value: unknown, fallback = 'Not supplied') {
+  const raw = String(value ?? '').trim();
+  if (!raw || INTERNAL_ID_PATTERN.test(raw)) return fallback;
+  if (!/[_-]/.test(raw) && raw !== raw.toUpperCase()) return raw;
+  return raw
+    .replace(/[_-]+/g, ' ')
+    .split(/\s+/)
+    .map((word) => DISPLAY_ACRONYMS.has(word.toUpperCase()) ? word.toUpperCase() : `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(' ');
+}
+
 /** Compact, accessible action surface for provider tables. */
 export function ProviderActionMenu({ label = 'Actions', actions }: { label?: string; actions: ProviderAction[] }) {
   const [open, setOpen] = useState(false);
@@ -59,6 +78,23 @@ export function OperationsDrawer({ title, children, onClose, busy = false }: { t
 
 export function ActionFeedback({ kind = 'success', children }: { kind?: 'success' | 'error' | 'warning' | 'info'; children: ReactNode }) {
   return <div className={`action-feedback action-feedback-${kind}`} role={kind === 'error' ? 'alert' : 'status'}>{children}</div>;
+}
+
+export function ActionNotification({ kind = 'success', title, children, onClose, durationMs = 5000 }: { kind?: 'success' | 'error' | 'warning' | 'info'; title: string; children: ReactNode; onClose: () => void; durationMs?: number | null }) {
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (durationMs === null) return;
+    const timer = window.setTimeout(() => close.current(), durationMs);
+    return () => window.clearTimeout(timer);
+  }, [durationMs]);
+  const symbol = kind === 'success' ? '✓' : kind === 'error' ? '!' : kind === 'warning' ? '!' : 'i';
+  return <aside className={`action-notification action-notification-${kind}`} role={kind === 'error' || kind === 'warning' ? 'alert' : 'status'} aria-live={kind === 'error' || kind === 'warning' ? 'assertive' : 'polite'}>
+    <span className="action-notification-bar" aria-hidden="true" />
+    <span className="action-notification-symbol" aria-hidden="true">{symbol}</span>
+    <div className="action-notification-copy"><strong>{title}</strong><p>{children}</p></div>
+    <button type="button" className="action-notification-close" aria-label={`Dismiss ${title}`} onClick={onClose}>×</button>
+  </aside>;
 }
 
 export function EmptyState({ title, description, action }: { title: string; description: string; action?: ReactNode }) {

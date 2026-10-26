@@ -5,7 +5,7 @@ import { operationsData } from './data';
 import { SvgIcon } from './icons';
 import { OperationsStatus } from './operations-status';
 
-type Capability = 'business_profile' | 'workforce' | 'team_access' | 'compliance' | 'subscriptions' | 'configuration';
+type Capability = 'business_profile' | 'workforce' | 'team_access' | 'compliance' | 'subscriptions' | 'configuration' | 'quotation_terms_admin';
 type Metrics = { technicians?: string; compliance?: string; members?: string; usage?: string; profile?: string; profileName?: string; profileAddress?: string; errors: string[] };
 type Tab = { label: string; hash: string; capability: Capability; icon: Parameters<typeof SvgIcon>[0]['name'] };
 
@@ -16,6 +16,7 @@ const tabs: Tab[] = [
   { label: 'Compliance', hash: 'compliance', capability: 'compliance', icon: 'clipboard' },
   { label: 'Subscription', hash: 'subscriptions', capability: 'subscriptions', icon: 'grid' },
   { label: 'Notifications', hash: 'configuration/notification-policies', capability: 'configuration', icon: 'activity' },
+  { label: 'Quotation Terms', hash: 'configuration/quotation-terms-templates', capability: 'quotation_terms_admin', icon: 'clipboard' },
 ];
 
 function navigate(hash: string) { window.location.hash = hash; }
@@ -80,7 +81,7 @@ export function ProviderAdministrationPage({ providerId, capabilities }: { provi
   if (!visibleTabs.length) return <StatePanel title="Administration unavailable">No administration capabilities are available in the selected provider context.</StatePanel>;
 
   return <section className="provider-administration-page">
-    <PageHeader eyebrow="Provider administration" title="Administration" description="Manage business profile, workforce, compliance, team access and subscription visibility." />
+    <PageHeader eyebrow="Provider administration" title="Administration" description="Manage business profile, workforce, compliance, team access, commercial templates and subscription visibility." />
     <div className="provider-admin-kpis" aria-label="Provider administration summary">
       {cards.map((card) => <button type="button" className={`provider-admin-kpi ${card.color}`} key={card.label} onClick={() => navigate(card.to)}>
         <span className="provider-admin-kpi-icon"><SvgIcon name={card.icon} size={22} /></span><span className="provider-admin-kpi-copy"><span>{card.label}</span><strong>{loading ? 'Loading…' : card.value || 'Unavailable'}</strong>{card.label === 'Pending compliance' && !loading && <small>Server-reported requests</small>}</span>

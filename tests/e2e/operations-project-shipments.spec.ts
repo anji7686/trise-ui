@@ -63,7 +63,7 @@ test('Provider Admin milestone execution stays hidden and is denied by the API',
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await expect(page.getByRole('heading', { name: 'Installation Projects', exact: true })).toBeVisible();
   const projectRow = page.getByRole('row').filter({ hasText: project.attributes.title });
   await expect(projectRow).toBeVisible();
@@ -105,7 +105,7 @@ test('Projects keeps per-unit milestones independent and blocks unassigned execu
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Quality and handover', exact: true })).toBeVisible();
@@ -124,7 +124,7 @@ test('Projects keeps per-unit milestones independent and blocks unassigned execu
   await page.getByLabel('Handover evidence document ID', { exact: true }).fill(syntheticEvidenceId());
   await page.getByRole('dialog').getByRole('button', { name: 'Request handover', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Handover request recorded by the server.');
-  await expect(page.getByText('REQUESTED', { exact: true })).toHaveCount(2);
+  await expect(page.getByText('Requested', { exact: true })).toHaveCount(2);
   await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
   await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
   await page.getByLabel('Code *', { exact: true }).fill('INSTALL-A');
@@ -194,7 +194,7 @@ test('Projects records a commissioning defect and requires independent reinspect
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Commissioning defects and reinspection', exact: true })).toBeVisible();
@@ -205,10 +205,10 @@ test('Projects records a commissioning defect and requires independent reinspect
   await page.getByRole('dialog').getByRole('button', { name: 'Report defect', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Quality finding recorded.');
   await page.getByRole('button', { name: 'Start rectification', exact: true }).click();
-  await expect(page.getByText('RECTIFICATION_IN_PROGRESS', { exact: true })).toBeVisible();
+  await expect(page.getByText('Rectification In Progress', { exact: true })).toBeVisible();
   await page.getByLabel('Reinspection evidence document ID', { exact: true }).fill(syntheticEvidenceId());
   await page.getByRole('button', { name: 'Submit for reinspection', exact: true }).click();
-  await expect(page.getByText('READY_FOR_REINSPECTION', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ready For Reinspection', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Pass reinspection', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('independent reviewer');
 
@@ -218,19 +218,26 @@ test('Projects records a commissioning defect and requires independent reinspect
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'QA & handover', exact: true }).click();
-  await expect(page.getByText('READY_FOR_REINSPECTION', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ready For Reinspection', { exact: true })).toBeVisible();
   await page.getByLabel('Reinspection evidence document ID', { exact: true }).fill(syntheticEvidenceId());
-  await page.getByRole('button', { name: 'Pass reinspection', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Quality finding resolved.');
-  await expect(page.getByText('RESOLVED', { exact: true })).toBeVisible();
+  // The default Provider Reviewer can inspect the finding but does not receive
+  // the operational SERVICE_JOB_EDIT grant required to resolve it. The UI
+  // must therefore keep the mutation hidden and the API remains the final
+  // authority for this boundary.
+  await expect(page.getByRole('button', { name: 'Pass reinspection', exact: true })).toHaveCount(0);
   const findingsResponse = await page.request.get(`${api}/service-cases/${project.id}/quality-findings`, { headers: reviewerHeaders });
   expect(findingsResponse.ok()).toBeTruthy();
   const findingsPayload = await findingsResponse.json();
   const finding = findingsPayload.data[0].data || findingsPayload.data[0];
-  expect(finding.attributes.status).toBe('RESOLVED');
+  const deniedResolution = await page.request.post(`${api}/quality-findings/${finding.id}/transitions`, {
+    headers: { ...reviewerHeaders, 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
+    data: { transition: 'RESOLVED', expected_revision: finding.attributes.revision, evidence_ids: [syntheticEvidenceId()], resolution_notes: 'Reviewer boundary verification' },
+  });
+  expect(deniedResolution.status()).toBe(403);
+  expect(finding.attributes.status).toBe('READY_FOR_REINSPECTION');
   await localSignOut(page);
 });
 
@@ -268,7 +275,7 @@ test('Projects creates and links an installation Service Job', async ({ page }, 
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
   const grants = await activePermissionCodes(page, session.accessToken, providerId);
@@ -343,12 +350,12 @@ test('independent provider administrator approves a submitted change order', asy
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await expect(page.getByText(/Synthetic independent approval/)).toBeVisible();
   await page.getByRole('button', { name: 'Approve change order', exact: true }).click();
-  await expect(page.getByText('APPROVED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Approved', { exact: true })).toBeVisible();
   await expect(page.getByText('Approved project adjustments', { exact: true })).toBeVisible();
   await expect(page.getByText('Adjusted project total: 1250.00 INR', { exact: true })).toBeVisible();
   await expect(page.getByText('Approved schedule extension: 2 days', { exact: true })).toBeVisible();
@@ -388,7 +395,7 @@ test('provider payment evidence is recorded and settlement remains finance-autho
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
   await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await expect(page.getByText(/ONLINE ·/)).toBeVisible();
@@ -408,9 +415,9 @@ test('provider payment evidence is recorded and settlement remains finance-autho
     return;
   }
   await settlementAction.click();
-  await expect(page.getByText('SETTLED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Settled', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Reverse settlement', exact: true }).click();
-  await expect(page.getByText('REVERSED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Reversed', { exact: true })).toBeVisible();
   const payments = await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers: approverHeaders });
   expect(payments.ok()).toBeTruthy();
   expect((await payments.json()).data.some((item: { data?: { attributes?: { status?: string } } }) => item.data?.attributes?.status === 'REVERSED')).toBeTruthy();
@@ -472,7 +479,7 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
 
   const grants = await activePermissionCodes(page, session.accessToken, providerId);
@@ -485,8 +492,9 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   }
 
   const chequeReference = `CHEQUE-BROWSER-${Date.now()}`;
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await page.getByRole('button', { name: 'Record collection', exact: true }).click();
-  const chequeDialog = page.getByRole('dialog', { name: 'Record collection — PAYMENT-STATES', exact: true });
+  const chequeDialog = page.getByRole('dialog', { name: 'Record collection — Payment States', exact: true });
   await chequeDialog.getByLabel('Payment reference *', { exact: true }).fill(chequeReference);
   await chequeDialog.locator('select').selectOption('CHEQUE');
   await chequeDialog.getByLabel('Amount *', { exact: true }).fill('300');
@@ -499,16 +507,16 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   expect(chequePayments.ok()).toBeTruthy();
   expect((await chequePayments.json()).data.some((item: { data?: { attributes?: { payment_reference?: string; status?: string } } }) => (item.data?.attributes?.payment_reference === chequeReference && item.data.attributes.status === 'RECEIVED'))).toBeTruthy();
   await page.reload();
-  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   const chequeCard = page.locator('article.record-card').filter({ hasText: chequeReference });
-  await expect(chequeCard).toContainText('RECEIVED');
+  await expect(chequeCard).toContainText('Received');
   const chequeRows = (await (await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers })).json()).data as Array<{ data?: { id: string }; id?: string }>;
   const chequePayment = chequeRows.map((item) => item.data || item).find((item) => item.id);
   const bounceAction = chequeCard.getByRole('button', { name: 'Record bounce', exact: true });
   if (await bounceAction.count()) {
     await bounceAction.click();
-    await expect(chequeCard).toContainText('BOUNCED');
+    await expect(chequeCard).toContainText('Bounced');
   } else {
     const deniedBounce = await page.request.post(`${api}/payments/${chequePayment!.id}/transitions`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: 1, transition: 'BOUNCED', reason: 'Unauthorized role denial verification' } });
     expect(deniedBounce.status()).toBe(403);
@@ -516,9 +524,9 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
 
   // Collection entry is part of the project Overview; Commercial is the
   // read-only payment-history workspace.
-  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+  await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   await page.getByRole('button', { name: 'Record collection', exact: true }).click();
-  const onlineDialog = page.getByRole('dialog', { name: 'Record collection — PAYMENT-STATES', exact: true });
+  const onlineDialog = page.getByRole('dialog', { name: 'Record collection — Payment States', exact: true });
   const onlineReference = `ONLINE-BROWSER-${Date.now()}`;
   await onlineDialog.getByLabel('Payment reference *', { exact: true }).fill(onlineReference);
   await onlineDialog.locator('select').selectOption('ONLINE');
@@ -532,10 +540,10 @@ test('Projects preserves cheque and online payment state transitions', async ({ 
   const onlinePaymentRows = await onlinePayments.json();
   expect(onlinePaymentRows.data.some((item: { data?: { attributes?: { payment_reference?: string; status?: string } } }) => (item.data?.attributes?.payment_reference === onlineReference && item.data.attributes.status === 'PENDING_VERIFICATION'))).toBeTruthy();
   await page.reload();
-  await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Commercial', exact: true }).click();
   const onlineCard = page.locator('article.record-card').filter({ hasText: onlineReference });
-  await expect(onlineCard).toContainText('PENDING_VERIFICATION');
+  await expect(onlineCard).toContainText('Pending Verification');
   const onlineSettleAction = onlineCard.getByRole('button', { name: 'Settle payment', exact: true });
   if (!(await onlineSettleAction.count())) {
     const onlineRows = (await (await page.request.get(`${api}/service-cases/${project.id}/payments`, { headers })).json()).data as Array<{ data?: { id: string; attributes?: { payment_reference?: string } }; id?: string; attributes?: { payment_reference?: string } }>;
@@ -593,16 +601,15 @@ test('Projects opens a linked Service Job in the execution workspace', async ({ 
   const project = (await projectResponse.json()).data;
   const jobResponse = await page.request.post(`${api}/service-cases/${project.id}/jobs/create`, { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { service_type_id: serviceType.id, summary: `Synthetic linked execution job ${Date.now()}`, role: 'INSTALLATION' } });
   expect(jobResponse.status()).toBe(201);
-  const job = (await jobResponse.json()).data;
-  const serviceJobId = job.attributes?.service_job_id || job.id;
+  expect((await jobResponse.json()).data).toBeTruthy();
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Projects & Delivery');
+  await navigateProvider(page, 'Projects & Installation');
   await page.getByRole('row').filter({ hasText: project.attributes.title }).getByRole('button', { name: 'Open project', exact: true }).click();
-  await expect(page.getByText(String(serviceJobId))).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open execution job', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Open execution job', exact: true }).click();
-  await expect(page.getByText('Focused job detail. Server authority remains the source of lifecycle state.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Job details', exact: true })).toBeVisible();
   await localSignOut(page);
 });

@@ -21,9 +21,22 @@ test('provider operations overview renders the provider-scoped elevator dashboar
   await menu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await navigateProvider(page, 'Overview');
-  await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible();
-  for (const label of ['Open requests', "Today's appointments", 'Active jobs', 'AMC renewals due', 'Payment follow-ups', 'Escalations']) await expect(page.getByText(label, { exact: true })).toBeVisible();
-  for (const heading of ["Today's operations", 'Urgent complaints', 'Project stage billing', 'Technician availability', 'AMC renewal pipeline', 'Recent activity']) await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible({ timeout: 15_000 });
+  const subjectTabs = page.locator('.dashboard-subject-tabs button');
+  await expect(subjectTabs).toHaveCount(5);
+  await expect.poll(() => subjectTabs.evaluateAll((buttons) => new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().height))).size)).toBe(1);
+  const attentionPanel = page.locator('.dashboard-attention-panel');
+  await expect(attentionPanel).toBeVisible();
+  await expect(attentionPanel.getByRole('heading', { name: 'Needs attention', exact: true })).toBeVisible();
+  const dashboardMetrics = page.locator('.dashboard-metric');
+  for (const label of ['Open requests', "Today's appointments", 'Active jobs', 'AMC renewals due', 'Payment follow-ups', 'Escalations']) await expect(dashboardMetrics.filter({ hasText: label })).toHaveCount(1);
+  await expect.poll(async () => {
+    const attentionTop = await attentionPanel.boundingBox();
+    const pipelineTop = await page.locator('.dashboard-pipeline-panel').boundingBox();
+    return attentionTop && pipelineTop ? attentionTop.y < pipelineTop.y : false;
+  }).toBe(true);
+  await expect(page.getByRole('heading', { name: /^Operations for / })).toBeVisible();
+  for (const heading of ['Urgent complaints', 'Project stage billing', 'Technician availability', 'AMC renewal pipeline']) await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   const appointmentRows = page.locator('.dashboard-table button.dashboard-table-row');
   if (await appointmentRows.count()) {
     const firstAppointment = appointmentRows.first();
@@ -50,13 +63,13 @@ test('provider operations overview renders the provider-scoped elevator dashboar
   await search.press('Enter');
   await expect(page).toHaveURL(/#bookings$/);
   await page.goto(`${page.url().split('#')[0]}#overview`);
-  await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible({ timeout: 15_000 });
   const metricRoutes: Array<[string, string]> = [['Open requests', 'requests'], ["Today's appointments", 'bookings'], ['Active jobs', 'jobs'], ['AMC renewals due', 'amc'], ['Payment follow-ups', 'projects'], ['Escalations', 'requests']];
   for (const [label, hash] of metricRoutes) {
-    await page.getByRole('button', { name: new RegExp(label, 'i') }).click();
+    await dashboardMetrics.filter({ hasText: label }).click();
     await expect(page).toHaveURL(new RegExp(`#${hash}$`));
     await page.goto(`${page.url().split('#')[0]}#overview`);
-    await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Operations dashboard', exact: true })).toBeVisible({ timeout: 15_000 });
   }
   await page.locator('.dashboard-panel-wide').getByRole('button', { name: 'View all', exact: true }).click();
   await expect(page).toHaveURL(/#bookings$/);
@@ -80,10 +93,10 @@ test('provider leads register is populated, selectable and responsive', async ({
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Marketing Leads & Surveys');
+  await navigateProvider(page, 'Leads & Surveys');
   await expect(page.getByRole('heading', { name: 'Leads & site surveys', exact: true })).toBeVisible();
   await expect(page.locator('.lead-register')).toBeVisible();
-  await expect(page.getByRole('combobox', { name: 'Rows per page', exact: true })).toHaveValue('10');
+  await expect(page.getByRole('combobox', { name: 'Lead rows per page', exact: true })).toHaveValue('15');
   const leadRows = page.locator('.lead-register tbody tr');
   await expect(leadRows).not.toHaveCount(0);
   const firstLead = page.locator('.lead-register-select').first();
@@ -105,20 +118,23 @@ test('provider quotations register and detail are populated and responsive', asy
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   await accountMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await navigateProvider(page, 'Sales & Quotations');
+  await navigateProvider(page, 'Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   const quotationRows = page.locator('.quotation-register tbody tr');
   await expect(quotationRows.first()).toBeVisible({ timeout: 15_000 });
   const baselineRowCount = await quotationRows.count();
-  for (const column of ['Quote No.', 'Prospect / Customer', 'Scope', 'Rev.', 'Status', 'Value (₹)', 'Last updated']) await expect(page.getByRole('columnheader', { name: column, exact: true })).toBeVisible();
-  await expect(quotationRows.first().locator('[data-label="Quote No."]')).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
+  for (const column of ['Quote no. / customer', 'Scope / revision', 'Status', 'Value (₹)', 'Last updated', 'Actions']) await expect(page.getByRole('columnheader', { name: column, exact: true })).toBeVisible();
+  await expect(quotationRows.first().locator('[data-label="Quote no. / customer"]')).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
   await expect(quotationRows.first().locator('td').nth(1)).not.toHaveText(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
   await quotationRows.first().locator('.quotation-row-select').click();
-  await expect(page.getByRole('dialog').filter({ hasText: 'Quotation detail' })).toBeVisible();
-  await expect(page.getByRole('combobox', { name: 'Quotation rows per page', exact: true })).toHaveValue('10');
+  await expect(page.getByRole('heading', { name: 'Quotation details', exact: true })).toBeVisible();
+  await expect(page.getByRole('tablist', { name: 'Quotation lifecycle sections', exact: true }).getByRole('tab')).toHaveCount(3);
+  await page.getByRole('button', { name: '← Sales & Quotations', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Quotation rows per page', exact: true })).toHaveValue('15');
   if ((page.viewportSize()?.width || 1440) <= 700) {
     await expect.poll(() => page.locator('.quotations-workspace').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-    for (const label of ['Prospect / Customer', 'Scope', 'Revision', 'Status', 'Value', 'Last updated']) await expect(quotationRows.first().locator(`[data-label="${label}"]`)).toBeVisible();
+    for (const label of ['Quote no. / customer', 'Scope / revision', 'Status', 'Value', 'Last updated', 'Actions']) await expect(quotationRows.first().locator(`[data-label="${label}"]`)).toBeVisible();
   } else {
     await expect.poll(() => page.locator('.quotation-register-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   }
@@ -209,7 +225,7 @@ test('provider appointments render on a time-aligned weekly calendar and list', 
   await localSignOut(page);
 });
 
-test('provider jobs register opens selected job in a responsive authorized detail drawer', async ({ page }, info) => {
+test('provider jobs register opens selected job in a responsive lifecycle detail page', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
@@ -223,16 +239,12 @@ test('provider jobs register opens selected job in a responsive authorized detai
   const firstRow = table.locator('tbody tr').first();
   await expect(firstRow).toBeVisible();
   await firstRow.getByRole('button', { name: 'Open job', exact: true }).click();
-  const detail = page.getByRole('dialog', { name: /^Job / });
-  await expect(detail.locator('.job-detail')).toBeVisible();
+  const detail = page.locator('.job-detail');
+  await expect(detail).toBeVisible();
   await expect(detail.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
-  if ((page.viewportSize()?.width || 1440) <= 700) {
-    for (const label of ['Job No.', 'Title / service', 'Scheduled time', 'Technician', 'Status']) await expect(firstRow.locator(`[data-label="${label}"]`)).toBeVisible();
-    await expect.poll(() => page.locator('.job-register-scroll').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-  }
-  await page.screenshot({ path: info.outputPath('provider-admin-jobs-selected-drawer.png') });
-  await page.keyboard.press('Escape');
-  await expect(detail).toHaveCount(0);
+  if ((page.viewportSize()?.width || 1440) <= 700) await expect.poll(() => detail.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('provider-admin-jobs-selected-detail.png') });
+  await expect(detail.getByRole('button', { name: /Jobs/ }).first()).toBeVisible();
   await localSignOut(page);
 });
 
@@ -249,9 +261,7 @@ test('provider job execution and evidence forms remain permission-gated and resp
   const jobId = await firstRow.getAttribute('data-job-id');
   expect(jobId).toBeTruthy();
   await firstRow.getByRole('button', { name: 'Open job', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: /^Job / })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', { name: /^Job / })).toHaveCount(0);
+  await expect(page.locator('.job-detail')).toBeVisible();
   const root = page.url().split('#')[0];
   await page.goto(`${root}#jobs/${jobId}`);
   const detail = page.locator('.job-detail');

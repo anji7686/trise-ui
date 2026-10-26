@@ -29,22 +29,22 @@ test('Provider Administrator receives all provider workspace access without Plat
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     navigation = page.getByRole('complementary', { name: 'Operations navigation' });
   }
-  for (const label of ['Overview', 'Marketing Leads & Surveys', 'Sales & Quotations', 'Projects & Delivery', 'Customers, Sites & Assets']) {
+  for (const label of ['Overview', 'Leads & Surveys', 'Quotations', 'Projects & Installation', 'Customers, Sites & Assets']) {
     await expect(navigation.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
   const openSettingsNavigation = async () => {
     if (!await navigation.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
     await expect(navigation).toBeVisible();
-    const settings = navigation.getByText('Provider Settings', { exact: true });
+    const settings = navigation.getByText('Administration', { exact: true });
     const expanded = await settings.evaluate((node) => node.closest('details')?.open ?? false);
     if (!expanded) await settings.click();
   };
   await openSettingsNavigation();
-  for (const label of ['Business profile', 'Team & roles']) await expect(navigation.getByRole('button', { name: label, exact: true })).toBeVisible();
-  await navigation.getByRole('button', { name: 'Business profile', exact: true }).click();
+  for (const label of ['Business Profile', 'Team & Roles']) await expect(navigation.getByRole('button', { name: label, exact: true })).toBeVisible();
+  await navigation.getByRole('button', { name: 'Business Profile', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Business profile', exact: true })).toBeVisible();
   await openSettingsNavigation();
-  await navigation.getByRole('button', { name: 'Team & roles', exact: true }).click();
+  await navigation.getByRole('button', { name: 'Team & Roles', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Team & Access', exact: true })).toBeVisible();
   await page.goto('/#/platform/roles');
   await expect(page.getByRole('status').filter({ hasText: 'Platform administration is restricted' })).toBeVisible();

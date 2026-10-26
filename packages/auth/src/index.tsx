@@ -10,6 +10,7 @@ type GoogleAccounts = { id: { initialize: (options: { client_id: string; callbac
 type ApiUser = { id: string; attributes: { display_name?: string; locale?: string | null; revision: number; platform_admin?: boolean; platform_capabilities?: string[]; provider_capabilities?: Array<{ provider_id: string; display_name: string; role_context?: string; operations_access?: boolean; capabilities: string[] }> } };
 declare global { interface Window { google?: { accounts: GoogleAccounts } } }
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
+export const SESSION_STARTED_EVENT = 'trise:session-started';
 let googleScriptPromise: Promise<void> | null = null;
 let initializedGoogleClientId: string | null = null;
 const DevelopmentSignInForm = import.meta.env.DEV && import.meta.env.VITE_DEVELOPMENT_SIGN_IN === 'true'
@@ -17,6 +18,12 @@ const DevelopmentSignInForm = import.meta.env.DEV && import.meta.env.VITE_DEVELO
 
 function authDiagnostic(stage: string, details: Record<string, unknown> = {}) {
   if (import.meta.env.DEV) console.info(`[trise-auth] ${stage}`, details);
+}
+
+function notifySessionStarted(user: ApiUser) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SESSION_STARTED_EVENT, { detail: { userId: user.id } }));
+  }
 }
 
 export function sessionFromApiUser(user: ApiUser): Session {
@@ -77,6 +84,7 @@ export function AuthProvider({ children, client = apiClient }: { children: React
       const body = await client.request<{ access_token: string; user: ApiUser }>('/session/development', { method: 'POST', body: JSON.stringify({ email, secret, client_type: 'web' }) });
       client.setAccessToken(body.access_token);
       setSession(sessionFromApiUser(body.user));
+      notifySessionStarted(body.user);
     } catch (cause) {
       client.clearSession(); setSession(null);
       const status = (cause as { status?: number }).status;
@@ -92,6 +100,7 @@ export function AuthProvider({ children, client = apiClient }: { children: React
       const body = await client.request<{ access_token: string; user: ApiUser }>('/session/development/quick', { method: 'POST', body: JSON.stringify({ email, client_type: 'web' }) });
       client.setAccessToken(body.access_token);
       setSession(sessionFromApiUser(body.user));
+      notifySessionStarted(body.user);
     } catch (cause) {
       client.clearSession(); setSession(null);
       const status = (cause as { status?: number }).status;
@@ -100,6 +109,15 @@ export function AuthProvider({ children, client = apiClient }: { children: React
     } finally { setLoading(false); }
   }, [client]);
   useEffect(() => { void loadCurrentUser(); }, [loadCurrentUser]);
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      client.clearSession();
+      setSession(null);
+      setError(null);
+    };
+    window.addEventListener('trise:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('trise:session-expired', handleSessionExpired);
+  }, [client]);
   const signInWithGoogleIdentityToken = useCallback(async (identityToken: string) => {
     setLoading(true); setError(null);
     authDiagnostic('session-exchange-started');
@@ -107,6 +125,7 @@ export function AuthProvider({ children, client = apiClient }: { children: React
       const body = await client.request<{ access_token: string; user: ApiUser }>('/session/google', { method: 'POST', body: JSON.stringify({ google_identity_token: identityToken, client_type: 'web' }) });
       client.setAccessToken(body.access_token);
       setSession(sessionFromApiUser(body.user));
+      notifySessionStarted(body.user);
       authDiagnostic('session-exchange-succeeded');
     } catch (cause) { client.clearSession(); setSession(null); authDiagnostic('session-exchange-failed', { status: (cause as { status?: number }).status, code: (cause as { code?: string }).code }); setError(authFailureMessage(cause, 'sign-in') || 'Google sign-in was rejected or the session expired.'); throw cause; }
     finally { setLoading(false); }

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { EmptyState, ProviderActionMenu, WorkspaceTabs } from './operations-shared';
+import { displayLabel, EmptyState, ProviderActionMenu, WorkspaceTabs } from './operations-shared';
 
 describe('Operations shared workspace primitives', () => {
   it('renders accessible workspace tabs with one selected tab', () => {
@@ -23,5 +23,11 @@ describe('Operations shared workspace primitives', () => {
     expect(single).not.toContain('provider-action-menu-trigger');
     expect(multiple).toContain('provider-action-menu-trigger');
     expect(multiple).toContain('>View</button>');
+  });
+
+  it('keeps server codes readable and hides UUID fallbacks from operators', () => {
+    expect(displayLabel('ELEVATOR_INSTALLATION')).toBe('Elevator Installation');
+    expect(displayLabel('PENDING_APPROVAL')).toBe('Pending Approval');
+    expect(displayLabel('01a16d9f-5f67-776e-b10b-41923657e453', 'Project')).toBe('Project');
   });
 });

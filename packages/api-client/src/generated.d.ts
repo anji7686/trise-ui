@@ -2725,7 +2725,11 @@ export interface paths {
         get: operations["GetCustomer"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Unlink Customer From Provider
+         * @description Ends only the active provider-to-customer relationship. The canonical customer identity, linked assets, audit history and relationships held by other providers are retained.
+         */
+        delete: operations["UnlinkCustomer"];
         options?: never;
         head?: never;
         /**
@@ -3497,6 +3501,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/part-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Provider Part Definitions
+         * @description Active platform and selected-provider part definitions available to an authorized provider service-job operator. This is a governed definition list only; it does not expose stock, reservation, warehouse, vendor or valuation state.
+         */
+        get: operations["ListPartDefinition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-material-scope-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List reusable material scope templates
+         * @description Lists active platform master and selected-provider planning templates. Templates prefill draft quotation material scope only; they do not represent SKU, stock, reservation, vendor, certification or valuation data.
+         */
+        get: operations["ListProviderMaterialScopeTemplate"];
+        put?: never;
+        /**
+         * Create provider material scope template
+         * @description Creates a provider-owned reusable planning template for draft quotations. The template is not an inventory or availability catalogue.
+         */
+        post: operations["CreateProviderMaterialScopeTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-material-scope-templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get material scope template */
+        get: operations["GetProviderMaterialScopeTemplate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update provider material scope template
+         * @description Updates a provider-owned template with optimistic revision protection. Existing quotations never change; issued or accepted quotations retain their immutable terms snapshot.
+         */
+        patch: operations["UpdateProviderMaterialScopeTemplate"];
+        trace?: never;
+    };
+    "/provider-quotation-terms-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List reusable quotation terms templates
+         * @description Lists active platform-master and selected-provider commercial terms templates. A template only prefills a draft quotation; it does not change an existing quotation revision.
+         */
+        get: operations["ListProviderQuotationTermsTemplate"];
+        put?: never;
+        /**
+         * Create provider quotation terms template
+         * @description Creates a provider-owned reusable commercial terms template for quotation drafts.
+         */
+        post: operations["CreateProviderQuotationTermsTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/provider-quotation-terms-templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get quotation terms template */
+        get: operations["GetProviderQuotationTermsTemplate"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive provider quotation terms template
+         * @description Archives a provider-owned commercial terms template while preserving audit history and existing quotation snapshots.
+         */
+        delete: operations["ArchiveProviderQuotationTermsTemplate"];
+        options?: never;
+        head?: never;
+        /**
+         * Update provider quotation terms template
+         * @description Updates a provider-owned terms template with optimistic revision protection. Existing quotations retain their stored terms snapshot.
+         */
+        patch: operations["UpdateProviderQuotationTermsTemplate"];
+        trace?: never;
+    };
     "/service-jobs": {
         parameters: {
             query?: never;
@@ -4245,6 +4367,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assignments/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Nearby Authorized Agent Assignments
+         * @description Returns active assignments the current actor is authorized to see, ordered by distance from the caller's one-shot device location. The server calculates distance from the immutable service-job location snapshot; caller coordinates are not persisted. Provider and role authorization is applied before distance filtering.
+         */
+        get: operations["ListNearbyAuthorizedAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/assignments/{assignmentId}": {
         parameters: {
             query?: never;
@@ -4900,6 +5042,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/quotation-tax-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Effective Quotation Tax Rules
+         * @description Provider commercial readers receive only published, currently effective central tax rules with verified legal sources. Providers cannot create or edit tax slabs from this endpoint.
+         */
+        get: operations["ListQuotationTaxRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/quotations": {
         parameters: {
             query?: never;
@@ -5005,7 +5167,7 @@ export interface paths {
         };
         /**
          * List authorized quotation delivery recipients
-         * @description Lists active provider contact points with an email address belonging to the quotation's authorized commercial parties. Arbitrary recipient addresses are not accepted.
+         * @description Lists active provider contact points with a valid email address or mobile number belonging to the quotation's authorized commercial parties. The UI can use the email/mobile value for the selected delivery channel; arbitrary recipient addresses are not accepted.
          */
         get: operations["ListQuotationDeliveryRecipients"];
         put?: never;
@@ -5033,7 +5195,7 @@ export interface paths {
         put?: never;
         /**
          * Queue exact quotation revision delivery
-         * @description Queues an email with the immutable quotation PDF attached. The recipient must be an active authorized ContactPoint; the exact version must have Provider approval; queue acceptance is not SMTP delivery confirmation.
+         * @description Queues an email with the immutable quotation PDF attached. The request must select an active authorized ContactPoint or provide a validated one-time recipient_email; the exact version must have Provider approval; queue acceptance is not SMTP delivery confirmation. A manually entered address is stored as the delivery recipient snapshot and does not create a customer ContactPoint.
          */
         post: operations["CreateQuotationDelivery"];
         delete?: never;
@@ -8871,11 +9033,11 @@ export interface paths {
         };
         get: operations["GetServiceCase"];
         put?: never;
-        post?: never;
+        post: operations["CloseServiceCase"];
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["UpdateServiceCase"];
         trace?: never;
     };
     "/service-cases/{caseId}/jobs": {
@@ -8997,6 +9159,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Provider members receive the full provider-scoped material projection. A customer receives only included quotation scope for their own provider relationship, with provider lineage and internal notes omitted. */
         get: operations["ListMaterialRequirement"];
         put?: never;
         post: operations["CreateMaterialRequirement"];
@@ -9065,6 +9228,86 @@ export interface paths {
         get: operations["ListServiceCasePayments"];
         put?: never;
         post: operations["CreateCustomerPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/blockers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListServiceCaseBlockers"];
+        put?: never;
+        post: operations["CreateServiceCaseBlocker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-case-blockers/{blockerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdateServiceCaseBlocker"];
+        trace?: never;
+    };
+    "/service-case-blockers/{blockerId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TransitionServiceCaseBlocker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-case-blockers/{blockerId}/notify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RequestServiceCaseBlockerNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/service-cases/{caseId}/stage-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListServiceCaseStageReleases"];
+        put?: never;
+        post: operations["CreateServiceCaseStageRelease"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10300,6 +10543,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workforce/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authenticated provider workforce profile and self-service state */
+        get: operations["GetMyProviderWorkforceProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider attendance records within the authorized self or team scope */
+        get: operations["ListProviderAttendance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attendance/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authenticated member's Asia/Kolkata attendance state */
+        get: operations["GetMyTodayAttendance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attendance/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record an explicit provider attendance check-in */
+        post: operations["CheckInProviderAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attendance/{attendanceId}/check-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record an explicit provider attendance check-out */
+        post: operations["CheckOutProviderAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read provider-scoped payment stages and recorded payment evidence */
+        get: operations["GetProviderBillingWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10737,20 +11082,25 @@ export interface components {
             user_id?: components["schemas"]["Id"] | null;
             service_location_id: components["schemas"]["Id"];
             /** @enum {string} */
-            role: "OWNER" | "TENANT" | "COMMITTEE" | "FACILITY_MANAGER" | "PROVIDER_RESPONSIBILITY" | "MEMBER";
+            role: "OWNER" | "IN_CHARGE" | "BUILDER" | "DEVELOPER" | "SECURITY" | "TENANT" | "COMMITTEE" | "FACILITY_MANAGER" | "PROVIDER_RESPONSIBILITY" | "MEMBER";
             /**
              * @default NONE
              * @enum {string}
              */
             inheritance_mode: "NONE" | "DESCENDANTS";
             capabilities: ("VIEW_LOCATION" | "VIEW_ASSET" | "RAISE_SERVICE" | "VIEW_SERVICE" | "APPROVE_QUOTATION" | "VIEW_COST" | "VIEW_DOCUMENTS" | "MANAGE_MEMBERS")[];
+            /**
+             * @description When true for a customer party, an active provider-scoped customer email is required before access or email notifications can be enabled.
+             * @default false
+             */
+            portal_access: boolean;
             /** Format: date-time */
             effective_from?: string;
             effective_to?: string | null;
         };
         ResourceMembershipPatch: {
             /** @enum {string} */
-            role?: "OWNER" | "TENANT" | "COMMITTEE" | "FACILITY_MANAGER" | "PROVIDER_RESPONSIBILITY" | "MEMBER";
+            role?: "OWNER" | "IN_CHARGE" | "BUILDER" | "DEVELOPER" | "SECURITY" | "TENANT" | "COMMITTEE" | "FACILITY_MANAGER" | "PROVIDER_RESPONSIBILITY" | "MEMBER";
             /** @enum {string} */
             inheritance_mode?: "NONE" | "DESCENDANTS";
             capabilities?: ("VIEW_LOCATION" | "VIEW_ASSET" | "RAISE_SERVICE" | "VIEW_SERVICE" | "APPROVE_QUOTATION" | "VIEW_COST" | "VIEW_DOCUMENTS" | "MANAGE_MEMBERS")[];
@@ -11124,7 +11474,7 @@ export interface components {
             value: string | number | boolean | unknown[] | null;
             document_ids?: components["schemas"]["Id"][];
         };
-        /** @description Recorded quotation values; tax/proration computation is not specified. */
+        /** @description Recorded quotation values with an optional immutable central tax-rule calculation snapshot. */
         QuotationLine: {
             description: string;
             /** @description Decimal serialized without binary floating-point loss. */
@@ -11133,6 +11483,19 @@ export interface components {
             unit_price: string;
             /** @description Decimal serialized without binary floating-point loss. */
             amount: string;
+            /** @description Server-calculated tax-exclusive unit price used for the taxable base. */
+            taxable_unit_price?: string;
+            /** @description Server-calculated taxable line amount before tax. */
+            taxable_amount?: string;
+            /** @description Server-calculated tax amount for this line. */
+            tax_amount?: string;
+            /** @enum {string} */
+            pricing_mode?: "EXCLUSIVE" | "INCLUSIVE";
+            tax_rule_id?: components["schemas"]["Id"];
+            /** @description Immutable central tax-rule calculation snapshot for the line. */
+            tax?: {
+                [key: string]: unknown;
+            } | null;
             /** @description Authorized discount amount; the provider terms policy bounds the permitted percentage. */
             discount_amount?: string;
         };
@@ -11143,6 +11506,32 @@ export interface components {
             /** @enum {string} */
             treatment: "included" | "excluded" | "limited" | "chargeable";
             limit_rule_id?: components["schemas"]["Id"];
+        };
+        PartDefinitionAttributes: {
+            /** Format: date-time */
+            created_at: string;
+            provider_id: components["schemas"]["Id"] | null;
+            code: string;
+            name: string;
+            description?: string | null;
+            /** @enum {string} */
+            serial_lot_policy: "NONE" | "OPTIONAL" | "REQUIRED";
+            /** @constant */
+            status: "ACTIVE";
+            /** @enum {string} */
+            scope: "platform" | "provider";
+        };
+        /** @description Active provider or platform part definition. It is a governed description only and carries no inventory balance or reservation semantics. */
+        PartDefinition: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "part-definitions";
+            attributes: components["schemas"]["PartDefinitionAttributes"];
+            relationships: Record<string, never>;
+        };
+        PartDefinitionCollection: {
+            data: components["schemas"]["PartDefinition"][];
+            page: components["schemas"]["Page"];
         };
         /** @description Records service use only; not inventory reservation, valuation or billing. */
         PartUsageItem: {
@@ -11159,6 +11548,8 @@ export interface components {
             };
             /** @enum {string} */
             usage_kind?: "consumed" | "installed" | "removed" | "replaced";
+            /** @enum {string} */
+            source: "PROVIDER" | "CUSTOMER" | "EXTERNAL";
             asset_id?: components["schemas"]["Id"];
             component_id?: components["schemas"]["Id"];
             serial_or_lot?: string;
@@ -11816,6 +12207,38 @@ export interface components {
             provider_id: components["schemas"]["Id"];
             display_name: string;
             party_kind: string;
+            /**
+             * @description Customer profile readiness status. ACTIVE requires a valid phone or email; otherwise the provider-visible customer profile is INACTIVE.
+             * @enum {string}
+             */
+            status?: "ACTIVE" | "INACTIVE";
+            contact: {
+                phone?: string;
+                /** Format: email */
+                email?: string;
+            };
+            linked_communities?: {
+                id: components["schemas"]["Id"];
+                name: string;
+                classification: string;
+                status?: string;
+                address?: string[];
+            }[];
+            linked_sites?: {
+                id: components["schemas"]["Id"];
+                name: string;
+                classification: string;
+                status?: string;
+                address?: string[];
+            }[];
+            linked_assets?: {
+                id: components["schemas"]["Id"];
+                name: string;
+                status: string;
+                family?: string;
+                type?: string;
+                identifier?: string;
+            }[];
             revision: components["schemas"]["Revision"];
         };
         /** @description Authorized projection of a Party through one provider relationship; the Party/customer is not globally owned by that provider. */
@@ -12965,7 +13388,14 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** Format: date-time */
+            valid_until?: string | null;
+            /** Format: date-time */
+            issued_at?: string | null;
+            /** Format: date-time */
+            accepted_at?: string | null;
             provider_id: components["schemas"]["Id"];
+            provider_name?: string;
             quotation_number: string;
             /** @enum {string} */
             status: "draft" | "issued" | "approved" | "rejected" | "expired" | "cancelled";
@@ -12973,6 +13403,10 @@ export interface components {
             lines: components["schemas"]["QuotationLine"][];
             /** @description Decimal serialized without binary floating-point loss. */
             total: string;
+            subtotal?: string;
+            discount_total?: string;
+            tax_total?: string;
+            tax_summary?: components["schemas"]["QuotationTaxSummary"];
             revision: components["schemas"]["Revision"];
             provider_review?: {
                 /** @enum {string} */
@@ -12981,9 +13415,16 @@ export interface components {
                 /** Format: date-time */
                 decided_at: string;
                 reason?: string | null;
+                reviewer?: components["schemas"]["QuotationUserAttribution"] | null;
             } | null;
             commercial_party_roles: components["schemas"]["CommercialPartySelection"];
+            terms?: components["schemas"]["QuotationTerms"];
             commercial_party_snapshot_present: boolean;
+            prepared_by?: components["schemas"]["QuotationUserAttribution"] | null;
+            issued_by?: components["schemas"]["QuotationUserAttribution"] | null;
+            customer_approval?: {
+                [key: string]: unknown;
+            };
         };
         /** @description Authorized canonical Quotation representation; fields and linked resources require independent authorization. */
         Quotation: {
@@ -13000,6 +13441,65 @@ export interface components {
         QuotationCollection: {
             data: components["schemas"]["Quotation"][];
             page: components["schemas"]["Page"];
+        };
+        QuotationUserAttribution: {
+            id: components["schemas"]["Id"];
+            name: string;
+            /** Format: email */
+            email: string;
+        };
+        /** @description Server-calculated component totals grouped by central tax component. */
+        QuotationTaxSummary: {
+            /** @enum {string} */
+            status: "NOT_CONFIGURED" | "PARTIAL" | "CALCULATED";
+            tax_total: string;
+            components: {
+                code: string;
+                amount: string;
+            }[];
+        };
+        QuotationTaxRuleAttributes: {
+            rule_code: string;
+            description?: string | null;
+            version_number: number;
+            /** @constant */
+            status: "PUBLISHED";
+            /** @enum {string} */
+            tax_treatment: "TAXABLE" | "EXEMPT" | "NIL_RATED" | "ZERO_RATED" | "OUT_OF_SCOPE" | "REVERSE_CHARGE";
+            /** @enum {string|null} */
+            supply_type?: "INTRA_STATE" | "INTER_STATE" | "UNION_TERRITORY" | "OUT_OF_SCOPE" | null;
+            place_of_supply_code?: string | null;
+            priority: number;
+            total_rate_percent: string;
+            /** Format: date */
+            effective_from: string;
+            /** Format: date */
+            effective_to?: string | null;
+            classification?: {
+                code?: string;
+                /** @enum {string} */
+                type?: "HSN" | "SAC";
+                description?: string | null;
+            } | null;
+            jurisdiction?: {
+                code?: string;
+                name?: string;
+                state_or_union_territory?: string | null;
+            } | null;
+            components: {
+                code: string;
+                name: string;
+                rate_percent: string;
+            }[];
+        };
+        QuotationTaxRule: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "quotation-tax-rules";
+            attributes: components["schemas"]["QuotationTaxRuleAttributes"];
+        };
+        QuotationTaxRuleCollection: {
+            data: components["schemas"]["QuotationTaxRule"][];
         };
         QuotationApprovalAttributes: {
             /** Format: date-time */
@@ -13056,16 +13556,26 @@ export interface components {
         QuotationDeliveryRecipient: {
             id: components["schemas"]["Id"];
             display_name: string;
-            /** Format: email */
-            email: string;
+            /**
+             * Format: email
+             * @description Active customer email address when available.
+             */
+            email?: string;
+            /** @description Active customer mobile/phone number when available. */
+            phone?: string;
         };
         QuotationDeliveryRecipientCollection: {
             data: components["schemas"]["QuotationDeliveryRecipient"][];
         };
         QuotationDeliveryCreate: {
-            contact_point_id: components["schemas"]["Id"];
+            contact_point_id?: components["schemas"]["Id"];
+            /**
+             * Format: email
+             * @description One-time customer recipient email. It is stored on the immutable delivery snapshot and does not create a ContactPoint.
+             */
+            recipient_email?: string;
             expected_revision: components["schemas"]["Revision"];
-        };
+        } & (unknown | unknown);
         /** @description Provider-scoped immutable recipient and exact quotation version delivery history. */
         QuotationDelivery: {
             id: components["schemas"]["Id"];
@@ -13594,12 +14104,26 @@ export interface components {
         /** @description Creates a Party projection/relationship under current provider authorization, not global provider ownership. */
         CustomerCreate: {
             display_name: string;
+            /**
+             * @description Optional for the simple customer form; the server defaults this to PERSON when omitted.
+             * @default PERSON
+             */
             party_kind: string;
+            contact: {
+                phone: string;
+                /** Format: email */
+                email?: string;
+            };
         };
         /** @description Customer self or explicitly authorized profile actor; provider staff may alter only the permitted relationship projection, not global Party identity across providers. */
         CustomerPatch: {
             display_name: string;
             expected_revision: components["schemas"]["Revision"];
+            contact?: {
+                phone: string;
+                /** Format: email */
+                email?: string;
+            };
         };
         /** @description Requires explicit permission to establish this relationship; existing identity/Party alone is insufficient. */
         CustomerRelationshipCreate: {
@@ -13641,6 +14165,11 @@ export interface components {
             customer_relationship_id: components["schemas"]["Id"];
             location_id?: components["schemas"]["Id"];
             owner_party_id: components["schemas"]["Id"];
+            /**
+             * @description Optional site-scoped customer relationship label recorded when an asset is linked to a service location. It grants no portal or operational capability.
+             * @enum {string}
+             */
+            site_relationship_role?: "OWNER" | "IN_CHARGE" | "BUILDER" | "DEVELOPER" | "SECURITY" | "TENANT" | "COMMITTEE" | "FACILITY_MANAGER" | "PROVIDER_RESPONSIBILITY" | "MEMBER";
             values: components["schemas"]["AttributeValue"][];
             identifier_inputs?: components["schemas"]["AssetIdentifierInput"][];
         };
@@ -13976,28 +14505,250 @@ export interface components {
             effective_to: string;
             coverage_rule_id: components["schemas"]["Id"];
         };
+        /** @description Backward-compatible opaque material reference retained until catalogue and stock phases. */
+        QuotationMaterialLegacy: {
+            code: string;
+            quantity: number;
+        };
+        /** @description Provider-owned material scope for Phase 1. It is not stock, SKU, vendor, certificate, or valuation data. */
+        QuotationMaterialScopeLine: {
+            description: string;
+            /** @enum {string} */
+            category?: "MECHANICAL" | "DOOR_SYSTEM" | "ELECTRICAL" | "SAFETY" | "CONSUMABLE" | "OTHER";
+            quantity: number;
+            unit_code?: string;
+            /** @enum {string} */
+            customer_visibility?: "INCLUDED" | "EXCLUDED";
+            /** @description Optional editable INR planning price preserved in draft and quotation revisions. */
+            unit_price?: string;
+            /** @description Optional provider-declared warranty period for this material line only; not certification or inventory coverage. */
+            warranty_months?: number;
+            notes?: string;
+            specifications?: components["schemas"]["MaterialSpecification"][];
+            tax_rule_id?: components["schemas"]["Id"];
+            /** @enum {string} */
+            tax_pricing_mode?: "EXCLUSIVE" | "INCLUSIVE";
+        };
+        /** @description Customer-readable specification pair for a material or quoted set. */
+        MaterialSpecification: {
+            name: string;
+            value: string;
+        };
+        /** @description Bounded material planning line used only to prefill a draft quotation. It is not a SKU or stock record. */
+        ProviderMaterialScopeTemplateLine: {
+            description: string;
+            /** @enum {string} */
+            category?: "MECHANICAL" | "DOOR_SYSTEM" | "ELECTRICAL" | "SAFETY" | "CONSUMABLE" | "OTHER";
+            quantity: string;
+            unit_code?: string;
+            /** @enum {string} */
+            customer_visibility?: "INCLUDED" | "EXCLUDED";
+            /** @description Indicative INR planning price copied into a new draft and editable before issue. */
+            default_unit_price: string;
+            /** @description Optional provider-declared warranty period copied into a new quotation line. */
+            warranty_months?: number;
+            specifications?: components["schemas"]["MaterialSpecification"][];
+            notes?: string;
+        };
+        ProviderMaterialScopeTemplateAttributes: {
+            name: string;
+            description?: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED";
+            revision: number;
+            /** @constant */
+            currency: "INR";
+            /** @enum {string} */
+            scope: "PLATFORM_MASTER" | "PROVIDER";
+            lines: components["schemas"]["ProviderMaterialScopeTemplateLine"][];
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        /** @description Authorized provider or platform master material planning template. It carries no inventory balance, reservation, vendor, certificate or valuation state. */
+        ProviderMaterialScopeTemplate: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-material-scope-templates";
+            attributes: components["schemas"]["ProviderMaterialScopeTemplateAttributes"];
+            relationships: Record<string, never>;
+        };
+        ProviderMaterialScopeTemplateCollection: {
+            data: components["schemas"]["ProviderMaterialScopeTemplate"][];
+        };
+        ProviderMaterialScopeTemplateCreate: {
+            name: string;
+            description?: string;
+            lines: components["schemas"]["ProviderMaterialScopeTemplateLine"][];
+        };
+        ProviderMaterialScopeTemplateUpdate: {
+            expected_revision: number;
+            name?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "ARCHIVED";
+            lines?: components["schemas"]["ProviderMaterialScopeTemplateLine"][];
+        };
+        QuotationTermsTemplateTerms: {
+            validity_days?: number;
+            terms_and_conditions?: string;
+            delivery_terms?: string;
+            warranty_terms?: string;
+            show_tax_details?: boolean;
+            bank_account?: components["schemas"]["QuotationBankAccount"];
+            payment_methods?: components["schemas"]["QuotationPaymentMethod"][];
+            payment_milestones?: {
+                code: string;
+                percentage: number;
+            }[];
+            payment_stages?: components["schemas"]["QuotationPaymentStageConfiguration"];
+            included_free_amc?: {
+                months: number;
+                /** @enum {string} */
+                frequency: "MONTHLY" | "QUARTERLY" | "BIANNUALLY" | "ANNUALLY";
+            };
+            exclusions?: string[];
+            letterhead?: components["schemas"]["QuotationLetterhead"];
+        };
+        QuotationLetterhead: {
+            enabled: boolean;
+            /** @enum {string} */
+            format: "STANDARD" | "COMPACT" | "CENTERED";
+            /** @enum {string} */
+            logo_position: "LEFT" | "CENTER" | "RIGHT";
+            logo: {
+                enabled: boolean;
+                document_id?: components["schemas"]["Id"];
+                version_id?: components["schemas"]["Id"];
+                filename?: string;
+                media_type?: string;
+            };
+            business_name?: string;
+            address?: {
+                country?: string;
+                address_line?: string;
+                locality?: string;
+                city?: string;
+                district?: string;
+                state?: string;
+                pin_code?: string;
+                landmark?: string;
+            };
+            show_address?: boolean;
+            gstin?: string;
+            pan_number?: string;
+            footer_text?: string;
+        };
+        QuotationBankAccount: {
+            beneficiary_name: string;
+            bank_name: string;
+            account_number: string;
+            /** @enum {string} */
+            account_type: "CURRENT" | "SAVINGS" | "OTHER";
+            ifsc_code: string;
+            branch_name?: string;
+            upi_id?: string;
+        };
+        QuotationPaymentMethod: {
+            /** @enum {string} */
+            method: "BANK_TRANSFER" | "ONLINE" | "CASH" | "CHEQUE" | "UPI_QR";
+            label?: string;
+            bank_account?: components["schemas"]["QuotationBankAccount"];
+            provider_name?: string;
+            /** Format: uri */
+            payment_link?: string;
+            upi_id?: string;
+            instructions?: string;
+        };
+        QuotationPaymentStage: {
+            code: string;
+            description: string;
+            percentage: number;
+            sequence: number;
+            /** @enum {string} */
+            trigger_kind: "MANUAL" | "CUSTOMER_ACCEPTANCE" | "STAGE_COMPLETION" | "DELIVERY" | "HANDOVER";
+            material_release_condition?: string | null;
+            customer_acceptance_required: boolean;
+        };
+        QuotationPaymentStageConfiguration: {
+            /** @enum {string} */
+            mode: "STAGED" | "NOT_APPLICABLE";
+            freeze_after_issue: boolean;
+            stages: components["schemas"]["QuotationPaymentStage"][];
+        };
+        ProviderQuotationTermsTemplateAttributes: {
+            name: string;
+            description?: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED";
+            revision: number;
+            /** @enum {string} */
+            scope: "PLATFORM_MASTER" | "PROVIDER";
+            terms: components["schemas"]["QuotationTermsTemplateTerms"];
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        ProviderQuotationTermsTemplate: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "provider-quotation-terms-templates";
+            attributes: components["schemas"]["ProviderQuotationTermsTemplateAttributes"];
+            relationships: Record<string, never>;
+        };
+        ProviderQuotationTermsTemplateCollection: {
+            data: components["schemas"]["ProviderQuotationTermsTemplate"][];
+        };
+        ProviderQuotationTermsTemplateCreate: {
+            name: string;
+            description?: string;
+            terms: components["schemas"]["QuotationTermsTemplateTerms"];
+        };
+        ProviderQuotationTermsTemplateUpdate: {
+            expected_revision: number;
+            name?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "ARCHIVED";
+            terms?: components["schemas"]["QuotationTermsTemplateTerms"];
+        };
+        /** @description Commercial terms; material lines are a quotation scope snapshot and do not establish inventory availability or reservation. */
+        QuotationTerms: {
+            materials?: (components["schemas"]["QuotationMaterialScopeLine"] | components["schemas"]["QuotationMaterialLegacy"])[];
+            payment_stages?: components["schemas"]["QuotationPaymentStageConfiguration"];
+            terms_and_conditions?: string;
+            bank_account?: components["schemas"]["QuotationBankAccount"];
+            payment_methods?: components["schemas"]["QuotationPaymentMethod"][];
+            letterhead?: components["schemas"]["QuotationLetterhead"];
+            online_customer_approval?: boolean;
+            show_tax_details?: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         QuotationCreate: {
             customer_relationship_id: components["schemas"]["Id"];
             job_id?: components["schemas"]["Id"];
             request_id?: components["schemas"]["Id"];
             /** @enum {string} */
-            purpose?: "SERVICE" | "REPAIR" | "PARTS" | "INSTALLATION" | "NEW_ASSET" | "PROCUREMENT" | "MAINTENANCE_CONTRACT" | "CONTRACT_RENEWAL" | "OTHER_CONTROLLED";
+            purpose?: "SERVICE" | "REPAIR" | "PARTS" | "INSTALLATION" | "MODIFICATION" | "TAKEOVER" | "NEW_ASSET" | "PROCUREMENT" | "MAINTENANCE_CONTRACT" | "CONTRACT_RENEWAL" | "OTHER_CONTROLLED";
             currency: string;
             lines: components["schemas"]["QuotationLine"][];
             commercial_parties?: components["schemas"]["CommercialPartySelection"];
+            terms?: components["schemas"]["QuotationTerms"];
         };
         /** @description Draft only; commercial policy is not calculated here. */
         QuotationPatch: {
             lines: components["schemas"]["QuotationLine"][];
             expected_revision: components["schemas"]["Revision"];
             commercial_parties?: components["schemas"]["CommercialPartySelection"];
+            terms?: components["schemas"]["QuotationTerms"];
         };
         QuotationRevisionCreate: {
             lines: components["schemas"]["QuotationLine"][];
             expected_revision: components["schemas"]["Revision"];
-            terms?: {
-                [key: string]: unknown;
-            };
+            terms?: components["schemas"]["QuotationTerms"];
         };
         QuotationNegotiationCreate: {
             /** @enum {string} */
@@ -15911,6 +16662,15 @@ export interface components {
             /** @enum {string} */
             fulfilment_mode?: "ON_SITE" | "DROP_OFF" | "PICKUP_RETURN" | "DEPOT_SERVICE";
         };
+        Batch47CaseUpdate: {
+            expected_revision: number;
+            title?: string;
+            project_classification_key?: string | null;
+            /** Format: uuid */
+            service_location_id?: string | null;
+            /** @description Provider-authorized customer elevator units; accepted only while the project is in DRAFT and must match the quotation unit count when a quotation declares units. */
+            asset_ids?: string[];
+        };
         Batch47CaseJob: {
             /** Format: uuid */
             service_job_id: string;
@@ -16037,6 +16797,43 @@ export interface components {
             required_quantity: number;
             unit_code: string;
         };
+        Batch47MaterialRequirementResource: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                type: "service-case-material-requirements";
+                attributes: {
+                    material_code?: string;
+                    description: string;
+                    required_quantity: string;
+                    unit_code: string;
+                    /** @enum {string} */
+                    status: "OPEN" | "FULFILLED" | "CANCELLED";
+                    dispatched_quantity?: string;
+                    accepted_quantity?: string;
+                    rejected_quantity?: string;
+                    remaining_quantity?: string;
+                    revision?: number;
+                    /** @enum {string} */
+                    source_kind?: "PROJECT_ADDED" | "QUOTATION_SNAPSHOT";
+                    /** Format: uuid */
+                    source_quotation_id?: string | null;
+                    source_quotation_number?: string | null;
+                    source_quotation_revision?: number | null;
+                    source_line_number?: number | null;
+                    category?: string | null;
+                    customer_visibility?: string | null;
+                    notes?: string | null;
+                };
+            };
+        };
+        Batch47MaterialRequirementListBody: {
+            data: components["schemas"]["Batch47MaterialRequirementResource"][];
+            page?: {
+                [key: string]: unknown;
+            };
+        };
         Batch47Shipment: {
             shipment_number: string;
             lines: {
@@ -16046,6 +16843,7 @@ export interface components {
             }[];
         };
         Batch47ShipmentDelivery: {
+            expected_revision?: number;
             delivery_notes?: string;
             lines: {
                 /** Format: uuid */
@@ -16208,6 +17006,15 @@ export interface components {
                 "application/json": Record<string, never>;
             };
         };
+        /** @description Provider-scoped project material requirements with immutable source lineage. */
+        Batch47MaterialRequirementList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Batch47MaterialRequirementListBody"];
+            };
+        };
     };
     parameters: {
         MembershipId: components["schemas"]["Id"];
@@ -16295,6 +17102,11 @@ export interface components {
         Batch47Case: {
             content: {
                 "application/json": components["schemas"]["Batch47Case"];
+            };
+        };
+        Batch47CaseUpdate: {
+            content: {
+                "application/json": components["schemas"]["Batch47CaseUpdate"];
             };
         };
         Batch47CaseJob: {
@@ -21339,6 +22151,12 @@ export interface operations {
                 "filter[created_at][lte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][lt]"?: string;
+                /** @description Case-insensitive customer name or identifier search. */
+                "filter[q]"?: string;
+                /** @description Provider-scoped phone search against authorized customer contact points. */
+                "filter[phone]"?: string;
+                /** @description Provider-scoped email search against authorized customer contact points. */
+                "filter[email]"?: string;
             };
             header: {
                 /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
@@ -21418,6 +22236,40 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Authorized Customer outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    UnlinkCustomer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                customerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer relationship was unlinked from the provider. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -23315,6 +24167,341 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListPartDefinition: {
+        parameters: {
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized provider part-definition outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartDefinitionCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    ListProviderMaterialScopeTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized material scope template collection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderMaterialScopeTemplateCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    CreateProviderMaterialScopeTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderMaterialScopeTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Created provider material scope template. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderMaterialScopeTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    GetProviderMaterialScopeTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized material scope template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderMaterialScopeTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    UpdateProviderMaterialScopeTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderMaterialScopeTemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated provider material scope template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderMaterialScopeTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    ListProviderQuotationTermsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized quotation terms template collection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderQuotationTermsTemplateCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    CreateProviderQuotationTermsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderQuotationTermsTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Created provider quotation terms template. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderQuotationTermsTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    GetProviderQuotationTermsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized quotation terms template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderQuotationTermsTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    ArchiveProviderQuotationTermsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Archived provider quotation terms template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderQuotationTermsTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    UpdateProviderQuotationTermsTemplate: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                templateId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderQuotationTermsTemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Updated provider quotation terms template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderQuotationTermsTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            500: components["responses"]["ServerError"];
+        };
+    };
     ListServiceJob: {
         parameters: {
             query?: {
@@ -25137,6 +26324,49 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListNearbyAuthorizedAssignments: {
+        parameters: {
+            query: {
+                /** @description One-shot device latitude in decimal degrees. */
+                latitude: number;
+                /** @description One-shot device longitude in decimal degrees. */
+                longitude: number;
+                /** @description Optional device-reported accuracy. Requests above 1 km are rejected. */
+                accuracy_m?: number;
+                /** @description Search radius in metres, bounded to 100 m through 50 km. */
+                radius_m?: number;
+                /** @description Maximum nearby assignments returned. Cursor pagination is not offered for this bounded proximity view. */
+                "page[limit]"?: number;
+                /** @description Optional active assignment statuses. Concluded statuses are rejected. */
+                "filter[status]"?: ("PROPOSED" | "ASSIGNED" | "ACCEPTED" | "EN_ROUTE" | "ARRIVED" | "WORKING")[];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized active assignments ordered by server-calculated distance. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAssignmentCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
     GetAuthorizedAssignment: {
         parameters: {
             query?: never;
@@ -26541,6 +27771,32 @@ export interface operations {
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    ListQuotationTaxRules: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective central quotation tax rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationTaxRuleCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["ServerError"];
         };
     };
@@ -34229,6 +35485,21 @@ export interface operations {
                     requester_name?: string | null;
                     requester_contact_reference?: string | null;
                     site_summary?: string | null;
+                    /** @description Required when source is REFERRAL. */
+                    referral_contact_name?: string | null;
+                    /** @description Primary referral tracking reference; required when source is REFERRAL. */
+                    referral_contact_number?: string | null;
+                    /** Format: email */
+                    referral_contact_email?: string | null;
+                    referral_contact_role?: string | null;
+                    referral_details?: string | null;
+                    site_latitude?: number | null;
+                    site_longitude?: number | null;
+                    site_coordinate_accuracy_m?: number | null;
+                    /** @enum {string|null} */
+                    site_coordinate_source?: "BROWSER_GEOLOCATION" | "MANUAL" | "IMPORT" | null;
+                    /** Format: date-time */
+                    site_coordinates_captured_at?: string | null;
                     assigned_to_user_id?: components["schemas"]["Id"] | null;
                     marketing_lead_id?: components["schemas"]["Id"] | null;
                     service_request_id?: components["schemas"]["Id"] | null;
@@ -34335,6 +35606,19 @@ export interface operations {
                     requester_name?: string | null;
                     requester_contact_reference?: string | null;
                     site_summary?: string | null;
+                    referral_contact_name?: string | null;
+                    referral_contact_number?: string | null;
+                    /** Format: email */
+                    referral_contact_email?: string | null;
+                    referral_contact_role?: string | null;
+                    referral_details?: string | null;
+                    site_latitude?: number | null;
+                    site_longitude?: number | null;
+                    site_coordinate_accuracy_m?: number | null;
+                    /** @enum {string|null} */
+                    site_coordinate_source?: "BROWSER_GEOLOCATION" | "MANUAL" | "IMPORT" | null;
+                    /** Format: date-time */
+                    site_coordinates_captured_at?: string | null;
                     assigned_to_user_id?: components["schemas"]["Id"] | null;
                 };
             };
@@ -34485,6 +35769,45 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: components["responses"]["Batch47Ok"];
+        };
+    };
+    CloseServiceCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    UpdateServiceCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Batch47CaseUpdate"];
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     ListServiceCaseJobs: {
@@ -34652,7 +35975,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: components["responses"]["Batch47OkList"];
+            200: components["responses"]["Batch47MaterialRequirementList"];
         };
     };
     CreateMaterialRequirement: {
@@ -34774,6 +36097,208 @@ export interface operations {
             cookie?: never;
         };
         requestBody: components["requestBodies"]["Batch47Payment"];
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    ListServiceCaseBlockers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateServiceCaseBlocker: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    service_stage_id?: components["schemas"]["Id"] | null;
+                    asset_id?: components["schemas"]["Id"] | null;
+                    payment_schedule_id?: components["schemas"]["Id"] | null;
+                    /** @enum {string} */
+                    category: "SITE_READINESS" | "STRUCTURAL" | "ELECTRICAL" | "MATERIAL" | "PAYMENT" | "DEPENDENCY" | "QA" | "OTHER";
+                    /**
+                     * @default WARNING
+                     * @enum {string}
+                     */
+                    severity?: "INFO" | "WARNING" | "CRITICAL";
+                    /** @default true */
+                    blocking?: boolean;
+                    title: string;
+                    description: string;
+                    /**
+                     * @default INTERNAL
+                     * @enum {string}
+                     */
+                    stakeholder_type?: "CUSTOMER" | "BUILDER" | "CONTRACTOR" | "INTERNAL" | "OTHER";
+                    stakeholder_name?: string | null;
+                    stakeholder_reference?: string | null;
+                    /** Format: date */
+                    due_on?: string | null;
+                    /** Format: date */
+                    expected_resolution_on?: string | null;
+                    /** @default 0 */
+                    impact_days?: number;
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Batch47Created"];
+        };
+    };
+    UpdateServiceCaseBlocker: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                blockerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    title?: string;
+                    description?: string;
+                    /** @enum {string} */
+                    severity?: "INFO" | "WARNING" | "CRITICAL";
+                    blocking?: boolean;
+                    /** @enum {string} */
+                    stakeholder_type?: "CUSTOMER" | "BUILDER" | "CONTRACTOR" | "INTERNAL" | "OTHER";
+                    stakeholder_name?: string | null;
+                    stakeholder_reference?: string | null;
+                    /** Format: date */
+                    due_on?: string | null;
+                    /** Format: date */
+                    expected_resolution_on?: string | null;
+                    impact_days?: number;
+                    assigned_to_user_id?: components["schemas"]["Id"] | null;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+        };
+    };
+    TransitionServiceCaseBlocker: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                blockerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                    /** @enum {string} */
+                    transition: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "WONT_FIX";
+                    resolution_note?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+        };
+    };
+    RequestServiceCaseBlockerNotification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                blockerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Batch47Ok"];
+        };
+    };
+    ListServiceCaseStageReleases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Batch47OkList"];
+        };
+    };
+    CreateServiceCaseStageRelease: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                caseId: components["parameters"]["Batch47caseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    payment_schedule_id: components["schemas"]["Id"];
+                    accepted_quotation_revision: number;
+                    release_rule_version: string;
+                    /** @enum {string} */
+                    decision: "AUTHORIZED" | "REJECTED" | "HOLD";
+                    reason: string;
+                    settled_payment_ids?: components["schemas"]["Id"][];
+                    /**
+                     * @default SETTLED_PAYMENT
+                     * @enum {string}
+                     */
+                    release_basis?: "SETTLED_PAYMENT" | "APPROVED_CREDIT";
+                    approved_credit_amount?: number | string | null;
+                    /** Format: date */
+                    credit_due_on?: string | null;
+                    credit_reference?: string | null;
+                };
+            };
+        };
         responses: {
             201: components["responses"]["Batch47Created"];
         };
@@ -36973,6 +38498,144 @@ export interface operations {
                 content?: never;
             };
             409: components["responses"]["Conflict"];
+        };
+    };
+    GetMyProviderWorkforceProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped workforce profile, today's attendance and own leave requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    ListProviderAttendance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider-scoped attendance records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    GetMyTodayAttendance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Today's attendance or an explicit not-recorded state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    CheckInProviderAttendance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attendance check-in recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    CheckOutProviderAttendance: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                "Idempotency-Key": string;
+            };
+            path: {
+                attendanceId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attendance check-out recorded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    GetProviderBillingWorkspace: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider payment stages and recorded payment evidence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
         };
     };
 }

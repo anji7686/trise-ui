@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { approvedLocalAccounts, configuredAccount, localSignIn } from './local-auth';
+import { approvedLocalAccounts, configuredAccount, localSignIn, localSignOut } from './local-auth';
 import { e2eApiV1Base } from './e2e-config';
 
 test.use({ trace: 'on-first-retry', video: 'off', screenshot: 'only-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
@@ -116,6 +116,21 @@ test('qualified inspector assignment and report execution are enforced in Chromi
   const persisted = await page.request.get(`${api}/service-jobs/${job.id}/reports`, { headers: technicianHeaders });
   expect(persisted.ok()).toBeTruthy();
   expect((await persisted.json()).data.some((item: { attributes: { summary?: string; status?: string } }) => item.attributes.summary === 'Independent inspection completed' && item.attributes.status === 'submitted')).toBeTruthy();
+
+  // A submitted service report closes material evidence entry. Verify the
+  // provider-facing read-only state with an Operations Administrator session.
+  await localSignOut(page);
+  await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  const adminMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
+  await adminMenu.getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId);
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.goto(`/#jobs/${job.id}`);
+  const adminDetail = page.locator('.job-detail');
+  await expect(adminDetail).toBeVisible({ timeout: 20_000 });
+  await adminDetail.getByRole('tab', { name: 'Evidence', exact: true }).click();
+  await expect(adminDetail.getByText('Service report submitted. Parts & materials used are read-only for this job.', { exact: true })).toBeVisible();
+  await expect(adminDetail.getByRole('button', { name: 'Record part usage', exact: true })).toBeDisabled();
   await page.screenshot({ path: `/tmp/trise-inspection-qualification-${job.id}.png`, fullPage: true });
   expect(browserEvidence.exceptions).toEqual([]);
   expect(browserEvidence.responses.filter((response) => response.status >= 500)).toEqual([]);

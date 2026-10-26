@@ -16,7 +16,7 @@ test('provider uploads private evidence and opens the asset approvals workspace'
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
   if (!(await navigation.isVisible())) await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await navigation.getByText('Provider Settings', { exact: true }).click();
+  await navigation.getByText('Administration', { exact: true }).click();
   await navigation.getByRole('button', { name: 'Provider compliance', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Compliance Center', exact: true })).toBeVisible();
 

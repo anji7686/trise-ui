@@ -25,9 +25,10 @@ export function approvedLocalAccounts() {
 }
 
 export async function paceLocalSignIn() {
-  // Sequential acceptance runs respect the server's 10 attempts/minute limit.
-  // This delay deliberately paces authentication; it is not a rendering wait.
-  await new Promise(resolve => setTimeout(resolve, 7000));
+  // Keep parallel viewport projects below the development endpoint's
+  // 10-attempts/minute limit. This is authentication pacing, not a rendering
+  // wait, and keeps role-regression evidence deterministic.
+  await new Promise(resolve => setTimeout(resolve, 15_000));
 }
 
 export async function localSignIn(page: Page, email: string) {
@@ -60,6 +61,8 @@ export async function localSignIn(page: Page, email: string) {
 }
 
 export async function localSignOut(page: Page) {
+  const closeMenu = page.getByRole('button', { name: 'Close menu', exact: true });
+  if (await closeMenu.isVisible().catch(() => false)) await closeMenu.click();
   const dialog = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   const accountMenu = page.getByRole('button', { name: 'Open account menu', exact: true });
   if (await accountMenu.isVisible().catch(() => false)) {
@@ -68,5 +71,5 @@ export async function localSignOut(page: Page) {
   } else {
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   }
-  await expect(page.getByRole('combobox', { name: 'Test email', exact: true })).toBeVisible();
+  await expect(page.locator('select[name="email"], input[name="email"]').first()).toBeVisible({ timeout: 15_000 });
 }

@@ -1,0 +1,28 @@
+.operations-dialog.amc-lifecycle-dialog{width:min(920px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:20px}
+.amc-lifecycle-modal-content{--amc-ink:#142b52;--amc-copy:#6a7e95;--amc-muted:#8a9aae;--amc-border:#d7e1ef;--amc-soft:#f7faff;--amc-node:#fff;--amc-current:#1769e8;--amc-current-soft:#e6f2ff;display:grid;gap:18px;color:var(--amc-ink)}
+.amc-lifecycle-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid var(--amc-border);border-radius:12px;background:linear-gradient(110deg,var(--amc-soft),var(--surface))}
+.amc-lifecycle-heading .page-eyebrow{display:block;margin-bottom:4px;color:var(--amc-muted);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.amc-lifecycle-heading p{margin:0;color:var(--amc-copy);font-size:.8rem;line-height:1.4}
+.amc-lifecycle-current{flex:0 0 auto;padding:6px 9px;border-radius:999px;background:var(--amc-current-soft);color:var(--amc-current);font-size:.68rem;font-weight:800;white-space:nowrap}
+.amc-lifecycle-track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;padding:4px 0}
+.amc-lifecycle-step{position:relative;display:grid;grid-template-columns:auto 1fr;gap:8px;min-width:0;padding:4px 12px 4px 0}
+.amc-lifecycle-step:not(:first-child){padding-left:8px}
+.amc-lifecycle-node{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--amc-border);border-radius:10px;background:var(--amc-node);color:var(--amc-muted);z-index:1;box-shadow:0 2px 7px rgb(20 43 82 / 6%)}
+.amc-lifecycle-step.is-current .amc-lifecycle-node{border-color:var(--amc-current);background:var(--amc-current);color:#fff;box-shadow:0 0 0 4px var(--amc-current-soft)}
+.amc-lifecycle-step-copy{display:grid;align-content:center;gap:2px;min-width:0;padding-top:1px}
+.amc-lifecycle-step-copy strong{color:var(--amc-ink);font-size:.73rem;line-height:1.2}
+.amc-lifecycle-step.is-current .amc-lifecycle-step-copy strong{color:var(--amc-current)}
+.amc-lifecycle-step-copy span{color:var(--amc-copy);font-size:.65rem;line-height:1.25}
+.amc-lifecycle-step-copy small{color:var(--amc-muted);font-size:.61rem;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+.amc-lifecycle-connector{position:absolute;top:18px;right:-2px;color:var(--amc-muted);font-style:normal;font-size:.84rem;transform:translateX(50%)}
+.amc-lifecycle-handoff{display:grid;grid-template-columns:1fr 1.3fr auto;gap:10px;padding:12px;border:1px solid var(--amc-border);border-radius:10px;background:var(--amc-soft)}
+.amc-lifecycle-handoff div{display:grid;gap:3px;min-width:0}
+.amc-lifecycle-handoff strong{color:var(--amc-ink);font-size:.69rem}
+.amc-lifecycle-handoff span{color:var(--amc-copy);font-size:.68rem;line-height:1.3}
+.amc-lifecycle-note{align-self:center;color:var(--amc-copy);font-size:.65rem;line-height:1.3;text-align:right}
+[data-theme="dark"] .amc-lifecycle-modal-content{--amc-ink:#edf4ff;--amc-copy:#b5c5d8;--amc-muted:#8ea4bd;--amc-border:#3a506b;--amc-soft:#18283b;--amc-node:#142238;--amc-current:#79b0ff;--amc-current-soft:#213c61}
+[data-theme="dark"] .amc-lifecycle-heading{background:linear-gradient(110deg,#18283b,#142238)}
+[data-theme="dark"] .amc-lifecycle-node{box-shadow:0 2px 7px rgb(0 0 0 / 18%)}
+[data-theme="dark"] .amc-lifecycle-step.is-current .amc-lifecycle-node{color:#102139}
+@media(max-width:760px){.amc-lifecycle-track{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 0}.amc-lifecycle-step{padding-right:10px}.amc-lifecycle-step:nth-child(3n){padding-right:0}.amc-lifecycle-step:nth-child(3n) .amc-lifecycle-connector{display:none}.amc-lifecycle-handoff{grid-template-columns:1fr 1fr}.amc-lifecycle-note{grid-column:1/-1;text-align:left}}
+@media(max-width:520px){.operations-dialog.amc-lifecycle-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);padding:14px}.amc-lifecycle-modal-content{gap:12px}.amc-lifecycle-heading{align-items:flex-start;display:grid;gap:10px}.amc-lifecycle-current{justify-self:start}.amc-lifecycle-track{grid-template-columns:1fr 1fr;gap:10px}.amc-lifecycle-step,.amc-lifecycle-step:not(:first-child){padding:3px 6px 3px 0}.amc-lifecycle-step:nth-child(3n){padding-right:6px}.amc-lifecycle-step:nth-child(2n) .amc-lifecycle-connector{display:none}.amc-lifecycle-step-copy strong{font-size:.7rem}.amc-lifecycle-step-copy span{font-size:.62rem}.amc-lifecycle-handoff{grid-template-columns:1fr}.amc-lifecycle-note{grid-column:auto}}

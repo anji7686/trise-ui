@@ -38,7 +38,9 @@ test.use({ trace: 'off', video: 'off', screenshot: 'off', actionTimeout: 10_000,
 
 test('approved accounts expose only their existing access workspaces', async ({ page, evidence }, testInfo) => {
   test.skip(testInfo.project.name !== 'operations-desktop', 'Authority inventory is recorded once in Operations.');
-  test.setTimeout(90_000);
+  // Ten approved personas are intentionally paced below the development
+  // sign-in limit; keep the authority inventory timeout above that bound.
+  test.setTimeout(240_000);
   const accounts = approvedLocalAccounts();
   const observed: unknown[] = [];
   for (const [index, account] of accounts.entries()) {

@@ -30,6 +30,16 @@ Before editing a screen, record which reference pattern is being applied and
 compare the rendered result at desktop and narrow widths when browser tooling
 is available.
 
+## Canonical UI design instructions
+
+Use [`docs/design/TRISE_UI_DESIGN_SYSTEM_AI_INSTRUCTIONS.md`](docs/design/TRISE_UI_DESIGN_SYSTEM_AI_INSTRUCTIONS.md)
+as the implementation contract for all new and materially changed screens.
+It defines the approved logo treatment, typography, tokens, button variants,
+forms, read-only views, tabs, accordions, tables, filters, dialogs, responsive
+behavior, status colors, and acceptance checks. Do not invent a competing
+pattern in a feature stylesheet. Extend the shared primitive or token system
+when a pattern is genuinely reusable.
+
 ## Customer boundary
 
 The Customer application is excluded from the UBold provider-dashboard design

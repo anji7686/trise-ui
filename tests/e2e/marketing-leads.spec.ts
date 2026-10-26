@@ -31,7 +31,17 @@ test('Provider marketing survey draft resumes and submits as a versioned survey'
   const leadRow = page.getByRole('row').filter({ hasText: reference });
   await expect(leadRow).toBeVisible();
   await leadRow.getByRole('button', { name: 'Mobile survey verification', exact: true }).click();
-  await page.getByRole('tab', { name: 'Site Survey', exact: true }).click();
+  await page.getByRole('button', { name: 'Record first interaction', exact: true }).click();
+  const firstInteraction = page.getByRole('dialog', { name: 'Activity & follow-up history', exact: true });
+  await firstInteraction.getByRole('tab', { name: 'Log past interaction', exact: true }).click();
+  await firstInteraction.getByLabel('Notes', { exact: true }).fill('Initial qualification call completed.');
+  await firstInteraction.getByRole('button', { name: 'Save past interaction', exact: true }).click();
+  await expect(page.locator('.action-notification').filter({ hasText: 'Interaction recorded. It is now part of this shared journey.' })).toBeVisible();
+  await firstInteraction.getByRole('button', { name: 'Close Activity & follow-up history', exact: true }).click();
+  await page.getByRole('button', { name: 'Review qualification', exact: true }).click();
+  const qualification = page.getByRole('dialog', { name: 'Qualification decision', exact: true });
+  await qualification.getByRole('button', { name: 'Accept & qualify', exact: true }).click();
+  await expect(page.locator('.action-notification').filter({ hasText: 'Lead accepted and qualified.' })).toBeVisible();
   await page.getByRole('button', { name: 'Start survey', exact: true }).click();
   const wizard = page.locator('.site-survey-wizard');
   const date = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
@@ -58,23 +68,25 @@ test('Provider marketing survey draft resumes and submits as a versioned survey'
   await wizard.getByLabel('Capacity (kg)').first().fill('680');
   await wizard.getByRole('button', { name: 'Add another unit', exact: true }).click();
   await expect(wizard.getByLabel('Unit label')).toHaveCount(2);
+  await wizard.getByLabel('Stops').nth(1).fill('8');
+  await wizard.getByLabel('Capacity (kg)').nth(1).fill('680');
   await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
   await wizard.getByLabel('Shaft width (mm)').fill('1800');
   await wizard.getByLabel('Shaft depth (mm)').fill('1900');
-  await expect(page.getByText('Evidence upload is unavailable', { exact: true })).toBeVisible();
+  const requirementSelects = wizard.locator('select');
+  for (let index = 0; index < await requirementSelects.count(); index += 1) {
+    await requirementSelects.nth(index).selectOption({ index: 1 });
+  }
+  await wizard.locator('input[name="safety_features"]').first().check();
+  await wizard.locator('input[name="standards_references"]').first().check();
   await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByText('Unavailable until an approved scanner is configured')).toBeVisible();
+  await expect(wizard.getByText('Manage files in the shared Lead documents and photos section.', { exact: true })).toBeVisible();
   await testInfo.attach(`survey-summary-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`survey-summary-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
   await wizard.getByRole('button', { name: 'Submit survey', exact: true }).click();
-  await expect(page.getByText('Site survey submitted. The captured revision is now read-only.')).toBeVisible();
+  await expect(page.getByText('Site survey submitted. A provider-only draft quotation was created; customer delivery remains unavailable until it is reviewed and published.')).toBeVisible();
   await expect(page.getByText(/SUBMITTED ·/)).toBeVisible();
-  await page.getByRole('tab', { name: 'Requirements', exact: true }).click();
-  await page.getByLabel('Capacity (kg)', { exact: true }).fill('1000');
-  await page.getByLabel('Stops', { exact: true }).fill('8');
-  await page.getByLabel('Lift type', { exact: true }).fill('Passenger');
-  await page.getByRole('button', { name: 'Capture requirements', exact: true }).click();
-  await expect(page.getByText('Requirement revision captured by the server.')).toBeVisible();
-  await testInfo.attach(`requirements-revision-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`requirements-revision-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
+  await expect(page.getByText('Final survey & requirements', { exact: true })).toBeVisible();
+  await testInfo.attach(`survey-final-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`survey-final-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
 });
 
 test('Provider lead create, update and follow-up dialogs persist supported fields', async ({ page }, testInfo) => {
@@ -94,29 +106,31 @@ test('Provider lead create, update and follow-up dialogs persist supported field
   await create.getByLabel('Opportunity title').fill('Elevator modernization assessment');
   await create.getByLabel('Primary contact reference').fill('synthetic-contact-ref');
   await create.getByRole('button', { name: 'Create lead', exact: true }).click();
-  await expect(page.getByText('Lead created by the server.')).toBeVisible();
-
-  const row = page.getByRole('row').filter({ hasText: reference });
-  await expect(row).toBeVisible();
-  await row.getByRole('button', { name: 'Elevator modernization assessment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Lead details', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit lead', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Update lead', exact: true });
   await testInfo.attach(`lead-update-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`lead-update-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
   await edit.getByLabel('Opportunity title').fill('Modernization and site assessment');
-  await edit.getByLabel('Lead stage').selectOption('CONTACTED');
   await edit.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(page.getByText('Lead updated by the server.')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Activity', exact: true }).click();
-  await page.getByRole('button', { name: 'Record follow-up', exact: true }).click();
-  const followUp = page.getByRole('dialog', { name: 'Record follow-up', exact: true });
+  await page.getByRole('button', { name: 'Open follow-up history', exact: true }).click();
+  const followUp = page.getByRole('dialog', { name: 'Activity & follow-up history', exact: true });
   await testInfo.attach(`lead-follow-up-${testInfo.project.name}`, { body: await page.screenshot({ path: testInfo.outputPath(`lead-follow-up-${testInfo.project.name}.png`), fullPage: true }), contentType: 'image/png' });
-  await followUp.getByLabel('Activity type').selectOption('CALL');
+  await followUp.getByRole('tab', { name: 'Log past interaction', exact: true }).click();
+  await followUp.getByLabel('Interaction type').selectOption('CALL');
   await followUp.getByLabel('Outcome').fill('Customer requested a site visit');
   await followUp.getByLabel('Next action').fill('Coordinate site access');
-  await followUp.getByLabel('Summary / notes').fill('Discussed modernization scope and tentative visit date.');
-  await followUp.getByRole('button', { name: 'Save activity', exact: true }).click();
-  await expect(page.getByText('Follow-up recorded by the server.')).toBeVisible();
+  await followUp.getByLabel('Notes').fill('Discussed modernization scope and tentative visit date.');
+  await followUp.getByRole('button', { name: 'Save past interaction', exact: true }).click();
+  await expect(page.getByText('Interaction recorded. It is now part of this shared journey.')).toBeVisible();
+  await followUp.getByRole('button', { name: 'Close Activity & follow-up history', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Review qualification', exact: true }).click();
+  const qualification = page.getByRole('dialog', { name: 'Qualification decision', exact: true });
+  await expect(qualification.getByRole('button', { name: 'Accept & qualify', exact: true })).toBeEnabled();
+  await qualification.getByRole('button', { name: 'Accept & qualify', exact: true }).click();
+  await expect(page.getByText('Lead accepted and qualified.')).toBeVisible();
 
   const fetched = await page.request.get(`${api}/marketing-leads?filter%5Bq%5D=${encodeURIComponent(reference)}`, {
     headers: { Authorization: `Bearer ${accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Idempotency-Key': crypto.randomUUID() },
@@ -124,5 +138,5 @@ test('Provider lead create, update and follow-up dialogs persist supported field
   expect(fetched.ok()).toBeTruthy();
   const leadPayload = await fetched.json() as { data: Array<{ id: string; attributes: { reference_code: string; title: string; status: string } }> };
   const savedLead = leadPayload.data.find(item => item.attributes.reference_code === reference);
-  expect(savedLead?.attributes).toMatchObject({ title: 'Modernization and site assessment', status: 'CONTACTED' });
+  expect(savedLead?.attributes).toMatchObject({ title: 'Modernization and site assessment', status: 'QUALIFIED' });
 });

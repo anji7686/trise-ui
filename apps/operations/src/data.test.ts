@@ -958,9 +958,9 @@ describe("operations execution contracts", () => {
     await operationsData.configuration("provider-1", "asset-families");
     await operationsData.timeline("provider-1");
 
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
-      "/configuration/asset-families?page[limit]=25",
-    );
+    const configurationRequest = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(configurationRequest.searchParams.get("page[limit]")).toBe("15");
+    expect(configurationRequest.searchParams.get("sort")).toBe("-created_at,id");
     expect(String(fetchMock.mock.calls[1][0])).toContain(
       "/timeline?page[limit]=25",
     );
@@ -975,9 +975,10 @@ describe("operations execution contracts", () => {
 
     await operationsData.configuration("provider-1", "service-types", "ACTIVE");
 
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
-      "/configuration/service-types?page[limit]=25&sort=-created_at,id&filter[status]=ACTIVE",
-    );
+    const configurationRequest = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(configurationRequest.searchParams.get("page[limit]")).toBe("15");
+    expect(configurationRequest.searchParams.get("sort")).toBe("-created_at,id");
+    expect(configurationRequest.searchParams.get("filter[status]")).toBe("ACTIVE");
   });
 
   it("keeps property onboarding staged, provider-scoped, and idempotent", async () => {

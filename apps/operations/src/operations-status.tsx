@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 export function statusTone(value: string) {
   const state = value.trim().toUpperCase().replaceAll('_', ' ');
   if (['ACTIVE', 'ENABLED', 'VERIFIED', 'APPROVED', 'REVIEW APPROVED', 'PAID', 'PUBLISHED', 'APPLIED', 'VALID', 'COMPLETE', 'COMPLETED', 'CONFIGURED', 'CONFIRMED', 'RESOLVED', 'CLOSED', 'AVAILABLE', 'SETTLED', 'READY', 'WON', 'QUALIFIED'].includes(state)) return 'success';
-  if (['REJECTED', 'SUSPENDED', 'DISABLED', 'EXPIRED', 'FAILED', 'LIMIT EXCEEDED', 'OVERDUE', 'NOT GRANTED', 'CANCELLED', 'CANCELED', 'BLOCKED', 'INELIGIBLE', 'LOST'].includes(state)) return 'danger';
+  if (['REJECTED', 'SUSPENDED', 'DISABLED', 'EXPIRED', 'TERMINATED', 'FAILED', 'LIMIT EXCEEDED', 'OVERDUE', 'NOT GRANTED', 'CANCELLED', 'CANCELED', 'ABANDONED', 'BLOCKED', 'INELIGIBLE', 'LOST'].includes(state)) return 'danger';
   if (state.includes('PENDING') || state.includes('UNDER REVIEW') || state.includes('CORRECTION') || ['ON HOLD', 'EVIDENCE SUBMITTED', 'DUE', 'GRACE', 'REQUESTED', 'PROPOSED', 'ASSESSMENT', 'QUOTATION PENDING'].includes(state)) return 'warning';
   if (['DRAFT', 'SCHEDULED', 'UPCOMING', 'IN PROGRESS', 'RECORDED', 'NEW', 'CONTACTED', 'ASSIGNED', 'ON THE WAY', 'ARRIVED', 'WORK STARTED', 'EXECUTION', 'OPEN'].includes(state)) return 'info';
   if (['CRITICAL', 'URGENT', 'EMERGENCY', 'HIGH', 'P0', 'P1'].includes(state)) return 'danger';

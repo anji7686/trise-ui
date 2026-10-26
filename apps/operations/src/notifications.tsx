@@ -66,6 +66,12 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
   }, [allowed, load, providerId]);
 
   useEffect(() => {
+    const refresh = () => void load();
+    window.addEventListener('trise-notifications-refresh', refresh);
+    return () => window.removeEventListener('trise-notifications-refresh', refresh);
+  }, [load]);
+
+  useEffect(() => {
     if (!open) return;
     void load();
     const onKey = (event: KeyboardEvent) => {

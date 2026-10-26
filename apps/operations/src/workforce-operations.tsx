@@ -7,6 +7,7 @@ import {
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
 import { OperationsDialog } from "./operations-dialog";
+import { ActionNotification } from "./operations-shared";
 import { indiaDateTimeToIso } from "./subscription-support";
 
 const fail = (cause: unknown) =>
@@ -227,7 +228,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
       setMode(null);
       setQualification(null);
       setSelectedLeaveRequest(null);
-      setMessage("Workforce change saved by the server.");
+      setMessage("Workforce change saved.");
       await load();
     } catch (cause) {
       setError(fail(cause));
@@ -249,20 +250,12 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
         description="Manage provider-scoped agents, teams, leave, availability, skills and certifications through authorized workflows."
         action={canManageWorkforce && <Button onClick={() => setMode("agent")}>Add member</Button>}
       />
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="success" role="status">
-          {message}
-        </p>
-      )}
+      {error && <ActionNotification kind="error" title="Workforce action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
+      {message && <ActionNotification title="Workforce update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
       <div className="workforce-kpi-grid" aria-label="Workforce summary">
         {[["Active team members", `${activeCount} shown`, "blue"], ["Available today", `${availableCount} shown`, "green"], ["On site", `${onSiteCount} shown`, "purple"], ["On leave / unavailable", `${unavailableCount} shown`, "orange"]].map(([title, value, tone]) => <article className={`workforce-kpi ${tone}`} key={title}><span>{title}</span><strong>{value}</strong><small>From the current server-filtered page of {agents.data.length} members</small></article>)}
       </div>
-      <nav className="workforce-tabs" aria-label="Workforce sections">
+      <nav className="workforce-tabs" aria-label="Workforce sections" aria-hidden={selected ? "true" : undefined}>
         {([["team", "Team"], ["availability", "Availability & Dispatch"], ["skills", "Skills & Certifications"], ["leave", "Leave & Holidays"]] as const).map(([key, title]) => <button type="button" key={key} className={tab === key ? "active" : ""} aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key)}>{title}</button>)}
       </nav>
       <div className="workforce-tab-actions">
@@ -537,7 +530,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
           </div>
         </section>}
         {tab === "team" && selected && <OperationsDialog title={label(selected)} onClose={() => setSelectedAgent("")} className="workforce-detail-dialog"><section className="detail-card workforce-detail-panel">
-          <div className="workforce-detail-heading"><h2>{label(selected)}<small>Provider-scoped workforce record</small></h2>{canManageAccess && <Button variant="secondary" onClick={() => { window.location.hash = "team-access"; }}>Manage provider access</Button>}</div>
+          <div className="workforce-detail-heading"><h2>{label(selected)}<small>Provider-scoped workforce record</small></h2><div className="workforce-detail-actions">{canManageAccess && <Button variant="secondary" onClick={() => { window.location.hash = "team-access"; }}>Manage provider access</Button>}<Button variant="secondary" onClick={() => setTab("skills")}>Skills &amp; Certifications</Button></div></div>
           {selected ? <dl className="workforce-facts"><dt>Member ID</dt><dd>{selected.id}</dd><dt>Role</dt><dd>{String(attrs(selected).role_name || attrs(selected).role || "Not returned by the provider directory")}</dd><dt>Status</dt><dd><Status>{String(attrs(selected).status || "ACTIVE")}</Status></dd><dt>Team</dt><dd>{String(attrs(selected).team_name || "Not assigned")}</dd></dl> : <p>Select a member to review their provider-scoped details.</p>}
           {canManageAccess && <p className="workforce-access-note">Role grants and membership permissions are managed in Team &amp; Access, separately from workforce qualifications. Select the member there before changing access.</p>}
           <h3>Provider teams</h3>
@@ -560,6 +553,191 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
           <div className="workforce-qualification-columns"><section><h3>Skill attainments</h3>{agentSkills.data.length ? agentSkills.data.map((item) => <article className="workforce-team-row" key={item.id}><span><strong>{String(attrs(item).skill_name || attrs(item).name || "Skill attainment")}</strong><small>{String(attrs(item).proficiency || "Proficiency not returned")}</small></span><Status>{String(attrs(item).verification || "PENDING")}</Status>{attrs(item).verification !== "verified" && <Button variant="quiet" onClick={() => { setQualification(item); setMode("verifySkill"); }}>Review</Button>}</article>) : <p>No skill attainments returned for this member.</p>}</section><section><h3>Certifications</h3>{agentCertifications.data.length ? agentCertifications.data.map((item) => <article className="workforce-team-row" key={item.id}><span><strong>{String(attrs(item).certification_name || attrs(item).name || "Certification")}</strong><small>{String(attrs(item).issuer || "Issuer not returned")}</small></span><Status>{String(attrs(item).verification || "PENDING")}</Status>{attrs(item).verification !== "verified" && <Button variant="quiet" onClick={() => { setQualification(item); setMode("verifyCertification"); }}>Review</Button>}</article>) : <p>No certifications returned for this member.</p>}</section></div>
         </section>}
       </div>
+    </section>
+  );
+}
+
+type SelfServiceTab = "attendance" | "leave";
+type JsonRecord = Record<string, unknown>;
+
+function jsonRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
+}
+
+function dateTimeLabel(value: unknown, includeTime = true) {
+  if (!value) return "Not recorded";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "Not recorded";
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    ...(includeTime ? { timeStyle: "short" } : {}),
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+}
+
+export function WorkforceSelfService({
+  providerId,
+  initialTab,
+}: {
+  providerId: string;
+  initialTab: SelfServiceTab;
+}) {
+  const [profile, setProfile] = useState<GenericAttributes | null>(null);
+  const [attendance, setAttendance] = useState<Collection<GenericAttributes>>({ data: [] });
+  const [tab, setTab] = useState<SelfServiceTab>(initialTab);
+  const [dialog, setDialog] = useState<"check-in" | "check-out" | "leave" | "cancel-leave" | null>(null);
+  const [selectedLeave, setSelectedLeave] = useState<GenericAttributes | null>(null);
+  const [reason, setReason] = useState("");
+  const [leaveForm, setLeaveForm] = useState({
+    leave_type: "ANNUAL",
+    starts_at: "",
+    ends_at: "",
+    extent: "full_day",
+    reason: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function load() {
+    const [me, attendanceRows] = await Promise.all([
+      operationsData.workforceMe(providerId),
+      operationsData.attendance(providerId),
+    ]);
+    setProfile(me.attributes);
+    setAttendance(attendanceRows);
+  }
+
+  useEffect(() => {
+    setTab(initialTab);
+    setError("");
+    void load().catch((cause) => setError(fail(cause)));
+  }, [providerId, initialTab]);
+
+  const profileAttributes = jsonRecord(profile);
+  const currentAttendance = jsonRecord(profileAttributes.attendance);
+  const attendanceStatus = String(currentAttendance.status || "NOT_RECORDED").toUpperCase();
+  const leaveRequests = attendance.data.length >= 0
+    ? (Array.isArray(profileAttributes.leave_requests) ? profileAttributes.leave_requests : [])
+        .map((value) => jsonRecord(value))
+    : [];
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      if (dialog === "check-in") {
+        await operationsData.checkInAttendance(providerId, {
+          source: "WEB",
+          reason: reason.trim() || null,
+          location: null,
+        }, crypto.randomUUID());
+        setMessage("You are checked in for today.");
+      } else if (dialog === "check-out") {
+        if (!currentAttendance.id && !currentAttendance.revision) throw new Error("Today’s attendance record is not available.");
+        await operationsData.checkOutAttendance(providerId, String(currentAttendance.id), {
+          expected_revision: Number(currentAttendance.revision),
+          reason: reason.trim() || null,
+        }, crypto.randomUUID());
+        setMessage("You are checked out for today.");
+      } else if (dialog === "leave") {
+        const profileId = String(profile?.id || "");
+        if (!profileId || !leaveForm.starts_at || !leaveForm.ends_at) throw new Error("Select both leave dates before submitting.");
+        await operationsData.createLeaveRequest(providerId, profileId, {
+          leave_type: leaveForm.leave_type,
+          window: {
+            starts_at: indiaDateTimeToIso(leaveForm.starts_at),
+            ends_at: indiaDateTimeToIso(leaveForm.ends_at),
+          },
+          extent: leaveForm.extent,
+          reason: leaveForm.reason.trim() || null,
+        }, crypto.randomUUID());
+        setMessage("Leave request submitted for provider review.");
+      } else if (dialog === "cancel-leave" && selectedLeave) {
+        await operationsData.transitionLeaveRequest(providerId, String(selectedLeave.id), "cancel", {
+          expected_revision: Number(selectedLeave.revision),
+          reason: reason.trim() || "Cancelled by requester",
+        }, crypto.randomUUID());
+        setMessage("Leave request cancelled.");
+      }
+      setDialog(null);
+      setSelectedLeave(null);
+      setReason("");
+      await load();
+    } catch (cause) {
+      setError(fail(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const openLeave = (item: GenericAttributes) => {
+    setSelectedLeave(item);
+    setReason("");
+    setDialog("cancel-leave");
+  };
+  const attendanceActions = attendanceStatus === "CHECKED_IN"
+    ? <Button onClick={() => { setReason(""); setDialog("check-out"); }}>Check out</Button>
+    : attendanceStatus === "CHECKED_OUT"
+      ? <Button variant="secondary" disabled>Today completed</Button>
+      : <Button onClick={() => { setReason(""); setDialog("check-in"); }}>Check in</Button>;
+
+  return (
+    <section className="content feature-page workforce-page workforce-self-service">
+      <PageHeader
+        title={tab === "attendance" ? "My attendance" : "My leave"}
+        description={tab === "attendance" ? "Record one provider check-in and check-out for each working day." : "Request and review leave for your provider workforce profile."}
+        action={tab === "attendance" ? attendanceActions : <Button onClick={() => { setLeaveForm({ leave_type: "ANNUAL", starts_at: "", ends_at: "", extent: "full_day", reason: "" }); setDialog("leave"); }}>Request leave</Button>}
+      />
+      {error && <ActionNotification kind="error" title="Workforce action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
+      {message && <ActionNotification title="Workforce update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
+      <nav className="workforce-tabs workforce-self-tabs" aria-label="My workforce sections">
+        <button type="button" className={tab === "attendance" ? "active" : ""} aria-current={tab === "attendance" ? "page" : undefined} onClick={() => { setTab("attendance"); window.location.hash = "attendance"; }}>My attendance</button>
+        <button type="button" className={tab === "leave" ? "active" : ""} aria-current={tab === "leave" ? "page" : undefined} onClick={() => { setTab("leave"); window.location.hash = "my-leave"; }}>My leave</button>
+      </nav>
+
+      {tab === "attendance" ? <>
+        <div className="feature-summary-grid workforce-self-summary">
+          <div><span>Today</span><strong>{attendanceStatus === "NOT_RECORDED" ? "Not started" : attendanceStatus === "CHECKED_IN" ? "Checked in" : "Completed"}</strong><small>{String(profileAttributes.time_zone || "Asia/Kolkata")}</small></div>
+          <div><span>Business date</span><strong>{dateTimeLabel(profileAttributes.business_date, false)}</strong><small>India operations date</small></div>
+          <div><span>Check-in</span><strong>{dateTimeLabel(currentAttendance.checked_in_at)}</strong><small>Recorded by the server</small></div>
+          <div><span>Check-out</span><strong>{dateTimeLabel(currentAttendance.checked_out_at)}</strong><small>One daily record</small></div>
+        </div>
+        <section className="detail-card workforce-self-card">
+          <div className="section-heading"><div><h2>Today’s attendance</h2><p>Attendance is provider-scoped and uses Asia/Kolkata business dates.</p></div><Status>{attendanceStatus.replaceAll("_", " ")}</Status></div>
+          {attendanceStatus === "NOT_RECORDED" && <p className="workforce-self-note">Check in when you start work. The system will not start attendance automatically.</p>}
+          {attendanceStatus === "CHECKED_IN" && <p className="workforce-self-note">Your working day is open. Check out when you finish; the server records the final time and duration.</p>}
+          {attendanceStatus === "CHECKED_OUT" && <p className="workforce-self-note">Today’s attendance is complete and retained in the attendance history below.</p>}
+        </section>
+        <section className="detail-card workforce-self-card">
+          <div className="section-heading"><div><h2>Attendance history</h2><p>Latest records first; technical identifiers remain secondary.</p></div><span>{attendance.data.length} records</span></div>
+          {attendance.data.length ? <div className="workforce-self-table-wrap"><table className="workforce-self-table"><thead><tr><th>Date</th><th>Status</th><th>Check-in</th><th>Check-out</th><th>Duration</th><th>Source</th></tr></thead><tbody>{attendance.data.map((row) => { const item = attrs(row); return <tr key={row.id}><td>{dateTimeLabel(item.business_date, false)}</td><td><Status>{String(item.status || "—").replaceAll("_", " ")}</Status></td><td>{dateTimeLabel(item.checked_in_at)}</td><td>{dateTimeLabel(item.checked_out_at)}</td><td>{item.duration_seconds ? `${Math.round(Number(item.duration_seconds) / 60)} min` : "Open"}</td><td>{String(item.source || "WEB")}</td></tr>; })}</tbody></table></div> : <p className="workforce-self-empty">No attendance records have been recorded yet.</p>}
+        </section>
+      </> : <>
+        <div className="feature-summary-grid workforce-self-summary">
+          <div><span>Pending review</span><strong>{leaveRequests.filter((item) => String(item.status).toUpperCase() === "REQUESTED").length}</strong><small>Awaiting provider action</small></div>
+          <div><span>Approved</span><strong>{leaveRequests.filter((item) => String(item.status).toUpperCase() === "APPROVED").length}</strong><small>Approved leave records</small></div>
+          <div><span>Recent requests</span><strong>{leaveRequests.length}</strong><small>Latest server response</small></div>
+          <div><span>Time zone</span><strong>IST</strong><small>Asia/Kolkata</small></div>
+        </div>
+        <section className="detail-card workforce-self-card">
+          <div className="section-heading"><div><h2>Leave requests</h2><p>Submit planned leave here; provider reviewers approve or reject it from Workforce management.</p></div><span>{leaveRequests.length} recent</span></div>
+          {leaveRequests.length ? <div className="workforce-self-leave-list">{leaveRequests.map((item, index) => { const status = String(item.status || "REQUESTED").toUpperCase(); const window = jsonRecord(item.window); return <article className="workforce-self-leave-row" key={String(item.id || `${item.leave_type}-${index}`)}><div><div className="workforce-self-leave-title"><strong>{String(item.leave_type || "Leave request").replaceAll("_", " ")}</strong><Status>{status}</Status></div><p>{dateTimeLabel(window.starts_at)} – {dateTimeLabel(window.ends_at)} · {String(item.extent || "full_day").replaceAll("_", " ")}</p><small>{String(item.reason || "No reason supplied")}</small></div>{status === "REQUESTED" && Boolean(item.id) && <Button variant="quiet" onClick={() => openLeave(item)}>Cancel</Button>}</article>; })}</div> : <p className="workforce-self-empty">No leave requests are available for your workforce profile.</p>}
+        </section>
+      </>}
+
+      {dialog && <OperationsDialog title={dialog === "check-in" ? "Check in for today" : dialog === "check-out" ? "Check out for today" : dialog === "leave" ? "Request leave" : "Cancel leave request"} busy={busy} onClose={() => setDialog(null)}>
+        <form className="provider-form workforce-self-form" onSubmit={(event) => void submit(event)}>
+          {(dialog === "check-in" || dialog === "check-out" || dialog === "cancel-leave") && <label>{dialog === "cancel-leave" ? "Cancellation reason" : "Note (optional)"}<textarea rows={3} maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} placeholder={dialog === "check-in" ? "Optional context for today’s check-in" : "Optional context for this action"} /></label>}
+          {dialog === "leave" && <>
+            <div className="workforce-self-form-grid"><label>Leave type<select value={leaveForm.leave_type} onChange={(event) => setLeaveForm({ ...leaveForm, leave_type: event.target.value })}><option value="ANNUAL">Annual leave</option><option value="SICK">Sick leave</option><option value="CASUAL">Casual leave</option><option value="UNPAID">Unpaid leave</option></select></label><label>Extent<select value={leaveForm.extent} onChange={(event) => setLeaveForm({ ...leaveForm, extent: event.target.value })}><option value="full_day">Full day</option><option value="partial_day">Partial day</option></select></label><label>Starts at<input type="datetime-local" required value={leaveForm.starts_at} onChange={(event) => setLeaveForm({ ...leaveForm, starts_at: event.target.value })} /></label><label>Ends at<input type="datetime-local" required value={leaveForm.ends_at} onChange={(event) => setLeaveForm({ ...leaveForm, ends_at: event.target.value })} /></label></div><label>Reason (optional)<textarea rows={3} maxLength={2000} value={leaveForm.reason} onChange={(event) => setLeaveForm({ ...leaveForm, reason: event.target.value })} /></label>
+          </>}
+          <div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setDialog(null)}>Cancel</Button><Button type="submit" variant={dialog === "cancel-leave" ? "danger" : "primary"} busy={busy}>{dialog === "check-in" ? "Confirm check-in" : dialog === "check-out" ? "Confirm check-out" : dialog === "leave" ? "Submit leave request" : "Cancel leave request"}</Button></div>
+        </form>
+      </OperationsDialog>}
     </section>
   );
 }

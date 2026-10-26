@@ -4,6 +4,7 @@ import type { components } from '../../../packages/api-client/src/generated';
 export type AccessRole = components['schemas']['AccessRole'];
 export type AccessPermission = components['schemas']['AccessPermission'];
 export type AccessMember = components['schemas']['AccessMember'];
+export type AssignmentCandidate = { id: string; type: string; attributes: { user_id: string; name?: string | null; email?: string | null; status: string; membership_context?: string | null } };
 export type EffectivePermissionPreview = components['schemas']['ProviderEffectivePermissionPreview']['data'];
 export type RoleTemplateAdoptionPreview = components['schemas']['ProviderRoleTemplateAdoptionPreview']['data'];
 export type DefaultRoleInput = components['schemas']['DefaultRoleCreate'];
@@ -40,6 +41,11 @@ export const accessData = {
     if (filters.q) query.set('q', filters.q);
     if (filters.status) query.set('filter[status]', filters.status);
     return apiClient.request<components['schemas']['AccessMemberCollection']>(`/provider/access/members${query.size ? `?${query}` : ''}`, {}, { providerId });
+  },
+  assignmentCandidates: (providerId: string, filters: { q?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || 100) });
+    if (filters.q) query.set('q', filters.q);
+    return apiClient.request<{ data: AssignmentCandidate[]; page?: { next?: string | null; previous?: string | null; limit?: number } }>(`/provider/access/assignment-candidates?${query}`, {}, { providerId });
   },
   effectivePermissions: (providerId: string, memberId: string) => apiClient.request<components['schemas']['ProviderEffectivePermissionPreview']>(`/provider/access/members/${encodeURIComponent(memberId)}/effective-permissions`, {}, { providerId }),
   selfEffectivePermissions: (providerId: string) => apiClient.request<components['schemas']['ProviderEffectivePermissionPreview']>('/provider/access/self/effective-permissions', {}, { providerId }),

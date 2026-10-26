@@ -19,7 +19,7 @@ test('provider user can open the seeded asset compliance workflow', async ({ pag
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
   if (!await navigation.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await expect(navigation).toBeVisible();
-  await navigation.getByText('Provider Settings', { exact: true }).click();
+  await navigation.getByText('Administration', { exact: true }).click();
   await navigation.getByRole('button', { name: 'Provider compliance', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Compliance Center', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Asset approvals/ }).first().click();

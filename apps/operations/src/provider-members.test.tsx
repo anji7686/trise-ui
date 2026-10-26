@@ -37,8 +37,8 @@ describe('member access presentation', () => {
     const session = { platformAdmin: false, platformCapabilities: [], providerCapabilities: [{ providerId: 'p', displayName: 'Provider', capabilities: ['team_access'] }] };
     expect(providerRouteAllowed(session, 'p', 'team-access')).toBe(true);
     expect(providerRouteAllowed(session, 'other', 'team-access')).toBe(false);
-    const providerSettings = groupedProviderNavigation(navigationForSession(session, 'p').provider).find(group => group.group === 'Provider Settings');
-    expect(providerSettings?.items.map(item => item.label)).toEqual(['Team & roles']);
+    const providerSettings = groupedProviderNavigation(navigationForSession(session, 'p').provider).find(group => group.group === 'Administration');
+    expect(providerSettings?.items.map(item => item.label)).toEqual(['Team & Roles']);
   });
   it('exposes role search and enabled-state filters backed by the provider roles API', () => {
     const html = renderToStaticMarkup(<ProviderRoles providerId="provider-1" />);
