@@ -103,9 +103,14 @@
 .login-topbar-brand .trise-brand-logo,.login-brand-panel .trise-brand-logo { opacity:1; filter:none; }
 .login-topbar-brand .trise-brand-header { padding:0; }
 .login-topbar-brand .trise-brand-logo { display:block; width:9rem; height:auto; max-height:2.8rem; object-fit:contain; }
-.login-topbar-brand > span:not(.login-topbar-logo-badge) { padding-left:.8rem; border-left:1px solid #cbd8e7; color:#193458; font-size:.82rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-.login-topbar-context { display:flex; align-items:center; gap:.45rem; color:#526176; font-size:.78rem; font-weight:600; white-space:nowrap; }
-.login-live-dot { width:.5rem; height:.5rem; border-radius:50%; background:#03a329; box-shadow:0 0 0 4px rgba(3,163,41,.12); }
+.login-topbar-brand-copy { display:grid; gap:.12rem; min-width:0; padding-left:.9rem; border-left:1px solid #cbd8e7; }
+.login-topbar-brand-copy strong { color:#193458; font-size:.82rem; font-weight:800; letter-spacing:.08em; line-height:1.2; text-transform:uppercase; }
+.login-topbar-brand-copy small { color:#60748f; font-size:.7rem; font-weight:500; line-height:1.3; }
+.login-topbar-context { display:flex; align-items:center; gap:.65rem; padding:.45rem .75rem; border:1px solid #d8e2ee; border-radius:.75rem; background:rgba(255,255,255,.72); color:#526176; white-space:nowrap; }
+.login-region-mark { display:grid; place-items:center; width:2rem; height:2rem; border-radius:.55rem; background:#eaf3ff; color:#294d7a; font-size:.68rem; font-weight:800; letter-spacing:.04em; }
+.login-topbar-context-copy { display:grid; gap:.12rem; }
+.login-topbar-context-copy strong { color:#193458; font-size:.75rem; font-weight:750; line-height:1.2; }
+.login-topbar-context-copy small { color:#60748f; font-size:.68rem; line-height:1.25; }
 .login-maintenance-wrap { max-width:1280px; margin:1rem auto 0; }
 .login-maintenance-wrap .platform-maintenance-banner { max-width:none; margin:0; }
 .login-layout { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(25rem,.95fr); gap:clamp(1rem,4vw,3.5rem); align-items:stretch; max-width:1120px; margin:clamp(2rem,7vh,5rem) auto 2.25rem; }
@@ -150,15 +155,19 @@
 .login-footer-bar { display:flex; justify-content:center; flex-wrap:wrap; gap:.75rem 1.4rem; max-width:1120px; margin:0 auto; color:#60748f; font-size:.72rem; }
 .login-footer-bar span + span::before { content:'•'; margin-right:1.4rem; color:#a8b6c8; }
 @media(max-width:900px) { .login-layout { grid-template-columns:1fr; max-width:640px; margin-top:2rem; } .login-brand-panel { min-height:auto; padding:2.25rem; } .login-brand-panel h1 { max-width:20ch; } .login-brand-footer { margin-top:2rem; } }
-@media(max-width:560px) { .login-screen { padding:0 .75rem 1rem; } .login-topbar { min-height:4rem; } .login-topbar-brand .trise-brand-logo { width:7rem; } .login-topbar-logo-badge { padding:.15rem .4rem; } .login-topbar-brand > span:not(.login-topbar-logo-badge) { display:none; } .login-topbar-context { font-size:.7rem; } .login-layout { margin:1.25rem auto 1.5rem; } .login-brand-panel,.login-auth-panel { padding:1.5rem; border-radius:1rem; } .login-brand-panel .trise-brand-logo { width:13rem; margin-bottom:1.75rem; } .login-brand-panel h1 { font-size:2.2rem; } .login-capability-list { margin-top:1.5rem; } .login-footer-bar { justify-content:flex-start; padding:0 .25rem; } .login-footer-bar span + span::before { margin-right:.75rem; } }
+@media(max-width:560px) { .login-screen { padding:0 .75rem 1rem; } .login-topbar { min-height:4rem; gap:.5rem; } .login-topbar-brand { gap:.55rem; } .login-topbar-brand .trise-brand-logo { width:6.5rem; } .login-topbar-logo-badge { padding:.15rem .4rem; } .login-topbar-brand-copy { padding-left:.55rem; } .login-topbar-brand-copy strong { font-size:.72rem; } .login-topbar-brand-copy small { display:none; } .login-topbar-context { gap:.4rem; padding:.3rem .45rem; border-radius:.6rem; } .login-region-mark { width:1.75rem; height:1.75rem; } .login-topbar-context-copy strong { font-size:.68rem; } .login-topbar-context-copy small { display:none; } .login-layout { margin:1.25rem auto 1.5rem; } .login-brand-panel,.login-auth-panel { padding:1.5rem; border-radius:1rem; } .login-brand-panel .trise-brand-logo { width:13rem; margin-bottom:1.75rem; } .login-brand-panel h1 { font-size:2.2rem; } .login-capability-list { margin-top:1.5rem; } .login-footer-bar { justify-content:flex-start; padding:0 .25rem; } .login-footer-bar span + span::before { margin-right:.75rem; } }
+@media(max-width:380px) { .login-topbar-brand .trise-brand-logo { width:5.25rem; } .login-topbar-brand-copy { padding-left:.4rem; } .login-topbar-brand-copy strong { font-size:.66rem; } .login-topbar-context { gap:.3rem; padding:.25rem .35rem; } .login-region-mark { width:1.55rem; height:1.55rem; } .login-topbar-context-copy strong { font-size:.62rem; } }
 
 /* The signed-out shell is rendered before the authenticated theme controls are
    available, so keep it aligned with the same document theme and system
    preference from the first paint. */
 [data-theme="dark"] .login-screen { background:radial-gradient(circle at 12% 18%,rgba(89,145,220,.18),transparent 28%),radial-gradient(circle at 92% 88%,rgba(39,190,93,.12),transparent 26%),var(--background); color:var(--text); }
 [data-theme="dark"] .login-topbar { border-bottom-color:var(--border); }
-[data-theme="dark"] .login-topbar-brand > span:not(.login-topbar-logo-badge) { border-left-color:#49627f; color:#dbeafe; }
-[data-theme="dark"] .login-topbar-context { color:var(--secondary); }
+[data-theme="dark"] .login-topbar-brand-copy { border-left-color:#49627f; }
+[data-theme="dark"] .login-topbar-brand-copy strong,[data-theme="dark"] .login-topbar-context-copy strong { color:#dbeafe; }
+[data-theme="dark"] .login-topbar-brand-copy small,[data-theme="dark"] .login-topbar-context-copy small { color:var(--secondary); }
+[data-theme="dark"] .login-topbar-context { border-color:var(--border); background:var(--surface); color:var(--secondary); }
+[data-theme="dark"] .login-region-mark { background:#203753; color:#a9c8f3; }
 [data-theme="dark"] .login-auth-panel { border-color:var(--border); background:var(--surface); box-shadow:0 22px 60px rgba(0,0,0,.28); }
 [data-theme="dark"] .login-auth-icon { background:#203753; color:#a9c8f3; }
 [data-theme="dark"] .login-eyebrow { color:#a8b6c8; }

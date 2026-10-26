@@ -1119,6 +1119,108 @@
 .status-due .workflow-follow-up-desk-marker {
   background: #d97706;
 }
+/* The overview dashboard owns its theme tokens. Keep this shared reminder
+   widget on that same surface and compress it into scan-friendly rows. */
+.provider-dashboard .workflow-follow-up-desk {
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+  padding: 0.8rem 0.9rem;
+  border-color: var(--dashboard-border, var(--border-subtle, #d9e1ea));
+  border-radius: 12px;
+  background: var(--dashboard-surface, var(--surface-raised, #fff));
+  color: var(--dashboard-text, var(--text-primary, #142b52));
+}
+.provider-dashboard .workflow-follow-up-desk-heading {
+  align-items: center;
+  gap: 0.75rem;
+}
+.provider-dashboard .workflow-follow-up-desk-heading .eyebrow {
+  color: var(--dashboard-accent, var(--primary, #1769e8));
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+.provider-dashboard .workflow-follow-up-desk-heading h3 {
+  margin: 0.1rem 0 0.15rem;
+  color: var(--dashboard-text, var(--text-primary, #142b52));
+  font-size: 1rem;
+  line-height: 1.25;
+}
+.provider-dashboard .workflow-follow-up-desk-heading p {
+  color: var(--dashboard-muted, var(--text-muted, #64748b));
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.provider-dashboard .workflow-follow-up-desk-actions {
+  align-items: center;
+  gap: 0.25rem;
+}
+.workflow-follow-up-refresh-note {
+  padding-left: 0.35rem;
+  color: var(--dashboard-muted, var(--text-muted, #64748b));
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+.provider-dashboard .workflow-follow-up-desk-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.provider-dashboard .workflow-follow-up-desk-stats div {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border-color: var(--dashboard-border, var(--border-subtle, #d9e1ea));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--dashboard-accent, #1769e8) 5%, var(--dashboard-surface, #fff));
+}
+.provider-dashboard .workflow-follow-up-desk-stats strong {
+  color: var(--dashboard-text, var(--text-primary, #142b52));
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.provider-dashboard .workflow-follow-up-desk-stats span {
+  color: var(--dashboard-muted, var(--text-muted, #64748b));
+  font-size: 0.7rem;
+}
+.provider-dashboard .workflow-follow-up-desk-list {
+  gap: 0.35rem;
+}
+.provider-dashboard .workflow-follow-up-desk-row {
+  gap: 0.55rem;
+  padding: 0.48rem 0.65rem;
+  border-color: var(--dashboard-border, var(--border-subtle, #d9e1ea));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dashboard-accent, #1769e8) 3%, var(--dashboard-surface, #fff));
+  color: var(--dashboard-text, var(--text-primary, #142b52));
+}
+.provider-dashboard .workflow-follow-up-desk-row strong {
+  display: block;
+  overflow: hidden;
+  color: var(--dashboard-text, var(--text-primary, #142b52));
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-dashboard .workflow-follow-up-desk-row small {
+  overflow: hidden;
+  margin-top: 0.08rem;
+  color: var(--dashboard-muted, var(--text-muted, #64748b));
+  font-size: 0.64rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workflow-follow-up-desk-empty {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px dashed var(--dashboard-border, var(--border-subtle, #d9e1ea));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dashboard-accent, #1769e8) 4%, var(--dashboard-surface, #fff));
+  color: var(--dashboard-muted, var(--text-muted, #64748b));
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
 @media (max-width: 720px) {
   .workflow-follow-ups {
     padding: 0.9rem;
@@ -1211,15 +1313,13 @@
 @media (max-width: 720px) {
   .workflow-follow-up-desk-heading {
     display: grid;
+    align-items: start;
   }
   .workflow-follow-up-desk-actions {
     justify-content: flex-start;
   }
   .workflow-follow-up-desk-stats {
-    grid-template-columns: 1fr 1fr;
-  }
-  .workflow-follow-up-desk-stats div:last-child {
-    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .workflow-follow-up-desk-row {
     grid-template-columns: auto minmax(0, 1fr) auto;

@@ -2054,12 +2054,9 @@ export function WorkflowFollowUpDesk({
     <section className="workflow-follow-up-desk" aria-label="Follow-up desk">
       <div className="workflow-follow-up-desk-heading">
         <div>
-          <span className="eyebrow">Provider desk</span>
-          <h3>Follow-up reminders</h3>
-          <p>
-            One shared schedule across Work Intake, Lead, Quotation, Project,
-            Installation, Handover and AMC.
-          </p>
+          <span className="eyebrow">Follow-up desk</span>
+          <h3>Follow-ups</h3>
+          <p>Due and upcoming reminders across provider work areas.</p>
         </div>
         <div className="workflow-follow-up-desk-actions">
           {desktopEnabled ? (
@@ -2091,6 +2088,7 @@ export function WorkflowFollowUpDesk({
           <Button type="button" variant="quiet" onClick={() => void load()}>
             Refresh
           </Button>
+          <span className="workflow-follow-up-refresh-note" aria-label="Updates every 60 seconds">Updates every minute</span>
         </div>
       </div>
       {error && (
@@ -2111,13 +2109,9 @@ export function WorkflowFollowUpDesk({
           <strong>{upcoming.length}</strong>
           <span>Next 24 hours</span>
         </div>
-        <div>
-          <strong>60s</strong>
-          <span>Polling interval</span>
-        </div>
       </div>
       {loading ? (
-        <p className="notice">Checking scheduled reminders…</p>
+        <p className="workflow-follow-up-desk-empty" role="status">Checking scheduled reminders…</p>
       ) : due.length || upcoming.length ? (
         <div className="workflow-follow-up-desk-list">
           {[...due, ...upcoming].slice(0, 6).map((record) => (
@@ -2146,8 +2140,8 @@ export function WorkflowFollowUpDesk({
           ))}
         </div>
       ) : (
-        <p className="notice">
-          No due or upcoming follow-ups in the next 24 hours.
+        <p className="workflow-follow-up-desk-empty">
+          No follow-ups due in the next 24 hours.
         </p>
       )}
     </section>

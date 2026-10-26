@@ -463,6 +463,19 @@
 @media (max-width: 900px) { .business-compliance-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (min-width: 561px) and (max-width: 1024px) { .business-compliance-preview-dialog { width:min(860px,calc(100vw - 32px)); height:min(86vh,760px); } .business-compliance-preview-image { max-height:calc(86vh - 92px); } .business-compliance-preview-frame { height:calc(86vh - 92px); min-height:420px; } }
 @media (max-width: 560px) { .business-compliance-summary { grid-template-columns:1fr; } .business-compliance-panel > header { align-items:flex-start; flex-direction:column; } .business-compliance-panel-actions,.business-context-documents-heading { justify-content:flex-start; width:100%; flex-direction:column; } .business-compliance-detail dl div { grid-template-columns:1fr; gap:.2rem; } .business-compliance-modal-backdrop { padding:.5rem; } .business-compliance-preview-dialog { width:calc(100vw - 1rem); height:calc(100vh - 1rem); max-height:calc(100vh - 1rem); border-radius:10px; } .business-compliance-preview-dialog > header { padding:.75rem; } .business-compliance-preview-dialog .business-compliance-modal-body { padding:.5rem; } .business-compliance-preview-image { max-width:100%; max-height:calc(100vh - 88px); } .business-compliance-preview-frame { height:calc(100vh - 88px); min-height:0; } }
+
+/* Business compliance uses a custom modal; keep its hard-coded light palette in step with dark mode. */
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal { border:1px solid #344b66; background:#142236; color:#e6eef8; box-shadow:0 20px 60px #0008; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal > header { border-color:#344b66; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal h2 { color:#edf4ff; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .business-compliance-modal-body { color:#e2eaf4; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .business-compliance-form label { color:#c5d3e3; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .business-compliance-form :is(input,select,textarea) { border-color:#405570; background:#0d1520; color:#f1f5f9; color-scheme:dark; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .business-compliance-form :is(input,textarea)::placeholder { color:#9aabc0; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .business-compliance-note { border-left-color:#d9aa58; background:#3b2d18; color:#f6cf83; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .platform-definition-list dt { color:#b2c2d5; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-modal .platform-definition-list dd { color:#e2eaf4; }
+[data-theme="dark"] .platform-workspace .operations-main .business-compliance-preview-dialog .business-compliance-modal-body { background:#101d2d; }
 /* Provider Compliance Center */
 .compliance-center { max-width: 1440px; }
 .compliance-center-header { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; margin-bottom:20px; }
