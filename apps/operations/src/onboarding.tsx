@@ -48,6 +48,9 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
   const [customers, setCustomers] = useState<Collection<GenericAttributes> | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [communitySearch, setCommunitySearch] = useState('');
+  const [communityLookup, setCommunityLookup] = useState<{ query: string; results: Resource<GenericAttributes>[] } | null>(null);
+  const [communityLookupBusy, setCommunityLookupBusy] = useState(false);
+  const [communityLookupError, setCommunityLookupError] = useState('');
   const [definitions, setDefinitions] = useState<Collection<GenericAttributes> | null>(null);
   const [definitionsProviderId, setDefinitionsProviderId] = useState('');
   const [definitionsLoading, setDefinitionsLoading] = useState(false);
@@ -97,6 +100,7 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
   const locationsRequestId = useRef(0);
   const pincodeLookupRequestId = useRef(0);
   const communityPinSearchRequestId = useRef(0);
+  const communityLookupRequestId = useRef(0);
   const communityPinResultCache = useRef(new Map<string, Resource<GenericAttributes>[]>());
   function keyFor(command: string) { return idempotencyKeys.current[command] ||= crypto.randomUUID(); }
   const selectedDefinition = definitions?.data.find((item) => item.id === definitionId);
@@ -252,6 +256,8 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
   const selectedCustomer = createdCustomer || customers?.data.find((item) => linkOf(item, 'customer_relationship')?.id === relationshipId);
   const selectedCustomerEmail = String(((selectedCustomer?.attributes.contact || {}) as Record<string, unknown>).email || '').trim();
   const existingCommunities = availableLocations.filter((item) => String(item.attributes.classification || '').toUpperCase() === 'COMMUNITY');
+  const communityLookupQuery = propertyTemplate === 'existing' ? communitySearch.trim() : propertyTemplate === 'community' ? communityName.trim() : '';
+  const communityLookupResults = communityLookup?.query === communityLookupQuery ? communityLookup.results : [];
   const selectedCommunity = (propertyTemplate === 'existing' ? availableLocations.find((item) => item.id === selectedCommunityId) : undefined)
     || (propertyTemplate === 'community' && String(savedLocations[communityName]?.attributes.classification || '').toUpperCase() === 'COMMUNITY' ? savedLocations[communityName] : undefined);
   const community = selectedCommunity || savedLocations[communityName];
@@ -274,9 +280,12 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
     : propertyTemplate === 'existing'
     ? existingCommunityReady(selectedCommunity?.id || '', buildingLocations.length)
       : Boolean(community) && buildingLocations.length > 0 && (Boolean(selectedCommunity) || propertyAddressReady);
-  const communityNameDuplicate = hasDuplicateLocationName(communityName, existingCommunities.map(titleOf));
+  const communityNameMatch = [...existingCommunities, ...communityLookupResults].find((item) => hasDuplicateLocationName(communityName, [titleOf(item)]));
+  const communityNameDuplicate = Boolean(communityNameMatch);
   const communitySearchPool = searchedCommunityPin === communityPinFilter.trim() && communityPinResults
     ? communityPinResults.filter((item) => String(item.attributes.classification || '').toUpperCase() === 'COMMUNITY')
+    : communityLookupQuery.length >= 2 && communityLookup?.query === communityLookupQuery
+    ? communityLookupResults
     : existingCommunities;
   const communitySearchOptions = communitySearchPool.map((item) => ({
     id: item.id,
@@ -295,6 +304,42 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
     return referencePin === communityPinFilter.trim() || addressPins.includes(communityPinFilter.trim());
   });
   const stepIndex = onboardingStepOrder.indexOf(step);
+
+  useEffect(() => {
+    const query = communityLookupQuery;
+    if (!relationshipId || query.length < 2 || propertyTemplate === 'standalone') {
+      communityLookupRequestId.current += 1;
+      setCommunityLookupBusy(false);
+      setCommunityLookupError('');
+      return;
+    }
+    const requestId = ++communityLookupRequestId.current;
+    const relationshipAtRequest = relationshipId;
+    const timer = window.setTimeout(() => {
+      setCommunityLookupBusy(true);
+      setCommunityLookupError('');
+      void operationsData.locations(providerId, relationshipAtRequest, { query, limit: 100, classification: ['COMMUNITY'] })
+        .then((result) => {
+          if (communityLookupRequestId.current !== requestId || relationshipId !== relationshipAtRequest) return;
+          setCommunityLookup({ query, results: result.data });
+          setAvailableLocations((current) => [...current.filter((item) => !result.data.some((match) => match.id === item.id)), ...result.data]);
+          setSavedLocations((current) => ({ ...current, ...Object.fromEntries(result.data.map((item) => [String(item.attributes.name), item])) }));
+        })
+        .catch((cause) => { if (communityLookupRequestId.current === requestId) setCommunityLookupError(messageFor(cause)); })
+        .finally(() => { if (communityLookupRequestId.current === requestId) setCommunityLookupBusy(false); });
+    }, 300);
+    return () => { window.clearTimeout(timer); if (communityLookupRequestId.current === requestId) communityLookupRequestId.current += 1; };
+  }, [communityLookupQuery, propertyTemplate, providerId, relationshipId]);
+
+  function useExistingCommunity(item: Resource<GenericAttributes>) {
+    setAvailableLocations((current) => current.some((record) => record.id === item.id) ? current : [...current, item]);
+    setSavedLocations((current) => ({ ...current, [String(item.attributes.name)]: item }));
+    setPropertyTemplate('existing');
+    setSelectedCommunityId(item.id);
+    setSelectedBuildingIds({});
+    setCommunitySearch('');
+    setError('');
+  }
   const customerOptions = (customers?.data || []).map((item) => ({
     id: item.id,
     label: titleOf(item),
@@ -308,6 +353,7 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
 
   function resetPropertyAndLater() {
     setStep('customer'); setFurthestStep(0); setSelectedCommunityId(''); setSelectedBuildingIds({}); setCommunitySearch('');
+    communityLookupRequestId.current += 1; setCommunityLookup(null); setCommunityLookupBusy(false); setCommunityLookupError('');
     setAvailableLocations([]); setSavedLocations({}); setSavedAssets([]); setBuildingNames([DEFAULT_BUILDINGS[0]]); setBuildingEntryNotes(['']); setStandaloneEntryNote(''); setLocationsLoading(false);
     setCommunityName(DEFAULT_COMMUNITY); setPropertyTemplate('community'); setStandaloneName('Standalone Building');
     setAddress({ line1: '', locality: '', city: '', cityCode: '', district: '', districtCode: '', state: '', stateCode: '', postalCode: '', country: 'India', landmark: '' });
@@ -570,15 +616,14 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
         <div className="onboarding-grid"><SearchableSelect label="State or UT" searchLabel="Search Indian states and UTs" search={geography.stateSearch} onSearch={geography.setStateSearch} value={geography.stateCode} onChange={(id) => chooseAddressReference('state', id)} options={geography.stateOptions} placeholder="Select state / UT" required /><SearchableSelect label="District" searchLabel="Search districts in selected state" search={geography.districtSearch} onSearch={geography.setDistrictSearch} value={geography.districtCode} onChange={(id) => chooseAddressReference('district', id)} options={geography.districtOptions} placeholder="Select district" required disabled={!geography.stateCode} /><SearchableSelect label="City or town" searchLabel="Search Indian cities" search={geography.citySearch} onSearch={geography.setCitySearch} value={geography.cityCode} onChange={(id) => chooseAddressReference('city', id)} options={geography.cityOptions} placeholder="Select city" required disabled={!geography.districtCode} /></div>
         <label>Address line<input required value={address.line1} onChange={(event) => setAddress((current) => ({ ...current, line1: event.target.value }))} placeholder="Door/building number and street" /></label>
         <label>Locality or area<input required value={address.locality} onChange={(event) => setAddress((current) => ({ ...current, locality: event.target.value }))} placeholder="Example: Whitefield" /></label>
-        <label>Landmark <span className="optional">Optional</span><input value={address.landmark} onChange={(event) => setAddress((current) => ({ ...current, landmark: event.target.value }))} placeholder="Nearby landmark" /></label>
-        <div className="onboarding-grid onboarding-coordinate-grid"><label>Latitude <span className="optional">Optional</span><input type="number" step="0.000001" min="-90" max="90" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="12.9698" /></label><label>Longitude <span className="optional">Optional</span><input type="number" step="0.000001" min="-180" max="180" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="77.7500" /></label></div>
+        <details className="onboarding-address-extra"><summary>Optional details · landmark and map coordinates</summary><div className="onboarding-grid"><label>Landmark<input value={address.landmark} onChange={(event) => setAddress((current) => ({ ...current, landmark: event.target.value }))} placeholder="Nearby landmark" /></label><label>Latitude<input type="number" step="0.000001" min="-90" max="90" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="12.9698" /></label><label>Longitude<input type="number" step="0.000001" min="-180" max="180" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="77.7500" /></label></div></details>
         {!propertyAddressReady && <small className="onboarding-address-validation" role="status">To save this location: {propertyAddressIssues.join(' ')}</small>}
       </fieldset>}
-      {propertyTemplate === 'existing' && relationshipId && !locationsLoading && <><div className="onboarding-community-pin-search"><label>Filter saved communities by PIN <span className="optional">Optional</span><input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={communityPinFilter} onChange={(event) => { communityPinSearchRequestId.current += 1; setCommunityPinSearchBusy(false); setCommunityPinFilter(event.target.value.replace(/\D/g, '').slice(0, 6)); setCommunityPinSearchError(''); }} placeholder="Enter a six-digit PIN" /><small>Searches this customer’s communities by their saved postal address.</small></label><Button type="button" variant="secondary" busy={communityPinSearchBusy} disabled={communityPinSearchBusy || !/^[1-9]\d{5}$/.test(communityPinFilter.trim())} onClick={() => void searchCommunitiesByPin()}>Find communities</Button></div>{communityPinSearchError && <p className="onboarding-inline-note" role="alert">{communityPinSearchError}</p>}{existingCommunities.length > 0 && <SearchableSelect label="Select saved community" searchLabel="Search saved communities by name, code or address" search={communitySearch} onSearch={setCommunitySearch} value={selectedCommunityId} onChange={(id) => { setSelectedCommunityId(id); setSelectedBuildingIds({}); }} options={pinFilteredCommunityOptions} placeholder="Search saved communities" required />}{communityPinFilter.length === 6 && searchedCommunityPin === communityPinFilter && pinFilteredCommunityOptions.length === 0 && <div className="onboarding-inline-note onboarding-empty-communities"><span>No saved community matches PIN {communityPinFilter}.</span><Button type="button" variant="secondary" onClick={() => { setSelectedCommunityId(''); setPropertyTemplate('community'); setAddress((current) => ({ ...current, postalCode: communityPinFilter })); }}>Create a community with this PIN</Button></div>}</>}
+      {propertyTemplate === 'existing' && relationshipId && !locationsLoading && <><div className="onboarding-community-pin-search"><label>Filter saved communities by PIN <span className="optional">Optional</span><input inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={communityPinFilter} onChange={(event) => { communityPinSearchRequestId.current += 1; setCommunityPinSearchBusy(false); setCommunityPinFilter(event.target.value.replace(/\D/g, '').slice(0, 6)); setCommunityPinSearchError(''); }} placeholder="Enter a six-digit PIN" /><small>Searches this customer’s communities by their saved postal address.</small></label><Button type="button" variant="secondary" busy={communityPinSearchBusy} disabled={communityPinSearchBusy || !/^[1-9]\d{5}$/.test(communityPinFilter.trim())} onClick={() => void searchCommunitiesByPin()}>Find by PIN</Button></div>{communityPinSearchError && <p className="onboarding-inline-note" role="alert">{communityPinSearchError}</p>}{communityLookupError && <p className="onboarding-inline-note" role="alert">Community search failed: {communityLookupError}</p>}{communityLookupBusy && <p className="onboarding-inline-note" role="status">Searching this customer’s saved communities…</p>}{(existingCommunities.length > 0 || communitySearchPool.length > 0) && <SearchableSelect label="Search saved communities" searchLabel="Search this customer’s communities by name, code or address" search={communitySearch} onSearch={setCommunitySearch} value={selectedCommunityId} onChange={(id) => { setSelectedCommunityId(id); setSelectedBuildingIds({}); }} options={pinFilteredCommunityOptions} placeholder="Type a name, code, address or PIN" required />}{communityPinFilter.length === 6 && searchedCommunityPin === communityPinFilter && pinFilteredCommunityOptions.length === 0 && <div className="onboarding-inline-note onboarding-empty-communities"><span>No saved community matches PIN {communityPinFilter}.</span><Button type="button" variant="secondary" onClick={() => { setSelectedCommunityId(''); setPropertyTemplate('community'); setAddress((current) => ({ ...current, postalCode: communityPinFilter })); }}>Create a community with this PIN</Button></div>}</>}
       {propertyTemplate === 'existing' && locationsLoading && <p className="onboarding-inline-note" role="status">Loading this customer’s saved communities…</p>}
       {propertyTemplate === 'existing' && !locationsLoading && existingCommunities.length === 0 && <div className="onboarding-inline-note onboarding-empty-communities"><span>No saved communities are available for this customer yet.</span><Button type="button" variant="secondary" onClick={() => { setSelectedCommunityId(''); setPropertyTemplate('community'); }}>Create a community</Button></div>}
       {propertyTemplate === 'existing' && !locationsLoading && existingCommunities.length > 0 && !selectedCommunity && <p className="onboarding-inline-note">Select a saved community to use its buildings.</p>}
-      {propertyTemplate === 'community' && <><label>New community name <span className="required">Required</span><input required aria-invalid={communityNameDuplicate} value={communityName} onChange={(event) => setCommunityName(event.target.value)} placeholder="Example: Green Meadows" /></label>{communityNameDuplicate && <p className="onboarding-inline-note onboarding-name-conflict" role="alert">A community with this name already exists. Select “Use a saved community” or enter a unique name.</p>}<div className="action-footer"><Button busy={busy === communityName} disabled={!relationshipId || Boolean(community) || !communityName.trim() || communityNameDuplicate || !propertyAddressReady} onClick={() => void saveLocation(communityName, 'COMMUNITY')}>{community ? 'Community saved' : 'Save community'}</Button></div></>}
+      {propertyTemplate === 'community' && <><label>New community name <span className="required">Required</span><input required aria-invalid={communityNameDuplicate} value={communityName} onChange={(event) => { setCommunityName(event.target.value); setCommunityLookup(null); setCommunityLookupBusy(event.target.value.trim().length >= 2); setCommunityLookupError(''); }} placeholder="Example: Green Meadows" /></label>{communityLookupError && <p className="onboarding-inline-note" role="alert">Could not check saved communities: {communityLookupError}. You can retry by editing the name.</p>}{communityLookupBusy && <p className="onboarding-inline-note" role="status">Checking this customer’s saved communities…</p>}{communityNameDuplicate && <div className="onboarding-inline-note onboarding-name-conflict" role="alert"><span>This customer already has “{titleOf(communityNameMatch!)}”. Use the saved record to continue without re-entering its address.</span><Button type="button" variant="secondary" onClick={() => useExistingCommunity(communityNameMatch!)}>Use existing community</Button></div>}{communityLookup && communityLookup.query === communityName.trim() && !communityNameDuplicate && <p className="onboarding-inline-note" role="status">No exact name match found for this customer. You can create this community.</p>}<div className="action-footer"><Button busy={busy === communityName || communityLookupBusy} disabled={!relationshipId || Boolean(community) || !communityName.trim() || communityNameDuplicate || communityLookupBusy || !propertyAddressReady} onClick={() => void saveLocation(communityName, 'COMMUNITY')}>{community ? 'Community saved' : 'Save community'}</Button></div></>}
       {communityReady && <p className="onboarding-ready-banner" role="status"><strong>{propertyTemplate === 'standalone' ? 'Building address ready' : 'Community ready'}</strong><span>{propertyTemplate === 'existing' ? `Selected ${titleOf(selectedCommunity!)}.` : propertyTemplate === 'community' ? `${communityName} is saved and ready for buildings.` : 'Add the standalone building in the next step.'}</span></p>}
       {renderStepActions(communityReady && (propertyTemplate !== 'community' || !communityNameDuplicate), 'Continue to buildings')}
     </Panel>}

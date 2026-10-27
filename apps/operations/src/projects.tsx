@@ -1344,6 +1344,7 @@ function HandoverPanel({
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [sources, setSources] = useState<Collection<GenericAttributes> | null>(null);
   const [sourceId, setSourceId] = useState("");
+  const [coverageAssetId, setCoverageAssetId] = useState(units[0]?.id || "");
   useEffect(() => {
     setEvents(
       (project.attributes.handover_events || []).map((event) => ({
@@ -1364,7 +1365,13 @@ function HandoverPanel({
       .catch(() => setSources({ data: [] }));
   }, [canCommenceCoverage, providerId, project.id, events]);
   const requestableUnits = units.filter((unit) => !events.some((event) => event.attributes.asset_id === unit.id && ["REQUESTED", "ACCEPTED"].includes(String(event.attributes.event_kind))));
-  const commencedEvent = events.find((event) => String(event.attributes.event_kind) === "COMMENCED");
+  useEffect(() => {
+    setCoverageAssetId(units.find((unit) => !events.some((event) => event.attributes.asset_id === unit.id && String(event.attributes.event_kind) === "COMMENCED"))?.id || units[0]?.id || "");
+    setSourceId("");
+  }, [project.id, units]);
+  const commencedEvent = events.find((event) => String(event.attributes.event_kind) === "COMMENCED" && event.attributes.asset_id === coverageAssetId);
+  const acceptedForCoverageAsset = events.some((event) => String(event.attributes.event_kind) === "ACCEPTED" && event.attributes.asset_id === coverageAssetId);
+  const sourcesForCoverageAsset = sources?.data.filter((source) => Array.isArray(source.attributes.asset_ids) && source.attributes.asset_ids.includes(coverageAssetId)) || [];
   async function request(event: FormEvent) {
     event.preventDefault();
     if (!units.length || !assetId) { setError("An authorized elevator unit is required for per-unit handover."); return; }
@@ -1400,12 +1407,12 @@ function HandoverPanel({
     try {
       const commenced = await operationsData.commenceCoverage(providerId, project.id, {
         expected_revision: project.attributes.revision,
-        asset_id: units.length === 1 ? units[0].id : undefined,
+        asset_id: coverageAssetId,
         ...(source.attributes.kind === "WARRANTY" ? { source_warranty_id: source.id } : { source_contract_version_id: source.id }),
         effective_from: new Date().toISOString(),
       }, uuid());
       setEvents((current) => [...current, commenced]);
-      setMessage("AMC coverage commenced for the handed-over elevator unit.");
+      setMessage(source.attributes.kind === "WARRANTY" ? "Warranty coverage commenced for this elevator unit." : "AMC coverage commenced for this elevator unit.");
     } catch (cause) {
       setError(fail(cause));
     } finally {
@@ -1436,10 +1443,12 @@ function HandoverPanel({
       <section className="amc-coverage-placeholder" aria-label="AMC coverage after handover">
         <div>
           <span className="page-eyebrow">Coverage after handover</span>
-          <h3>Provider free AMC</h3>
-          <p>Free AMC becomes customer maintenance coverage only after an accepted unit handover and an approved, provider-scoped source are selected.</p>
+          <h3>Coverage after handover</h3>
+          <p>Start warranty or AMC separately for each accepted elevator unit using an approved source scoped to that asset.</p>
         </div>
-        <div className="amc-coverage-placeholder-state">{commencedEvent ? <><Status>Active</Status><span>Coverage commenced for {units.length === 1 ? units[0].display_name || "the handed-over unit" : "the accepted unit"}.</span></> : !canCommenceCoverage ? <><Status>Provider operation required</Status><span>Coverage commencement is available to an authorized provider operations role.</span></> : <>{sources?.data.length ? <><Status>Ready</Status><select aria-label="AMC coverage source" value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Select approved source</option>{sources.data.map((source) => { const plan = source.attributes.amc_plan as { name?: string; version?: number } | undefined; return <option value={source.id} key={source.id}>{String(source.attributes.label || source.id)}{plan?.name ? ` · ${plan.name} v${plan.version || 1}` : ""}</option>; })}</select><Button variant="secondary" busy={busy} disabled={!sourceId || !events.some((event) => String(event.attributes.event_kind) === "ACCEPTED")} onClick={() => void commenceCoverage()}>Commence AMC coverage</Button></> : <><Status>Source required</Status><span>{events.some((event) => String(event.attributes.event_kind) === "ACCEPTED") ? "No active scoped contract or warranty is available for this unit." : "Customer unit acceptance is required before coverage can start."}</span><Button variant="secondary" onClick={() => { window.location.hash = "amc"; }}>Open AMC contracts</Button></>}</>}</div>
+        <div className="amc-coverage-placeholder-state">
+          {units.length > 1 && <label>Elevator unit<select aria-label="Coverage elevator unit" value={coverageAssetId} onChange={(event) => { setCoverageAssetId(event.target.value); setSourceId(""); }}><option value="">Select elevator unit</option>{units.map((unit) => { const active = events.some((item) => String(item.attributes.event_kind) === "COMMENCED" && item.attributes.asset_id === unit.id); return <option value={unit.id} key={unit.id} disabled={active}>{unit.display_name || "Elevator unit"}{active ? " · coverage commenced" : ""}</option>; })}</select></label>}
+          {commencedEvent ? <><Status>Active</Status><span>{commencedEvent.attributes.source_warranty_id ? "Warranty active" : "AMC active"} for {units.find((unit) => unit.id === coverageAssetId)?.display_name || "this elevator"}.</span></> : !canCommenceCoverage ? <><Status>Provider operation required</Status><span>Coverage commencement is available to an authorized provider operations role.</span></> : <>{sourcesForCoverageAsset.length ? <><Status>{acceptedForCoverageAsset ? "Ready" : "Handover required"}</Status><select aria-label="Coverage source" value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Select approved coverage source</option>{sourcesForCoverageAsset.map((source) => { const plan = source.attributes.amc_plan as { name?: string; version?: number } | undefined; const kind = String(source.attributes.kind || "CONTRACT_VERSION"); return <option value={source.id} key={source.id}>{kind === "WARRANTY" ? "Warranty" : "AMC"} · {String(source.attributes.label || source.id)}{plan?.name ? ` · ${plan.name} v${plan.version || 1}` : ""}</option>; })}</select><Button variant="secondary" busy={busy} disabled={!coverageAssetId || !sourceId || !acceptedForCoverageAsset} onClick={() => void commenceCoverage()}>Commence {sourcesForCoverageAsset.find((source) => source.id === sourceId)?.attributes.kind === "WARRANTY" ? "warranty" : "AMC"} coverage</Button></> : <><Status>{acceptedForCoverageAsset ? "Source required" : "Handover required"}</Status><span>{acceptedForCoverageAsset ? "No active scoped contract or warranty is available for this unit." : "Customer acceptance is required before coverage can start for this unit."}</span><Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>Open AMC quotations</Button></>}</>}</div>
       </section>
       {events.length === 0 && <p className="notice">No per-unit handover requests recorded.</p>}
       {showRequestDialog && canRequestHandover && <OperationsDialog title="Request per-unit handover" busy={busy} onClose={() => setShowRequestDialog(false)}><form className="provider-form handover-request-form" onSubmit={(event) => void request(event)}>

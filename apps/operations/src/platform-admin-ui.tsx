@@ -1,7 +1,9 @@
-import { Children, Fragment, isValidElement, type FormEvent, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, PageHeader } from '@trise/ui';
 import { SvgIcon } from './icons';
 import { formatIndiaDateTime } from './subscription-support';
+import { adminActionMenuPosition } from './admin-action-menu-layout';
 
 export type AdminCrumb = { label: string; href?: string };
 
@@ -55,19 +57,52 @@ export function AdminDetailTabs({ items, active }: { items: Array<{ key: string;
 }
 
 export function AdminActionMenu({ label = 'More actions', children }: { label?: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, right: 8, maxHeight: 240 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const actions = Children.toArray(children).flatMap((child) => {
     if (isValidElement(child) && child.type === Fragment) return Children.toArray((child.props as { children?: ReactNode }).children);
     return [child];
   });
+  useLayoutEffect(() => {
+    if (!open) return;
+    const placeMenu = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const rect = trigger.getBoundingClientRect();
+      setPosition(adminActionMenuPosition(rect, menu.offsetHeight, { width: window.innerWidth, height: window.innerHeight }));
+    };
+    placeMenu();
+    window.addEventListener('resize', placeMenu);
+    window.addEventListener('scroll', placeMenu, true);
+    return () => {
+      window.removeEventListener('resize', placeMenu);
+      window.removeEventListener('scroll', placeMenu, true);
+    };
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!triggerRef.current?.contains(event.target as Node) && !menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setOpen(false); triggerRef.current?.focus(); }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
   if (!actions.length) return null;
   if (actions.length === 1) return <span className="admin-single-action">{actions[0]}</span>;
-  return <span className="admin-action-group"><span className="admin-single-action">{actions[0]}</span><details className="admin-action-menu"><summary aria-label={label}>•••</summary><div onClick={(event) => {
+  return <span className="admin-action-group"><span className="admin-single-action">{actions[0]}</span><span className="admin-action-menu"><button ref={triggerRef} type="button" className="admin-action-menu-trigger" aria-label={label} aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((value) => !value)}>•••</button>{open && createPortal(<div ref={menuRef} className="admin-action-menu-popup" style={{ top: position.top, right: position.right, maxHeight: position.maxHeight }} onClick={(event) => {
     const target = event.target as HTMLElement;
-    if (target.closest('button, a')) {
-      const menu = target.closest('details') as HTMLDetailsElement | null;
-      if (menu) menu.open = false;
-    }
-  }}>{actions.slice(1)}</div></details></span>;
+    if (target.closest('button, a')) setOpen(false);
+  }}>{actions.slice(1)}</div>, document.body)}</span></span>;
 }
 
 export function AdminAuditTimeline({ rows }: { rows: Array<{ action: string; occurred_at: string; actor_user_id?: string | null }> }) {

@@ -54,6 +54,25 @@ describe("operations execution contracts", () => {
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
   });
 
+  it("searches saved communities by name within the selected customer", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], page: { limit: 100, next: null, previous: null } }), { status: 200 }),
+    );
+
+    await operationsData.locations("provider-7", "relationship-1", {
+      query: "Green Meadows",
+      classification: ["COMMUNITY"],
+      limit: 100,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/locations?page%5Blimit%5D=100");
+    expect(url).toContain("filter%5Bcustomer_relationship_id%5D=relationship-1");
+    expect(url).toContain("filter%5Bq%5D=Green+Meadows");
+    expect(url).toContain("filter%5Bclassification%5D%5B%5D=COMMUNITY");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
+  });
+
   it("sends bounded quotation customer email and phone search to the authorized list endpoint", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [], page: { limit: 15, next: null, previous: null } }), { status: 200 }),

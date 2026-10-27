@@ -34,3 +34,17 @@
 [data-theme="dark"] .amc-plan-detail-heading p,[data-theme="dark"] .amc-plan-effective-window,[data-theme="dark"] .amc-plan-card p{color:var(--text-secondary,#b7c4d6)!important}
 [data-theme="dark"] .amc-plan-version-history{background:var(--surface-subtle,#1d2b40);border-color:var(--border,#33445c)}
 [data-theme="dark"] .amc-plan-version-history span{background:var(--surface,#172235);border-color:var(--border,#33445c)}
+[data-theme="dark"] .amc-plan-list-panel .section-heading h2,[data-theme="dark"] .amc-plan-list-panel .section-heading p,[data-theme="dark"] .amc-plan-list-panel .section-heading>span{color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-card{border-color:var(--border,#33445c);background:var(--surface,#172235);color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-card.is-featured{background:color-mix(in srgb,var(--primary,#79b0ff) 12%,var(--surface,#172235))}
+[data-theme="dark"] .amc-plan-card h3,[data-theme="dark"] .amc-plan-card>strong{color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-card p,[data-theme="dark"] .amc-plan-card>strong small{color:var(--secondary,#b7c4d6)}
+[data-theme="dark"] .amc-plan-card-facts span{background:var(--surface-subtle,#1d2b40);color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-lifecycle{background:var(--surface-subtle,#1d2b40);color:var(--secondary,#b7c4d6)}
+[data-theme="dark"] .amc-plan-recommended{background:#203753;color:#b7d7ff}
+[data-theme="dark"] .amc-plan-preview-card{border-color:var(--border,#33445c);background:linear-gradient(130deg,color-mix(in srgb,var(--primary,#79b0ff) 15%,var(--surface,#172235)),var(--surface,#172235))}
+[data-theme="dark"] .amc-plan-preview-title h3,[data-theme="dark"] .amc-plan-preview-title>strong{color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-preview-title span,[data-theme="dark"] .amc-plan-preview-title strong small{color:var(--secondary,#b7c4d6)}
+[data-theme="dark"] .amc-plan-preview-grid div,[data-theme="dark"] .amc-plan-detail-columns>div,[data-theme="dark"] .amc-plan-governance{border-color:var(--border,#33445c);background:var(--surface-subtle,#1d2b40);color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-preview-grid span,[data-theme="dark"] .amc-plan-preview-grid strong,[data-theme="dark"] .amc-plan-detail-columns h3,[data-theme="dark"] .amc-plan-governance strong,[data-theme="dark"] .amc-plan-availability{color:var(--text,#edf4ff)}
+[data-theme="dark"] .amc-plan-detail-columns ul,[data-theme="dark"] .amc-plan-detail-columns .is-excluded li{color:var(--secondary,#b7c4d6)}

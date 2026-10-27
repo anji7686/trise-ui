@@ -2344,6 +2344,10 @@ const journeyTime = (value?: string) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "Time unavailable";
+const dateInputValue = (value: Date) =>
+  new Date(value.getTime() - value.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 10);
 const quotationLeadId = (quotation: Resource<GenericAttributes> | null) => {
   const relationship = quotation?.relationships.marketing_lead;
   return relationship && !Array.isArray(relationship) ? relationship.id : null;
@@ -2381,6 +2385,7 @@ export function QuotationsWorkspace({
   const [contracts, setContracts] =
     useState<Collection<GenericAttributes> | null>(null);
   const [contractsLoading, setContractsLoading] = useState(false);
+  const [contractsError, setContractsError] = useState(false);
   const [amcPlans, setAmcPlans] =
     useState<Collection<GenericAttributes> | null>(null);
   const [amcAssets, setAmcAssets] =
@@ -2435,6 +2440,7 @@ export function QuotationsWorkspace({
   const [quotationSearchMode, setQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [debouncedQuotationSearchMode, setDebouncedQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [renewalOpen, setRenewalOpen] = useState(false);
+  const [initialAmcOpen, setInitialAmcOpen] = useState(false);
   const [detailDialog, setDetailDialog] = useState<
     "edit" | "revision" | "negotiation" | "customer-preview" | null
   >(null);
@@ -2705,7 +2711,7 @@ export function QuotationsWorkspace({
   const selectedQuotationTermsForContract = selected?.attributes.terms as
     | { predecessor_contract_id?: string }
     | undefined;
-  const needsMaintenanceContracts = renewalOpen || Boolean(
+  const needsMaintenanceContracts = (!initialCreate && !initialQuotationId) || renewalOpen || Boolean(
     selectedQuotationTermsForContract?.predecessor_contract_id ||
     convertedContract?.attributes.predecessor_contract_id,
   );
@@ -2714,15 +2720,15 @@ export function QuotationsWorkspace({
     let active = true;
     setContracts(null);
     setContractsLoading(true);
+    setContractsError(false);
     if (contractRequest.current?.providerId !== providerId) {
-      const promise = operationsData.genericCollection(providerId, "/maintenance-contracts?page[limit]=100").catch(() => ({ data: [] }));
+      const promise = operationsData.genericCollection(providerId, "/maintenance-contracts?page[limit]=100");
       contractRequest.current = { providerId, promise };
     }
-    void contractRequest.current.promise.then((result) => {
-      if (!active) return;
-      setContracts(result);
-      setContractsLoading(false);
-    });
+    void contractRequest.current.promise
+      .then((result) => { if (active) setContracts(result); })
+      .catch(() => { if (active) { setContracts({ data: [] }); setContractsError(true); } })
+      .finally(() => { if (active) setContractsLoading(false); });
     return () => { active = false; };
   }, [providerId, needsMaintenanceContracts]);
 
@@ -2752,7 +2758,7 @@ export function QuotationsWorkspace({
   }, [providerId, needsQuotationConfiguration]);
 
   useEffect(() => {
-    if (!renewalOpen) return;
+    if (!renewalOpen && !initialAmcOpen) return;
     let active = true;
     void Promise.all([
       operationsData.providerAmcPlans(providerId, "ACTIVE"),
@@ -2771,7 +2777,7 @@ export function QuotationsWorkspace({
     return () => {
       active = false;
     };
-  }, [providerId, renewalOpen]);
+  }, [providerId, renewalOpen, initialAmcOpen]);
 
   useEffect(() => {
     if (!initialQuotationId) {
@@ -3195,6 +3201,82 @@ export function QuotationsWorkspace({
       );
       window.location.hash = `quotations/${created.id}`;
       reload(true);
+      formElement.reset();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createInitialAmcQuotation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const asset = amcAssets?.data.find((item) => item.id === form.get("asset_id"));
+    const relationship = asset?.relationships.customer_relationship;
+    if (!asset || !relationship || Array.isArray(relationship)) {
+      setError("Select an elevator asset with an active customer relationship.");
+      return;
+    }
+    const plan = amcPlans?.data.find((item) => item.id === form.get("provider_service_plan_id"));
+    const version = plan?.attributes.current_version as Record<string, unknown> | undefined;
+    if (!plan || !version || String(version.status).toUpperCase() !== "PUBLISHED") {
+      setError("Select an active published AMC plan before creating the quotation.");
+      return;
+    }
+    const effectiveFrom = String(form.get("effective_from") || "");
+    const effectiveTo = String(form.get("effective_to") || "");
+    if (!effectiveFrom || !effectiveTo || effectiveTo <= effectiveFrom) {
+      setError("Enter a valid AMC term with an end date after the start date.");
+      return;
+    }
+    const numeric = (name: string) => {
+      const value = Number(form.get(name));
+      return Number.isFinite(value) && value > 0 ? value : undefined;
+    };
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const created = await operationsData.createQuotation(
+        providerId,
+        {
+          customer_relationship_id: relationship.id,
+          purpose: "MAINTENANCE_CONTRACT",
+          terms: {
+            effective_from: `${effectiveFrom}T00:00:00Z`,
+            effective_to: `${effectiveTo}T00:00:00Z`,
+            paid_renewal: false,
+            included_free_amc: { months: 0 },
+            validity_days: 30,
+          },
+          currency: "INR",
+          lines: [
+            {
+              description: String(form.get("description") || plan.attributes.name || "AMC service agreement"),
+              quantity: 1,
+              provider_service_plan_version_id: version.id,
+              asset_id: asset.id,
+              pricing_context: {
+                served_floors_above_ground: numeric("served_floors_above_ground"),
+                audience: String(form.get("audience") || plan.attributes.audience || "MIXED").toUpperCase(),
+                passenger_capacity: numeric("passenger_capacity"),
+                lift_type: String(form.get("lift_type") || "").trim().toUpperCase() || undefined,
+                usage_class: String(form.get("usage_class") || "").trim().toUpperCase() || undefined,
+                number_of_stops: numeric("number_of_stops"),
+                travel_height_m: numeric("travel_height_m"),
+              },
+            },
+          ],
+        },
+        crypto.randomUUID(),
+      );
+      automaticQuotationSelection.current = false;
+      setInitialAmcOpen(false);
+      setMessage("Initial paid AMC quotation draft created. Customer acceptance is required before contract activation.");
+      window.location.hash = `quotations/${created.id}`;
+      reload();
       formElement.reset();
     } catch (cause) {
       setError((cause as Error).message);
@@ -4808,9 +4890,24 @@ export function QuotationsWorkspace({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setRenewalOpen(true)}
+                  onClick={() => setInitialAmcOpen(true)}
                 >
-                  Create paid AMC renewal
+                  Create AMC quotation
+                </Button>
+              )}
+              {hasPermission("QUOTATION_CREATE") && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={contractsLoading || contractsError || !contracts?.data.some((item) =>
+                      ["active", "approved"].includes(
+                        String(item.attributes.status || "").toLowerCase(),
+                      ),
+                    )}
+                  onClick={() => setRenewalOpen(true)}
+                  title={contractsError ? "Active contracts could not be loaded." : contractsLoading ? "Loading active contracts…" : undefined}
+                >
+                  {contractsLoading ? "Loading AMC contracts…" : "Create paid AMC renewal"}
                 </Button>
               )}
               {hasPermission("QUOTATION_CREATE") && (
@@ -4827,6 +4924,8 @@ export function QuotationsWorkspace({
           }
         />
       )}
+      {!initialQuotationId && contractsError && <p className="notice" role="status">AMC renewal eligibility could not be checked. Refresh the page to retry.</p>}
+      {!initialQuotationId && !contractsLoading && !contractsError && contracts && !contracts.data.some((item) => ["active", "approved"].includes(String(item.attributes.status || "").toLowerCase())) && <p className="notice" role="status">No active maintenance contracts are available for paid renewal.</p>}
       <div className="feature-summary-grid quotation-summary-grid">
         <div>
           <span>Drafts on page</span>
@@ -4849,6 +4948,79 @@ export function QuotationsWorkspace({
           <small>View Projects &amp; Stages</small>
         </div>
       </div>
+      {initialAmcOpen && (
+        <OperationsDialog
+          title="Create initial AMC quotation"
+          busy={busy}
+          onClose={() => setInitialAmcOpen(false)}
+        >
+          <div className="quotation-renewal-dialog-content">
+            <p className="notice">
+              Create an asset-scoped paid AMC quotation for an existing customer. The accepted quotation becomes the contract source; acceptance and activation remain separate steps.
+            </p>
+            <form className="quotation-modal-form" onSubmit={(event) => void createInitialAmcQuotation(event)}>
+              <label>
+                Elevator asset
+                <select name="asset_id" required defaultValue="">
+                  <option value="">Select customer elevator</option>
+                  {amcAssets?.data.map((item) => {
+                    const relationship = item.relationships.customer_relationship;
+                    return (
+                      <option key={item.id} value={item.id} disabled={!relationship || Array.isArray(relationship)}>
+                        {String(item.attributes.name || "Elevator asset")} · {String(item.attributes.customer_name || "Customer relationship unavailable")}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label>
+                Paid AMC plan
+                <select name="provider_service_plan_id" required defaultValue="">
+                  <option value="">Select published plan</option>
+                  {amcPlans?.data.filter((item) => {
+                    const version = item.attributes.current_version as Record<string, unknown> | undefined;
+                    return String(version?.status || "").toUpperCase() === "PUBLISHED" && !/^FREE_AMC(?:_|$)/i.test(String(item.attributes.code || ""));
+                  }).map((item) => (
+                    <option key={item.id} value={item.id}>{String(item.attributes.name || item.attributes.code || "AMC plan")}</option>
+                  ))}
+                </select>
+              </label>
+              <p className="field-hint">Included free AMC is granted through accepted installation and handover; it cannot be sold as a paid quotation.</p>
+              <label>
+                Quotation description
+                <input name="description" required defaultValue="Paid AMC service agreement" />
+              </label>
+              <div className="quotation-renewal-date-grid">
+                <label>
+                  Effective from
+                  <input name="effective_from" type="date" required defaultValue={dateInputValue(new Date())} />
+                </label>
+                <label>
+                  Effective to
+                  <input name="effective_to" type="date" required defaultValue={dateInputValue(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000))} />
+                </label>
+              </div>
+              <div className="quotation-renewal-date-grid">
+                <label>Floors served<input name="served_floors_above_ground" type="number" min="1" /></label>
+                <label>Passenger capacity<input name="passenger_capacity" type="number" min="1" /></label>
+              </div>
+              <div className="quotation-renewal-date-grid">
+                <label>Number of stops<input name="number_of_stops" type="number" min="1" /></label>
+                <label>Lift type<input name="lift_type" placeholder="e.g. PASSENGER" /></label>
+              </div>
+              <div className="quotation-renewal-date-grid">
+                <label>Usage class<input name="usage_class" placeholder="e.g. RESIDENTIAL" /></label>
+                <label>Audience<select name="audience" defaultValue="MIXED"><option value="MIXED">Mixed</option><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
+              </div>
+              <label>Travel height (m)<input name="travel_height_m" type="number" min="0.1" step="0.1" /></label>
+              <div className="provider-form-actions">
+                <Button type="button" variant="secondary" onClick={() => setInitialAmcOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={!amcPlans?.data.length || !amcAssets?.data.length}>Create draft quotation</Button>
+              </div>
+            </form>
+          </div>
+        </OperationsDialog>
+      )}
       {renewalOpen && (
         <OperationsDialog
           title="Create paid AMC renewal quotation"
@@ -4907,7 +5079,7 @@ export function QuotationsWorkspace({
                     <option value="">{amcPlans ? "Select active published plan" : "Loading plans…"}</option>
                     {amcPlans?.data.map((item) => {
                       const version = item.attributes.current_version as Record<string, unknown> | undefined;
-                      if (String(version?.status || "").toUpperCase() !== "PUBLISHED") return null;
+                      if (String(version?.status || "").toUpperCase() !== "PUBLISHED" || /^FREE_AMC(?:_|$)/i.test(String(item.attributes.code || ""))) return null;
                       return <option key={item.id} value={item.id}>{String(item.attributes.name || item.attributes.code || "AMC plan")} · v{String(version?.version || "1")}</option>;
                     })}
                   </select>
