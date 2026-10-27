@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, FilterToolbar, PageHeader } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
@@ -51,7 +52,7 @@ export function ProjectsWorkspace({ providerId, route }: { providerId: string; r
     useState<Resource<ServiceCaseAttributes> | null>(null);
   const [error, setError] = useState("");
   const [pageCursor, setPageCursor] = useState<{ after?: string; before?: string }>({});
-  const [pageLimit, setPageLimit] = useState(15);
+  const pageLimit = DEFAULT_PAGE_SIZE;
   const [queryText, setQueryText] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const providerRoleContext = session?.providerCapabilities.find((context) => context.providerId === providerId)?.roleContext?.toUpperCase();
@@ -139,7 +140,7 @@ export function ProjectsWorkspace({ providerId, route }: { providerId: string; r
               description={projects.data.length ? "Clear the filters or move to another server page." : "Projects created through an accepted commercial workflow appear here."}
             />
           )}
-          <div className="server-pagination" aria-label="Project pages"><label className="page-size-control">Rows per page<select aria-label="Project rows per page" value={pageLimit} onChange={(event) => { setPageLimit(Number(event.target.value)); setPageCursor({}); setSelected(null); }}><option value="15">15</option><option value="30">30</option><option value="50">50</option><option value="100">100</option></select></label><div><Button type="button" variant="secondary" disabled={!projects.page?.previous} onClick={() => { setSelected(null); setPageCursor({ before: projects.page?.previous || undefined }); }}>Previous</Button><Button type="button" disabled={!projects.page?.next} onClick={() => { setSelected(null); setPageCursor({ after: projects.page?.next || undefined }); }}>Next</Button></div></div>
+          <div className="server-pagination" aria-label="Project pages"><div><Button type="button" variant="secondary" disabled={!projects.page?.previous} onClick={() => { setSelected(null); setPageCursor({ before: projects.page?.previous || undefined }); }}>Previous</Button><Button type="button" disabled={!projects.page?.next} onClick={() => { setSelected(null); setPageCursor({ after: projects.page?.next || undefined }); }}>Next</Button></div></div>
         </>
       )}
       {selected && (

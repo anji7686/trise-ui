@@ -1,14 +1,16 @@
-import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, PageHeader } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import QRCode from "qrcode";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
   type MaterialScopeTemplateAttributes,
   type QuotationTermsTemplateAttributes,
   type QuotationTaxRule,
+  type QuotationTaxRuleAttributes,
   type ProviderWorkJourney,
   type RequirementRevisionAttributes,
   type Resource,
@@ -2017,6 +2019,10 @@ function QuotationFormPage({
   templates,
   termsTemplates,
   taxRules,
+  relationshipsError = "",
+  relationshipsLoading = false,
+  relationshipsHaveMore = false,
+  onLoadMoreRelationships,
   onCreateTemplate,
   onSubmit,
   onCancel,
@@ -2036,6 +2042,10 @@ function QuotationFormPage({
   templates: Resource<MaterialScopeTemplateAttributes>[];
   termsTemplates: Resource<QuotationTermsTemplateAttributes>[];
   taxRules: QuotationTaxRule[];
+  relationshipsError?: string;
+  relationshipsLoading?: boolean;
+  relationshipsHaveMore?: boolean;
+  onLoadMoreRelationships?: () => void;
   onCreateTemplate?: (
     name: string,
     lines: QuotationMaterialLine[],
@@ -2157,6 +2167,9 @@ function QuotationFormPage({
             quotation can be created.
           </p>
         )}
+        {isCreate && relationshipsError && (
+          <p className="notice state-error" role="alert">{relationshipsError}</p>
+        )}
         <form onSubmit={onSubmit}>
           <div className="form-grid quotation-form-grid">
             {isCreate && (
@@ -2179,6 +2192,16 @@ function QuotationFormPage({
                     name="customer_relationship_id"
                     value={relationshipId}
                   />
+                  {relationshipsHaveMore && (
+                    <Button
+                      type="button"
+                      variant="quiet"
+                      disabled={relationshipsLoading}
+                      onClick={onLoadMoreRelationships}
+                    >
+                      {relationshipsLoading ? "Loading customers…" : "Load more customers"}
+                    </Button>
+                  )}
                 </div>
                 <div className="quotation-form-lookup">
                   <SearchableSelect
@@ -2352,8 +2375,12 @@ export function QuotationsWorkspace({
   );
   const [relationships, setRelationships] =
     useState<Collection<GenericAttributes> | null>(null);
+  const [relationshipsLoading, setRelationshipsLoading] = useState(false);
+  const [relationshipsError, setRelationshipsError] = useState("");
+  const [loadingMoreRelationships, setLoadingMoreRelationships] = useState(false);
   const [contracts, setContracts] =
     useState<Collection<GenericAttributes> | null>(null);
+  const [contractsLoading, setContractsLoading] = useState(false);
   const [amcPlans, setAmcPlans] =
     useState<Collection<GenericAttributes> | null>(null);
   const [amcAssets, setAmcAssets] =
@@ -2380,9 +2407,11 @@ export function QuotationsWorkspace({
   const [pageCursor, setPageCursor] = useState<{
     after?: string;
     before?: string;
+    filterKey?: string;
   }>({});
-  const [pageLimit, setPageLimit] = useState(15);
+  const pageLimit = DEFAULT_PAGE_SIZE;
   const [queryText, setQueryText] = useState("");
+  const [debouncedQueryText, setDebouncedQueryText] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const roleContext = session?.providerCapabilities
     .find((context) => context.providerId === providerId)
@@ -2403,7 +2432,8 @@ export function QuotationsWorkspace({
         context.capabilities.includes("quotations"),
     ),
   );
-  const [customerFilter, setCustomerFilter] = useState("");
+  const [quotationSearchMode, setQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
+  const [debouncedQuotationSearchMode, setDebouncedQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [renewalOpen, setRenewalOpen] = useState(false);
   const [detailDialog, setDetailDialog] = useState<
     "edit" | "revision" | "negotiation" | "customer-preview" | null
@@ -2437,6 +2467,33 @@ export function QuotationsWorkspace({
   >("overview");
   const [openMaterialDetailIndex, setOpenMaterialDetailIndex] = useState(0);
   const automaticQuotationSelection = useRef(true);
+  const quotationListRequestId = useRef(0);
+  const quotationListInFlight = useRef<{
+    key: string;
+    promise: Promise<Collection<GenericAttributes>>;
+  } | null>(null);
+  const relationshipPageRequest = useRef<{
+    providerId: string;
+    promise: Promise<Collection<GenericAttributes>>;
+  } | null>(null);
+  const relationshipNextPage = useRef<string | null>(null);
+  const relationshipPageLoading = useRef(false);
+  const leadRequest = useRef<{
+    providerId: string;
+    promise: Promise<Collection<GenericAttributes>>;
+  } | null>(null);
+  const contractRequest = useRef<{
+    providerId: string;
+    promise: Promise<Collection<GenericAttributes>>;
+  } | null>(null);
+  const quotationConfigurationRequest = useRef<{
+    providerId: string;
+    promise: Promise<[
+      Collection<MaterialScopeTemplateAttributes>,
+      Collection<QuotationTermsTemplateAttributes>,
+      Collection<QuotationTaxRuleAttributes>,
+    ]>;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -2465,70 +2522,73 @@ export function QuotationsWorkspace({
   const hasPermission = (code: string) =>
     effectivePermissions?.includes(code) === true;
 
-  function reload() {
+  const quotationFilterKey = JSON.stringify([
+    debouncedQueryText.trim(),
+    statusFilter,
+    debouncedQuotationSearchMode,
+    pageLimit,
+  ]);
+  const activePageCursor = pageCursor.filterKey === quotationFilterKey
+    ? { after: pageCursor.after, before: pageCursor.before }
+    : {};
+
+  const reload = useCallback((forceRefresh = false) => {
+    const searchTerm = debouncedQueryText.trim();
+    const searchDigits = searchTerm.replace(/\D/g, "").length;
+    if (
+      searchTerm &&
+      ((debouncedQuotationSearchMode === "quotation_id" && searchTerm.length < 3) ||
+        (debouncedQuotationSearchMode === "email" && searchTerm.length < 3) ||
+        (debouncedQuotationSearchMode === "phone" && (searchDigits < 3 || searchDigits > 20)))
+    ) return;
+
+    const requestId = ++quotationListRequestId.current;
+    const requestKey = JSON.stringify([
+      providerId,
+      activePageCursor.after,
+      activePageCursor.before,
+      pageLimit,
+      debouncedQueryText.trim(),
+      statusFilter,
+      debouncedQuotationSearchMode,
+    ]);
     setQuotations(null);
-    void operationsData
-      .materialScopeTemplates(providerId)
-      .then((response) => setMaterialScopeTemplates(response.data))
-      .catch(() => setMaterialScopeTemplates([]));
-    void operationsData
-      .quotationTermsTemplates(providerId)
-      .then((response) => setQuotationTermsTemplates(response.data))
-      .catch(() => setQuotationTermsTemplates([]));
-    void operationsData
-      .quotationTaxRules(providerId)
-      .then((response) => setQuotationTaxRules(response.data))
-      .catch(() => setQuotationTaxRules([]));
-    void Promise.all([
-      operationsData.quotations(providerId, {
-        ...pageCursor,
+    setError("");
+    let request = !forceRefresh && quotationListInFlight.current?.key === requestKey
+      ? quotationListInFlight.current.promise
+      : null;
+    if (!request) {
+      request = operationsData.quotations(providerId, {
+        ...activePageCursor,
         limit: pageLimit,
-        query: queryText.trim() || undefined,
+        query: debouncedQuotationSearchMode === "quotation" ? debouncedQueryText.trim() || undefined : undefined,
         status: statusFilter || undefined,
-        customerRelationshipId: customerFilter || undefined,
-      }),
-      // The register is cursor-paginated, but the create form needs a bounded
-      // authorized lookup so a newly-created lead is selectable even when it
-      // is not on the first ten quotation rows.
-      operationsData
-        .marketingLeads(providerId, { limit: 100 })
-        .catch((cause: unknown) => {
-          if (
-            typeof cause === "object" &&
-            cause !== null &&
-            "status" in cause &&
-            cause.status === 403
-          )
-            return { data: [] };
-          throw cause;
-        }),
-      operationsData
-        .customerRelationships(providerId)
-        .catch((cause: unknown) => {
-          // A quotation reader/manager may not have general customer-directory
-          // visibility. Keep the authorized quotation register available; the
-          // server still enforces relationship access for each mutation.
-          if (
-            typeof cause === "object" &&
-            cause !== null &&
-            "status" in cause &&
-            cause.status === 403
-          )
-            return { data: [] };
-          throw cause;
-        }),
-      operationsData
-        .genericCollection(providerId, "/maintenance-contracts?page[limit]=100")
-        .catch(() => ({ data: [] })),
-    ])
-      .then(([quoteRows, leadRows, relationshipRows, contractRows]) => {
-        setQuotations(quoteRows);
-        setLeads(leadRows as Collection<GenericAttributes>);
-        setRelationships(relationshipRows);
-        setContracts(contractRows);
+        quotationId: debouncedQuotationSearchMode === "quotation_id" ? debouncedQueryText.trim() || undefined : undefined,
+        customerEmail: debouncedQuotationSearchMode === "email" && debouncedQueryText.trim().length >= 3 ? debouncedQueryText.trim() : undefined,
+        customerPhone: debouncedQuotationSearchMode === "phone" && debouncedQueryText.replace(/\D/g, "").length >= 3 && debouncedQueryText.replace(/\D/g, "").length <= 20 ? debouncedQueryText : undefined,
+      });
+      quotationListInFlight.current = { key: requestKey, promise: request };
+      void request.then(
+        () => { if (quotationListInFlight.current?.promise === request) quotationListInFlight.current = null; },
+        () => { if (quotationListInFlight.current?.promise === request) quotationListInFlight.current = null; },
+      );
+    }
+    void request
+      .then((quoteRows) => {
+        if (requestId === quotationListRequestId.current) setQuotations(quoteRows);
       })
-      .catch((cause) => setError((cause as Error).message));
-  }
+      .catch((cause) => {
+        if (requestId === quotationListRequestId.current) setError((cause as Error).message);
+      });
+  }, [
+    providerId,
+    activePageCursor.after,
+    activePageCursor.before,
+    pageLimit,
+    debouncedQueryText,
+    statusFilter,
+    debouncedQuotationSearchMode,
+  ]);
 
   async function saveMaterialScopeTemplate(
     name: string,
@@ -2559,17 +2619,22 @@ export function QuotationsWorkspace({
     setMaterialScopeTemplates((current) => [created, ...current]);
   }
 
-  useEffect(reload, [
-    providerId,
-    pageCursor,
-    pageLimit,
-    queryText,
-    statusFilter,
-    customerFilter,
-  ]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQueryText(queryText);
+      setDebouncedQuotationSearchMode(quotationSearchMode);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [queryText, quotationSearchMode]);
 
   useEffect(() => {
-    setPageCursor({});
+    reload();
+    return () => {
+      quotationListRequestId.current += 1;
+    };
+  }, [reload]);
+
+  useEffect(() => {
     setSelected(null);
     setSelectedJourney(null);
     setJourneyOpen(false);
@@ -2578,7 +2643,113 @@ export function QuotationsWorkspace({
     setActiveDetailTab("overview");
     setOpenMaterialDetailIndex(0);
     automaticQuotationSelection.current = true;
-  }, [providerId, queryText, statusFilter, customerFilter]);
+  }, [providerId, debouncedQueryText, statusFilter, debouncedQuotationSearchMode]);
+
+  const loadMoreCustomerRelationships = useCallback(async () => {
+    const after = relationshipNextPage.current;
+    if (!after || relationshipPageLoading.current) return;
+    relationshipPageLoading.current = true;
+    setLoadingMoreRelationships(true);
+    setRelationshipsError("");
+    try {
+      const page = await operationsData.customerRelationshipsPage(providerId, {
+        after,
+        limit: 100,
+      });
+      relationshipNextPage.current = page.page?.next || null;
+      setRelationships((current) => ({
+        data: [...(current?.data || []), ...page.data],
+        page: page.page,
+      }));
+    } catch (cause) {
+      setRelationshipsError((cause as Error).message || "Customer options could not be loaded.");
+    } finally {
+      relationshipPageLoading.current = false;
+      setLoadingMoreRelationships(false);
+    }
+  }, [providerId]);
+
+  useEffect(() => {
+    let active = true;
+    setLeads(null);
+    if (!initialCreate) return;
+    if (leadRequest.current?.providerId !== providerId) {
+      const promise = operationsData.marketingLeads(providerId, { limit: 100 }).catch(() => ({ data: [] }));
+      leadRequest.current = { providerId, promise };
+    }
+    void leadRequest.current.promise.then((result) => { if (active) setLeads(result); });
+    return () => { active = false; };
+  }, [providerId, initialCreate]);
+
+  useEffect(() => {
+    let active = true;
+    if (!initialCreate) return;
+    setRelationships(null);
+    setContracts(null);
+    setRelationshipsLoading(true);
+    setRelationshipsError("");
+    relationshipNextPage.current = null;
+    if (relationshipPageRequest.current?.providerId !== providerId) {
+      const promise = operationsData.customerRelationshipsPage(providerId, { limit: 100 }).catch(() => ({ data: [] }));
+      relationshipPageRequest.current = { providerId, promise };
+    }
+    void relationshipPageRequest.current.promise.then((page) => {
+      if (!active) return;
+      setRelationships(page);
+      relationshipNextPage.current = page.page?.next || null;
+      setRelationshipsLoading(false);
+    });
+    return () => { active = false; };
+  }, [providerId, initialCreate]);
+
+  const selectedQuotationTermsForContract = selected?.attributes.terms as
+    | { predecessor_contract_id?: string }
+    | undefined;
+  const needsMaintenanceContracts = renewalOpen || Boolean(
+    selectedQuotationTermsForContract?.predecessor_contract_id ||
+    convertedContract?.attributes.predecessor_contract_id,
+  );
+  useEffect(() => {
+    if (!needsMaintenanceContracts) return;
+    let active = true;
+    setContracts(null);
+    setContractsLoading(true);
+    if (contractRequest.current?.providerId !== providerId) {
+      const promise = operationsData.genericCollection(providerId, "/maintenance-contracts?page[limit]=100").catch(() => ({ data: [] }));
+      contractRequest.current = { providerId, promise };
+    }
+    void contractRequest.current.promise.then((result) => {
+      if (!active) return;
+      setContracts(result);
+      setContractsLoading(false);
+    });
+    return () => { active = false; };
+  }, [providerId, needsMaintenanceContracts]);
+
+  const needsQuotationConfiguration = initialCreate || detailDialog === "edit" || detailDialog === "revision" || detailDialog === "customer-preview";
+  useEffect(() => {
+    if (!needsQuotationConfiguration) return;
+    if (quotationConfigurationRequest.current?.providerId !== providerId) {
+      const promise = Promise.all([
+        operationsData.materialScopeTemplates(providerId).then((response) => response.data).catch(() => ({ data: [] })),
+        operationsData.quotationTermsTemplates(providerId).then((response) => response.data).catch(() => ({ data: [] })),
+        operationsData.quotationTaxRules(providerId).then((response) => response.data).catch(() => ({ data: [] })),
+      ]) as Promise<[
+        Collection<MaterialScopeTemplateAttributes>,
+        Collection<QuotationTermsTemplateAttributes>,
+        Collection<QuotationTaxRuleAttributes>,
+      ]>;
+      quotationConfigurationRequest.current = { providerId, promise };
+    }
+    let active = true;
+    void quotationConfigurationRequest.current.promise.then(([materials, terms, taxRules]) => {
+      if (!active) return;
+      setMaterialScopeTemplates(materials.data);
+      setQuotationTermsTemplates(terms.data);
+      setQuotationTaxRules(taxRules.data);
+    });
+    return () => { active = false; };
+  }, [providerId, needsQuotationConfiguration]);
 
   useEffect(() => {
     if (!renewalOpen) return;
@@ -2830,7 +3001,7 @@ export function QuotationsWorkspace({
         "Quotation draft saved. It is ready for provider review; customer delivery remains blocked until it is issued and approved.",
       );
       window.location.hash = `quotations/${created.id}`;
-      reload();
+      reload(true);
       formElement.reset();
     } catch (cause) {
       setError((cause as Error).message);
@@ -2857,7 +3028,7 @@ export function QuotationsWorkspace({
       setMessage(
         "Quotation issued; awaiting Provider review before customer acceptance.",
       );
-      reload();
+      reload(true);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -2898,7 +3069,7 @@ export function QuotationsWorkspace({
         "Quotation draft updated. The revised scope is saved and remains subject to provider review.",
       );
       setDetailDialog(null);
-      reload();
+      reload(true);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -2940,7 +3111,7 @@ export function QuotationsWorkspace({
         "New quotation revision created; the prior issued revision remains immutable.",
       );
       setDetailDialog(null);
-      reload();
+      reload(true);
       formElement.reset();
     } catch (cause) {
       setError((cause as Error).message);
@@ -3023,7 +3194,7 @@ export function QuotationsWorkspace({
         "Paid AMC renewal quotation draft created. Customer acceptance remains required before contract activation.",
       );
       window.location.hash = `quotations/${created.id}`;
-      reload();
+      reload(true);
       formElement.reset();
     } catch (cause) {
       setError((cause as Error).message);
@@ -3369,6 +3540,10 @@ export function QuotationsWorkspace({
   ).length;
   const visibleQuotations = quotations.data;
   const customerNameFor = (quotation: Resource<GenericAttributes>) => {
+    const customerRelationshipName = quotation.attributes.customer_relationship_name;
+    if (typeof customerRelationshipName === "string" && customerRelationshipName.trim()) {
+      return customerRelationshipName;
+    }
     const link = quotation.relationships.customer_relationship;
     const relationshipId = link && !Array.isArray(link) ? link.id : "";
     const linkedLead = (leads?.data || []).find((lead) => {
@@ -4557,6 +4732,10 @@ export function QuotationsWorkspace({
           providerId={providerId}
           relationshipOptions={selectableRelationships}
           leads={leads?.data || []}
+          relationshipsError={relationshipsError}
+          relationshipsLoading={relationshipsLoading || loadingMoreRelationships}
+          relationshipsHaveMore={Boolean(relationships?.page?.next)}
+          onLoadMoreRelationships={() => void loadMoreCustomerRelationships()}
           initialDescription="Elevator installation"
           initialLiftUnitCodes="Lift 1"
           initialPurpose="INSTALLATION"
@@ -4629,13 +4808,6 @@ export function QuotationsWorkspace({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={
-                    !contracts?.data.some((item) =>
-                      ["active", "approved"].includes(
-                        String(item.attributes.status || "").toLowerCase(),
-                      ),
-                    )
-                  }
                   onClick={() => setRenewalOpen(true)}
                 >
                   Create paid AMC renewal
@@ -4697,8 +4869,8 @@ export function QuotationsWorkspace({
             >
               <label>
                 Predecessor contract
-                <select name="predecessor_contract_id" required>
-                  <option value="">Select active contract</option>
+                <select name="predecessor_contract_id" required disabled={!contracts}>
+                  <option value="">{contractsLoading || !contracts ? "Loading active contracts…" : "Select active contract"}</option>
                   {contracts?.data
                     .filter((item) =>
                       ["active", "approved"].includes(
@@ -4717,6 +4889,9 @@ export function QuotationsWorkspace({
                     ))}
                 </select>
               </label>
+              {contracts && !contracts.data.some((item) =>
+                ["active", "approved"].includes(String(item.attributes.status || "").toLowerCase()),
+              ) && <p className="notice">No active maintenance contracts are available for renewal.</p>}
               <label>
                 Description
                 <input
@@ -4798,10 +4973,27 @@ export function QuotationsWorkspace({
           Search quotations
           <input
             aria-label="Search quotations"
-            placeholder="Search quotation number or description…"
+            type="search"
+            maxLength={quotationSearchMode === "email" ? 254 : quotationSearchMode === "phone" ? 32 : quotationSearchMode === "quotation_id" ? 64 : 200}
+            autoComplete="off"
+            inputMode={quotationSearchMode === "phone" ? "tel" : quotationSearchMode === "email" ? "email" : undefined}
+            placeholder={quotationSearchMode === "quotation" ? "Quotation number or description" : quotationSearchMode === "quotation_id" ? "Quotation UUID or number" : quotationSearchMode === "email" ? "Customer email" : "Customer phone"}
             value={queryText}
             onChange={(event) => setQueryText(event.target.value)}
           />
+        </label>
+        <label>
+          Search by
+          <select
+            aria-label="Search quotations by"
+            value={quotationSearchMode}
+            onChange={(event) => setQuotationSearchMode(event.target.value as "quotation" | "quotation_id" | "email" | "phone")}
+          >
+            <option value="quotation">Quotation details</option>
+            <option value="quotation_id">Quotation ID / number</option>
+            <option value="email">Customer email</option>
+            <option value="phone">Customer phone</option>
+          </select>
         </label>
         <label>
           Quote status
@@ -4822,25 +5014,15 @@ export function QuotationsWorkspace({
             ))}
           </select>
         </label>
-        <label>
-          Customer
-          <select
-            aria-label="Filter quotations by customer"
-            value={customerFilter}
-            onChange={(event) => setCustomerFilter(event.target.value)}
-          >
-            <option value="">All customers</option>
-            {relationshipOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {String(
-                  item.attributes.display_name ||
-                    item.attributes.name ||
-                    "Customer relationship",
-                )}
-              </option>
-            ))}
-          </select>
-        </label>
+        {queryText.trim() && quotationSearchMode === "quotation_id" && queryText.trim().length < 3 && (
+          <small>Enter a quotation UUID or number to search.</small>
+        )}
+        {queryText.trim() && quotationSearchMode === "email" && queryText.trim().length < 3 && (
+          <small>Enter at least 3 characters to search by email.</small>
+        )}
+        {queryText.trim() && quotationSearchMode === "phone" && (queryText.replace(/\D/g, "").length < 3 || queryText.replace(/\D/g, "").length > 20) && (
+          <small>Enter 3 to 20 digits to search by phone.</small>
+        )}
         <span className="quotations-filter-result">
           Showing {visibleQuotations.length} quotations on this server page
         </span>
@@ -4962,24 +5144,6 @@ export function QuotationsWorkspace({
             </div>
           )}
           <div className="server-pagination" aria-label="Quotation pages">
-            <label className="page-size-control">
-              Rows per page
-              <select
-                aria-label="Quotation rows per page"
-                value={pageLimit}
-                onChange={(event) => {
-                  setPageLimit(Number(event.target.value));
-                  setPageCursor({});
-                  setSelected(null);
-                  automaticQuotationSelection.current = true;
-                }}
-              >
-                <option value="15">15</option>
-                <option value="30">30</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </label>
             <div>
               <Button
                 type="button"
@@ -4989,6 +5153,7 @@ export function QuotationsWorkspace({
                   automaticQuotationSelection.current = true;
                   setSelected(null);
                   setPageCursor({
+                    filterKey: quotationFilterKey,
                     before: quotations.page?.previous || undefined,
                   });
                 }}
@@ -5001,7 +5166,10 @@ export function QuotationsWorkspace({
                 onClick={() => {
                   automaticQuotationSelection.current = true;
                   setSelected(null);
-                  setPageCursor({ after: quotations.page?.next || undefined });
+                  setPageCursor({
+                    filterKey: quotationFilterKey,
+                    after: quotations.page?.next || undefined,
+                  });
                 }}
               >
                 Next

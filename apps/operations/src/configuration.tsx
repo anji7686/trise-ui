@@ -360,6 +360,8 @@ export function ConfigurationAdmin({ providerId, t, initialKind, platformOnly = 
     const nextKind = availableTypes.includes(initialKind || '') ? initialKind! : availableTypes[0];
     if (nextKind === kind) return;
     setKind(nextKind);
+    setItems(null);
+    setConfigurationPage({});
     setConfigurationCursor({});
     setSelected(null);
     setReviewId('');

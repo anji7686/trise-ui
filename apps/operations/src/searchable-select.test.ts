@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortedSearchOptions } from './searchable-select';
+import { requiresSearchTerm, sortedSearchOptions } from './searchable-select';
 import { statusTone } from './operations-status';
 
 describe('Operations lookup policy', () => {
@@ -19,6 +19,12 @@ describe('Operations lookup policy', () => {
   it('matches details and reports no fabricated choices', () => {
     expect(sortedSearchOptions(options, ' USD ')).toEqual([options[2]]);
     expect(sortedSearchOptions(options, 'absent')).toEqual([]);
+  });
+  it('can keep large customer catalogues collapsed until a useful search term is entered', () => {
+    expect(requiresSearchTerm('', true)).toBe(true);
+    expect(requiresSearchTerm(' Sy ', true)).toBe(true);
+    expect(requiresSearchTerm('Syn', true)).toBe(false);
+    expect(requiresSearchTerm('', false)).toBe(false);
   });
 });
 

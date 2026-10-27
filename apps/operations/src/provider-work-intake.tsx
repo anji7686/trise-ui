@@ -17,6 +17,7 @@ import {
 import { OperationsStatus as Status } from "./operations-status";
 import {
   operationsData,
+  DEFAULT_PAGE_SIZE,
   type Collection,
   type GenericAttributes,
   type ProviderWorkJourney,
@@ -90,7 +91,6 @@ const DEFAULT_ELEVATOR_EQUIPMENT_TYPES = [
   { code: "HYDRAULIC", label: "Hydraulic lift" },
   { code: "HOME_LIFT", label: "Home lift" },
 ];
-const LIMITS = [15, 30, 50, 100];
 const label = (value: string) =>
   value
     .toLowerCase()
@@ -213,7 +213,7 @@ export function ProviderWorkIntakeWorkspace({
   const [status, setStatus] = useState("");
   const [relationshipStatus, setRelationshipStatus] = useState("");
   const [activeQueue, setActiveQueue] = useState<IntakeQueue>("ALL");
-  const [limit, setLimit] = useState(15);
+  const limit = DEFAULT_PAGE_SIZE;
   const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [createOpen, setCreateOpen] = useState(false);
   const [detailHeaderActions, setDetailHeaderActions] =
@@ -662,23 +662,6 @@ export function ProviderWorkIntakeWorkspace({
             ))}
           {items && (
             <div className="server-pagination" aria-label="Work intake pages">
-              <label className="page-size-control">
-                Rows per page
-                <select
-                  aria-label="Work intake rows per page"
-                  value={limit}
-                  onChange={(event) => {
-                    setLimit(Number(event.target.value));
-                    setCursor({});
-                  }}
-                >
-                  {LIMITS.map((size) => (
-                    <option value={size} key={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <div>
                 <Button
                   type="button"

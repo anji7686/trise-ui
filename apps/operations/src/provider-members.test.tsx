@@ -47,11 +47,8 @@ describe('member access presentation', () => {
     expect(html).toContain('Apply filters');
     expect(html).toContain('Role directory');
     expect(html).toContain('System templates');
-    expect(html).toContain('Provider roles per page');
-    expect(html).toContain('<option value="10" selected="">10</option>');
-    expect(html).toContain('<option value="20">20</option>');
-    expect(html).toContain('<option value="50">50</option>');
-    expect(html).toContain('<option value="100">100</option>');
+    expect(html).not.toContain('Rows per page');
+    expect(html).not.toContain('Provider roles per page');
     expect(html).not.toContain('Load more roles');
     expect(html).toContain('Creating and editing Provider roles is currently disabled');
     expect(html).toContain('They are not Platform Administration team members');

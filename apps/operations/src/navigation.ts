@@ -50,6 +50,8 @@ const providerItems: OperationsNavigationItem[] = [
   { key: 'workforce', label: 'Directory', hash: 'workforce', capability: 'workforce', group: 'Workforce' },
   { key: 'attendance', label: 'My Attendance', hash: 'attendance', capability: 'attendance', group: 'Workforce' },
   { key: 'my-leave', label: 'My Leave', hash: 'my-leave', capability: 'my_leave', group: 'Workforce' },
+  { key: 'support-coverage', label: 'Support Coverage', hash: 'configuration/support-coverage', capability: 'support_coverage', group: 'Workforce' },
+  { key: 'extra-day-credits', label: 'CompOff Ledger', hash: 'configuration/extra-day-credits', capability: 'extra_day_credits', group: 'Workforce' },
   { key: 'compliance', label: 'Provider Compliance', hash: 'compliance', capability: 'compliance', group: 'Governance' },
   { key: 'audit', label: 'Audit History', hash: 'audit', capability: 'audit', group: 'Governance' },
   { key: 'reports', label: 'Reports & Analytics', hash: 'reports', capability: 'reports', group: 'Insights' },
@@ -70,7 +72,7 @@ const providerConfigurationKinds = new Set([
   'working-calendars', 'holiday-calendars', 'service-territories',
   'assignment-policies', 'asset-criticalities', 'service-priorities',
   'emergency-rules', 'sla-policies', 'identifier-policies',
-  'maintenance-policies'
+  'maintenance-policies', 'support-coverage', 'extra-day-credits'
 ]);
 
 export function providerContextFor(session: Pick<Session, 'providerCapabilities'>, providerId?: string): ProviderCapabilityContext | undefined {
@@ -133,6 +135,9 @@ export function requiredProviderCapability(section: string): string | undefined 
 
 export function providerRouteAllowed(session: Pick<Session, 'providerCapabilities'>, providerId: string, section: string, routeId?: string, routeKind?: string): boolean {
   const navigation = navigationForSession(session, providerId);
+  const context = providerContextFor(session, providerId);
+  if (section === 'configuration' && routeKind === 'support-coverage') return Boolean(context?.capabilities.includes('support_coverage'));
+  if (section === 'configuration' && routeKind === 'extra-day-credits') return Boolean(context?.capabilities.includes('extra_day_credits'));
   if (section === 'configuration' && routeKind && providerConfigurationKinds.has(routeKind)) {
     return navigation.provider.some((item) => item.hash === 'configuration');
   }

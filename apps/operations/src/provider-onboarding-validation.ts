@@ -20,11 +20,18 @@ export type LocationDraft = {
 
 export type FieldErrors = Record<string, string>;
 
+export function normalizeIndianMobile(value: string): string | null {
+  const compact = value.trim().replace(/[\s().-]/g, '');
+  if (/^[6-9]\d{9}$/.test(compact)) return `+91${compact}`;
+  if (/^\+?91[6-9]\d{9}$/.test(compact)) return compact.startsWith('+') ? compact : `+${compact}`;
+  return null;
+}
+
 export function validateOnboardingContact(contact: ContactDraft): FieldErrors {
   const errors: FieldErrors = {};
   if (!contact.display_name.trim()) errors.display_name = 'Enter a contact name.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) errors.email = 'Enter a valid email address.';
-  if (!/^\+91[6-9]\d{9}$/.test(contact.mobile.trim())) errors.mobile = 'Enter an Indian mobile number in +91XXXXXXXXXX format.';
+  if (!normalizeIndianMobile(contact.mobile)) errors.mobile = 'Enter a 10-digit Indian mobile number. You can also include the +91 country code.';
   if (contact.landline.trim() && !/^(?:\+91|0)?[1-9]\d{7,11}$/.test(contact.landline.trim())) errors.landline = 'Enter a valid Indian landline number.';
   return errors;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, PageHeader } from '@trise/ui';
 import { CONFIGURATION_TYPE_GROUPS } from './configuration';
-import { operationsData, type ProviderSetupAttributes } from './data';
+import { operationsData, type ProviderSetupAttributes, type ProviderSetupMastersAttributes } from './data';
 import { SvgIcon } from './icons';
 
 type Setup = ProviderSetupAttributes['setup'];
@@ -140,6 +140,10 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [masterCatalogue, setMasterCatalogue] = useState<ProviderSetupMastersAttributes | null>(null);
+  const [masterKind, setMasterKind] = useState('asset-definitions');
+  const [selectedMasters, setSelectedMasters] = useState<Record<string, string[]>>({});
+  const [savingMasters, setSavingMasters] = useState(false);
   const [selectedBlocker, setSelectedBlocker] = useState<SetupBlocker | null>(null);
   const setup = projection?.setup || null;
 
@@ -152,6 +156,12 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
       .then((response) => { if (!disposed) setProjection(response.data.attributes); })
       .catch((cause) => { if (!disposed) setError((cause as { message?: string })?.message || 'Provider setup could not be loaded.'); })
       .finally(() => { if (!disposed) setLoading(false); });
+    operationsData.providerConfigurationMasters(providerId).then((response) => {
+      if (disposed) return;
+      const attributes = response.data.attributes;
+      setMasterCatalogue(attributes);
+      setSelectedMasters(Object.fromEntries(Object.entries(attributes.selected_masters || {}).map(([kind, rows]) => [kind, rows.map((row) => row.id)])));
+    }).catch(() => { /* The readiness projection remains usable if a role cannot manage master selections. */ });
     return () => { disposed = true; };
   }, [providerId]);
 
@@ -183,6 +193,28 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
     }
   }
 
+  async function saveMasterSelection() {
+    if (!projection || savingMasters) return;
+    setSavingMasters(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await operationsData.saveProviderMasterSelections(providerId, {
+        selected_masters: { ...selectedMasters, [masterKind]: selectedForKind },
+        expected_revision: projection.provider_revision,
+        reason: 'Provider selected published platform masters for its operating setup',
+      }, crypto.randomUUID());
+      setProjection(result.data.attributes);
+      const refreshed = await operationsData.providerConfigurationMasters(providerId);
+      setMasterCatalogue(refreshed.data.attributes);
+      setMessage('Master selections saved and audited. Published platform records remain the source of truth.');
+    } catch (cause) {
+      setError((cause as { message?: string })?.message || 'Platform master selections could not be saved.');
+    } finally {
+      setSavingMasters(false);
+    }
+  }
+
   const tasks = setup?.tasks || [];
   const blockers = setup?.readiness?.blockers || [];
   const grouped = useMemo(() => new Map(HUB_GROUPS.map((group) => [group.key, groupTasks(tasks, group)])), [tasks]);
@@ -195,6 +227,15 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
   const blockerInstruction = (blocker: SetupBlocker) => blocker.code.startsWith('SETUP_')
     ? `Check ${typeLabel(blocker.code.replace(/^SETUP_/, '').toLowerCase().replaceAll('_', '-'))}. Use the published platform default when available; create a provider-specific value only when your operating policy requires it.`
     : 'Open the related provider administration area to resolve this requirement.';
+  const masterKinds = HUB_GROUPS.flatMap((group) => group.kinds).filter((kind) => masterCatalogue?.masters[kind]?.length);
+  const mastersForKind = masterCatalogue?.masters[masterKind] || [];
+  const hasExplicitSelection = Object.prototype.hasOwnProperty.call(selectedMasters, masterKind);
+  const selectedForKind = hasExplicitSelection ? selectedMasters[masterKind] : mastersForKind.map((record) => record.id);
+  const masterName = (record: ProviderSetupMastersAttributes['masters'][string][number]) => {
+    const attrs = record.attributes;
+    const definition = attrs.definition && typeof attrs.definition === 'object' ? attrs.definition as Record<string, unknown> : {};
+    return String(attrs.name || attrs.label || attrs.display_name || definition.name || attrs.code || record.id);
+  };
 
   return (
     <section className="content feature-page provider-configuration-hub">
@@ -209,12 +250,32 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
       </div>
       {error && <div className="feature-error" role="alert"><strong>{error}</strong><Button type="button" variant="secondary" onClick={() => window.location.reload()}>Retry</Button></div>}
       {loading ? <p className="notice">Loading provider setup readiness…</p> : setup && <>
+        <nav className="provider-configuration-setup-steps" aria-label="Provider setup steps">
+          {[
+            ['Master data', 'configuration', 'Select published defaults'],
+            ['Workforce', 'configuration/skills', 'Skills and schedules'],
+            ['Customer messages', 'configuration/notification-templates', 'Notifications'],
+            ['Lift catalogue', 'configuration/asset-definitions', 'Passenger and MRL lifts'],
+            ['Holidays', 'configuration/holiday-calendars', 'Year calendar'],
+            ['Operations', 'configuration/sla-policies', 'Priority and SLA'],
+            ['Coverage', 'configuration/support-coverage', 'Allocate support'],
+            ['CompOff', 'configuration/extra-day-credits', 'Review credits'],
+          ].map(([title, path, hint], index) => <button type="button" key={path} onClick={() => path === 'configuration' ? document.getElementById('provider-master-selector')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) : go(path)}><span>{index + 1}</span><strong>{title}</strong><small>{hint}</small></button>)}
+        </nav>
         <div className="provider-configuration-summary-grid">
           <article><span>Setup readiness</span><strong>{setup.readiness?.score ?? 0}%</strong><div className="provider-configuration-summary-bar"><i style={{ width: `${setup.readiness?.score ?? 0}%` }} /></div><small>{setup.readiness?.ready ? 'Required configuration is ready' : `${blockers.length} item${blockers.length === 1 ? '' : 's'} need attention`}</small></article>
           <article><span>Published masters</span><strong>{platformMasters}</strong><small>Available from Platform Administration</small></article>
           <article><span>Provider settings</span><strong>{providerSettings}</strong><small>Provider-owned values configured</small></article>
           <article><span>Next action</span><strong>{nextTask ? typeLabel(nextTask.kind) : 'No blocker'}</strong><small>{nextTask ? 'Required before activation' : 'Continue operating normally'}</small></article>
         </div>
+        <section id="provider-master-selector" className="provider-configuration-master-picker">
+          <div className="provider-configuration-card-heading"><div><h2>Select platform masters</h2><p>Choose the published defaults this provider uses. No catalogue is copied; selections retain each source revision.</p></div><span className="provider-configuration-badge">Platform managed</span></div>
+          {!masterCatalogue ? <p className="notice">Loading published masters…</p> : <>
+            <div className="provider-configuration-master-toolbar"><label><span>Configuration group</span><select aria-label="Master configuration group" value={masterKind} onChange={(event) => setMasterKind(event.target.value)}>{masterKinds.map((kind) => <option key={kind} value={kind}>{typeLabel(kind)}</option>)}</select></label><span>{selectedForKind.length} selected{hasExplicitSelection ? ' · provider selection' : ' · platform default'}</span></div>
+            <div className="provider-configuration-master-list">{mastersForKind.map((record) => <label key={record.id} className="provider-configuration-master-row"><input type="checkbox" checked={selectedForKind.includes(record.id)} onChange={(event) => setSelectedMasters((current) => ({ ...current, [masterKind]: event.target.checked ? [...selectedForKind, record.id] : selectedForKind.filter((id) => id !== record.id) }))} /><span><strong>{masterName(record)}</strong><small>Published platform default · {typeLabel(masterKind)}</small></span><span className="status status-success">Available</span></label>)}{!mastersForKind.length && <p className="notice">No published platform masters are available in this group.</p>}</div>
+            <div className="provider-configuration-master-footer"><small>Published masters are enabled by default. Changes are provider scoped, revision checked and recorded in the audit log.</small><Button type="button" busy={savingMasters} disabled={savingMasters} onClick={() => void saveMasterSelection()}>Save master selections</Button></div>
+          </>}
+        </section>
         <div className="provider-configuration-hub-layout">
           <section className="provider-configuration-progress-card">
             <div className="provider-configuration-card-heading"><div><h2>Configuration setup progress</h2><p>{setup.readiness?.ready ? 'Required defaults and provider settings are in place for this workspace.' : 'Resolve missing items before provider activation.'}</p></div><span>{tasks.filter((task) => task.status !== 'MISSING').length} / {tasks.length} ready</span></div>

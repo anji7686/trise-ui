@@ -70,6 +70,16 @@ workforce, commercial, configuration, audit, and platform screens as supported
 by current APIs. Keep unsupported capabilities omitted or explicitly marked
 unavailable.
 
+Follow the canonical design guide's data-loading and production-performance
+requirements for every new or changed feature. Keep primary content independent
+from optional lookups, use bounded server pagination, debounce search, reuse
+provider-scoped data, and protect against stale responses. Coalesce identical
+concurrent GETs and use short-lived in-memory caching only for stable lookups;
+key cached data by session/provider, and invalidate it after writes or context
+changes. Never persist authenticated customer or provider data in localStorage.
+Review request counts for the initial screen and repeated interactions, and
+consider representative production-sized data before calling the feature ready.
+
 For UI changes, run typecheck, tests, lint, production builds, bundle-budget
 checks, and `git diff --check`. Report automated, rendered, and authenticated
 browser evidence separately. Never claim visual acceptance from compilation

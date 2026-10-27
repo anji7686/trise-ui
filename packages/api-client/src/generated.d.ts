@@ -868,6 +868,33 @@ export interface paths {
         /** List platform reference-data imports */
         get: operations["ListReferenceDataImports"];
         put?: never;
+        /**
+         * Upload and stage an India PIN directory snapshot
+         * @description Accepts a CSV up to 30 MiB. State, district, and city scoped refreshes merge into a complete staged snapshot by preserving rows outside the selected scope. City scope is available only when the uploaded CSV contains a City, City Name, or Town column and the active complete snapshot already contains source City values. City values are exact source labels and are never inferred from a PIN code, office, or geography catalogue. Staging does not activate the dataset.
+         */
+        post: operations["StageIndiaPincodeImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference-data/admin/imports/{importId}/pincodes/{pincode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+                pincode: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Preview a PIN lookup response from an import version
+         * @description Returns the same bounded JSON shape as the provider PIN lookup, against a selected staged or active import version for platform review.
+         */
+        get: operations["PreviewStagedIndiaPincodeLookup"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2323,6 +2350,82 @@ export interface paths {
         patch: operations["UpdatePlatformProviderBusinessProfile"];
         trace?: never;
     };
+    "/platform/providers/{providerId}/business-profile/setup-workbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Download a Provider Setup Workbook as Platform Administrator */
+        get: operations["DownloadPlatformProviderSetupWorkbook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/business-profile/setup-workbook/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Provider Setup Workbook and Secure Workspace Link */
+        post: operations["EmailPlatformProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/business-profile/setup-workbook/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate a Provider Setup Workbook as Platform Administrator */
+        post: operations["ValidatePlatformProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/business-profile/setup-workbook/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import a Provider Setup Workbook as Draft on Behalf of Provider */
+        post: operations["ImportPlatformProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/providers/{providerId}/business-profile/reviews": {
         parameters: {
             query?: never;
@@ -2610,6 +2713,74 @@ export interface paths {
         head?: never;
         /** Update Provider Business Profile */
         patch: operations["UpdateProviderBusinessProfile"];
+        trace?: never;
+    };
+    "/providers/business-profile/setup-workbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Operation-Specific Provider Setup Workbook */
+        get: operations["DownloadProviderSetupWorkbook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/business-profile/setup-workbook/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Blank Provider Setup Workbook */
+        post: operations["EmailProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/business-profile/setup-workbook/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Provider Setup Workbook Without Writing */
+        post: operations["ValidateProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/business-profile/setup-workbook/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Validated Provider Setup Workbook As Draft */
+        post: operations["ImportProviderSetupWorkbook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/providers/business-profile/submit": {
@@ -10722,7 +10893,7 @@ export interface components {
             page?: components["schemas"]["Page"];
         };
         AccessMember: {
-            id: components["schemas"]["Id"];
+            id: string;
             /** @constant */
             type: "provider-members";
             attributes: {
@@ -12092,6 +12263,12 @@ export interface components {
             pan_number?: string | null;
             address?: components["schemas"]["ProviderBusinessProfileAddress"];
             contact_point_ids?: components["schemas"]["Id"][];
+            /** @description Elevator & Lift Services only. Values are validated against the active operation's server-owned profile policy. */
+            operation_profile_details?: {
+                industries_served?: ("Residential buildings" | "Villas and homes" | "Apartments and communities" | "Commercial buildings" | "Industrial facilities" | "Healthcare and hospitals" | "Hospitality" | "Institutional buildings")[];
+                equipment_types?: ("Passenger lifts" | "Goods lifts" | "Service lifts" | "Home lifts" | "Hospital lifts" | "Car lifts" | "Escalators" | "Moving walks" | "Dumbwaiters")[];
+                services_offered?: ("New installation" | "Preventive maintenance / AMC" | "Breakdown repair" | "Modernisation" | "Takeover of existing equipment" | "Rescue and emergency response" | "Spare parts")[];
+            };
         };
         ProviderBusinessProfileUpdate: {
             business_profile: components["schemas"]["ProviderBusinessProfile"];
@@ -12100,6 +12277,16 @@ export interface components {
         ProviderBusinessProfileResponse: {
             data: {
                 provider_id: components["schemas"]["Id"];
+                operation_code?: string | null;
+                operation_profile_policy?: null | {
+                    fields?: {
+                        [key: string]: {
+                            label: string;
+                            required: boolean;
+                            options: string[];
+                        };
+                    };
+                };
                 profile: components["schemas"]["ProviderBusinessProfile"];
                 revision: components["schemas"]["Revision"];
                 /** @enum {string} */
@@ -12108,6 +12295,65 @@ export interface components {
                 submitted_at?: string | null;
                 /** Format: date-time */
                 verified_at?: string | null;
+            };
+        };
+        ProviderSetupWorkbookInput: {
+            /**
+             * Format: byte
+             * @description Base64-encoded .xlsx workbook; macros
+             */
+            workbook_base64: string;
+            expected_revision: components["schemas"]["Revision"];
+        };
+        ProviderSetupWorkbookIssue: {
+            sheet: string;
+            field: string;
+            message: string;
+        };
+        ProviderSetupWorkbookValidationResponse: {
+            data: {
+                valid: boolean;
+                errors: components["schemas"]["ProviderSetupWorkbookIssue"][];
+                warnings: components["schemas"]["ProviderSetupWorkbookIssue"][];
+                operation_name: string;
+                expected_revision: components["schemas"]["Revision"];
+                summary: {
+                    profile_fields: number;
+                    contacts: number;
+                    locations: number;
+                };
+                preview: {
+                    legal_name?: string | null;
+                    registration_number?: string | null;
+                    /** @description Masked except last four characters */
+                    gstin?: string | null;
+                    /** @description Masked except last three characters */
+                    pan_number?: string | null;
+                    address: string;
+                    contacts: {
+                        [key: string]: unknown;
+                    }[];
+                    locations: {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+        ProviderSetupWorkbookImportResponse: {
+            data: {
+                /** @constant */
+                status: "IMPORTED_DRAFT";
+                revision: components["schemas"]["Revision"];
+                contacts_added: number;
+                locations_added: number;
+                next_action: string;
+            };
+        };
+        ProviderSetupWorkbookEmailResponse: {
+            data: {
+                /** @constant */
+                status: "QUEUED";
+                message: string;
             };
         };
         ProviderVerificationReviewAttributes: {
@@ -12311,6 +12557,7 @@ export interface components {
                 party?: components["schemas"]["ResourceLink"];
                 parent?: components["schemas"]["ResourceLink"] | null;
                 customer_relationship?: components["schemas"]["ResourceLink"];
+                service_location?: components["schemas"]["ResourceLink"] | null;
             };
         };
         LocationCollection: {
@@ -13396,6 +13643,8 @@ export interface components {
             accepted_at?: string | null;
             provider_id: components["schemas"]["Id"];
             provider_name?: string;
+            /** @description Display name for the customer relationship linked to this quotation. */
+            customer_relationship_name?: string | null;
             quotation_number: string;
             /** @enum {string} */
             status: "draft" | "issued" | "approved" | "rejected" | "expired" | "cancelled";
@@ -14983,6 +15232,32 @@ export interface components {
             /** @constant */
             type: "configuration-reviews";
             attributes: components["schemas"]["ConfigurationReviewAttributes"];
+        };
+        ConfigurationAuditEntry: {
+            id: string;
+            /** @constant */
+            type: "configuration-audit-events";
+            attributes: {
+                /** @enum {string} */
+                source: "AUDIT" | "EVENT";
+                label: string;
+                resource_kind: string;
+                resource_id: components["schemas"]["Id"];
+                actor_user_id?: components["schemas"]["Id"] | null;
+                occurred_at: string | null;
+                metadata?: {
+                    [key: string]: unknown;
+                };
+                before?: {
+                    [key: string]: unknown;
+                };
+                after?: {
+                    [key: string]: unknown;
+                };
+                payload?: {
+                    [key: string]: unknown;
+                };
+            };
         };
         /** @description Server validates registered client/origin; client_type never grants permissions. Credentials are never logged. */
         GoogleIdentityExchange: {
@@ -18949,6 +19224,80 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    StageIndiaPincodeImport: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description UTF-8 CSV with pincode
+                     */
+                    file: string;
+                    /** @enum {string} */
+                    scope_type: "ALL_INDIA" | "STATE_UT" | "DISTRICT" | "CITY";
+                    state?: string;
+                    district?: string;
+                    /** @description Required for CITY scope; exact city label from the source CSV. */
+                    city?: string;
+                    /** Format: date */
+                    source_published_on?: string;
+                    source_url?: string;
+                    license_reference?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Complete staged PIN dataset version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceDataImport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    PreviewStagedIndiaPincodeLookup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importId: components["schemas"]["Id"];
+                pincode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PIN lookup preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndiaPincodeLookupResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     SubmitReferenceDataImportReview: {
         parameters: {
             query?: never;
@@ -19411,7 +19760,7 @@ export interface operations {
     ListPlatformSubscriptionChanges: {
         parameters: {
             query?: {
-                "page[limit]"?: components["parameters"]["PageLimit"];
+                "page[limit]"?: number;
                 /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
                 "page[after]"?: components["parameters"]["PageAfter"];
                 /** @description Mutually exclusive with page[after]. */
@@ -21349,6 +21698,130 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    DownloadPlatformProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Blank operation-specific workbook */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    EmailPlatformProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    contact_id: components["schemas"]["Id"];
+                } | {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Workbook and workspace link email queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookEmailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ValidatePlatformProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSetupWorkbookInput"];
+            };
+        };
+        responses: {
+            /** @description Cell-level validation preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookValidationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ImportPlatformProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSetupWorkbookInput"];
+            };
+        };
+        responses: {
+            /** @description Provider details imported as a draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookImportResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     ListPlatformProviderVerificationReviews: {
         parameters: {
             query?: {
@@ -21968,6 +22441,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderBusinessProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    DownloadProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Blank operation-specific workbook */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    EmailProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    contact_id: components["schemas"]["Id"];
+                };
+            };
+        };
+        responses: {
+            /** @description Blank workbook email queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookEmailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ValidateProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSetupWorkbookInput"];
+            };
+        };
+        responses: {
+            /** @description Cell-level validation preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookValidationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ImportProviderSetupWorkbook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSetupWorkbookInput"];
+            };
+        };
+        responses: {
+            /** @description Provider details imported as a draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderSetupWorkbookImportResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -22841,6 +23424,8 @@ export interface operations {
                 /** @description Mutually exclusive with page[after]. */
                 "page[before]"?: components["parameters"]["PageBefore"];
                 "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Filter to attributes belonging to the selected asset definition. */
+                "filter[asset_definition_id]"?: components["schemas"]["Id"][];
                 /** @description Comma-separated allowlist: created_at, id. Prefix - for descending; append id tie-breaker. Unknown/unauthorized/malformed query members yield 422. Counts/search/field selection unavailable unless explicitly declared. */
                 sort?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -27812,6 +28397,12 @@ export interface operations {
                 sort?: string;
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[customer_relationship_id]"?: components["schemas"]["Id"][];
+                /** @description Case-insensitive partial match against active contact email for customers already in the authorized quotation scope. At least 3 characters are required. */
+                "filter[customer_email]"?: string;
+                /** @description Partial match against digits in the active contact phone for customers already in the authorized quotation scope. At least 3 digits are required. */
+                "filter[customer_phone]"?: string;
+                /** @description Exact match by quotation UUID or displayed quotation number, within the authorized quotation scope. */
+                "filter[quotation_id]"?: string;
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[job_id]"?: components["schemas"]["Id"][];
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
@@ -28432,6 +29023,8 @@ export interface operations {
                 sort?: string;
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[category]"?: string[];
+                /** @description Filter to unread (true) or read (false) notifications within the authorized recipient scope. */
+                "filter[unread]"?: boolean;
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][gte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -29951,7 +30544,14 @@ export interface operations {
     };
     GetConfigurationReviewInbox: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: number;
+                sort?: "-created_at,id" | "-submitted_at,id";
+            };
             header?: {
                 /** @description Required for provider configuration. Omission is permitted only for an explicitly authorized platform administrator acting in platform scope, never inferred from resource ID. */
                 "X-TRISE-Provider-Id"?: components["parameters"]["ConfigurationProviderContext"];
@@ -29969,6 +30569,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ConfigurationReview"][];
+                        page: components["schemas"]["Page"];
                     };
                 };
             };
@@ -29979,7 +30580,20 @@ export interface operations {
     GetConfigurationAuditInbox: {
         parameters: {
             query?: {
-                limit?: number;
+                /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
+                "page[after]"?: components["parameters"]["PageAfter"];
+                /** @description Mutually exclusive with page[after]. */
+                "page[before]"?: components["parameters"]["PageBefore"];
+                "page[limit]"?: number;
+                sort?: "-occurred_at,id";
+                "filter[q]"?: string;
+                "filter[source]"?: "AUDIT" | "EVENT";
+                "filter[action]"?: string;
+                "filter[resource_kind]"?: string;
+                "filter[resource_id]"?: string;
+                "filter[actor_user_id]"?: string;
+                "filter[occurred_at][gte]"?: string;
+                "filter[occurred_at][lte]"?: string;
             };
             header?: never;
             path?: never;
@@ -29987,13 +30601,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Platform-scoped configuration audit and events. */
+            /** @description Platform-scoped configuration audit and events in one ordered, keyset-paginated stream. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
+                        data: components["schemas"]["ConfigurationAuditEntry"][];
+                        page: components["schemas"]["Page"];
                         audit: Record<string, never>[];
                         events: Record<string, never>[];
                     };

@@ -4,7 +4,7 @@ import { OperationsDialog } from './operations-dialog';
 import { operationsData, type ProviderOnboardingContactAttributes, type ProviderOfficeLocationAttributes, type Resource } from './data';
 import { SearchableSelect } from './searchable-select';
 import { useIndiaGeography } from './use-india-geography';
-import { validateOnboardingContact, validateOnboardingLocation, type FieldErrors } from './provider-onboarding-validation';
+import { normalizeIndianMobile, validateOnboardingContact, validateOnboardingLocation, type FieldErrors } from './provider-onboarding-validation';
 import { SvgIcon } from './icons';
 import { formatIndiaDateTime } from './subscription-support';
 
@@ -66,7 +66,7 @@ export function ProviderContactLocationDetails({ providerId }: { providerId: str
     event.preventDefault(); const invalid = validateOnboardingContact(contact); setContactErrors(invalid); if (Object.keys(invalid).length) return;
     setBusy(true); setError('');
     try {
-      const body = { ...contact, display_name: contact.display_name.trim(), email: contact.email.trim(), mobile: contact.mobile.trim(), landline: contact.landline.trim() };
+      const body = { ...contact, display_name: contact.display_name.trim(), email: contact.email.trim(), mobile: normalizeIndianMobile(contact.mobile)!, landline: contact.landline.trim() };
       if (editingContact) await operationsData.updateProviderOnboardingContact(providerId, editingContact.attributes.contact_id, { ...body, expected_revision: editingContact.attributes.revision }, crypto.randomUUID());
       else await operationsData.createProviderOnboardingContact(providerId, body, crypto.randomUUID());
       setContactDialog(false); await load();
@@ -87,7 +87,7 @@ export function ProviderContactLocationDetails({ providerId }: { providerId: str
     <label>Full name *<input required value={contact.display_name} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, display_name: event.target.value }))} aria-invalid={Boolean(contactErrors.display_name)} />{contactErrors.display_name && <small className="platform-field-error">{contactErrors.display_name}</small>}</label>
     <label>Designation<select value={contact.designation} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, designation: event.target.value }))}><option value="PRIMARY">Primary</option><option value="SECONDARY">Secondary</option></select></label>
     <label>Responsibility<select value={contact.responsibility_type} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, responsibility_type: event.target.value }))}><option value="BUSINESS_CONTACT">Business contact</option><option value="CUSTOMER_SUPPORT">Customer support</option></select></label>
-    <label>Mobile *<input required inputMode="tel" value={contact.mobile} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, mobile: event.target.value }))} aria-invalid={Boolean(contactErrors.mobile)} />{contactErrors.mobile && <small className="platform-field-error">{contactErrors.mobile}</small>}</label>
+    <label>Mobile *<input required inputMode="tel" placeholder="9876543210" value={contact.mobile} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, mobile: event.target.value }))} aria-invalid={Boolean(contactErrors.mobile)} />{contactErrors.mobile && <small className="platform-field-error">{contactErrors.mobile}</small>}{!contactErrors.mobile && <small>10-digit Indian number; +91 is added automatically.</small>}</label>
     <label>Email *<input required type="email" value={contact.email} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, email: event.target.value }))} aria-invalid={Boolean(contactErrors.email)} />{contactErrors.email && <small className="platform-field-error">{contactErrors.email}</small>}</label>
     <label>Landline <span className="platform-muted">(optional)</span><input inputMode="tel" value={contact.landline} disabled={busy} onChange={(event) => setContact((current) => ({ ...current, landline: event.target.value }))} /></label>
     <div className="platform-form-actions"><Button type="button" variant="secondary" onClick={() => setContactDialog(false)} disabled={busy}>Cancel</Button><Button type="submit" busy={busy}>{editingContact ? 'Update contact' : 'Save contact'}</Button></div>

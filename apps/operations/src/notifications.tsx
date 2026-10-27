@@ -23,8 +23,11 @@ function dateTime(value?: string | null) {
   return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short', hourCycle: 'h23' }).format(new Date(value));
 }
 
-async function fetchNotifications(providerId: string) {
-  return operationsData.notifications(providerId);
+async function fetchNotifications(
+  providerId: string,
+  params: { limit?: number; unreadOnly?: boolean; forceRefresh?: boolean } = {},
+) {
+  return operationsData.notifications(providerId, params);
 }
 
 export function NotificationBell({ providerId, allowed, onViewAll }: { providerId: string; allowed: boolean; onViewAll: () => void }) {
@@ -35,19 +38,21 @@ export function NotificationBell({ providerId, allowed, onViewAll }: { providerI
 function ProviderNotificationBell({ providerId, allowed, onViewAll }: { providerId: string; allowed: boolean; onViewAll: () => void }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationResource[]>([]);
+  const [hasMoreUnread, setHasMoreUnread] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false) => {
     if (!allowed || !providerId) return;
     setLoading(true);
     setError('');
     try {
-      const result = await fetchNotifications(providerId);
-      setItems(result.data.filter((item) => !item.attributes.read_at));
+      const result = await fetchNotifications(providerId, { limit: 5, unreadOnly: true, forceRefresh });
+      setItems(result.data);
+      setHasMoreUnread(Boolean(result.page?.next));
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -58,15 +63,24 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
   useEffect(() => {
     setOpen(false);
     setItems([]);
+    setHasMoreUnread(false);
     setError('');
     if (!allowed || !providerId) return;
     void load();
-    const timer = window.setInterval(() => void load(), 60_000);
-    return () => window.clearInterval(timer);
+    const refreshOnFocus = () => void load();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [allowed, load, providerId]);
 
   useEffect(() => {
-    const refresh = () => void load();
+    const refresh = () => void load(true);
     window.addEventListener('trise-notifications-refresh', refresh);
     return () => window.removeEventListener('trise-notifications-refresh', refresh);
   }, [load]);
@@ -74,6 +88,9 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
   useEffect(() => {
     if (!open) return;
     void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 60_000);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false);
@@ -86,6 +103,7 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointer);
     return () => {
+      window.clearInterval(timer);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerdown', onPointer);
     };
@@ -99,7 +117,7 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
     setError('');
     try {
       await operationsData.markNotificationRead(providerId, notificationId, crypto.randomUUID());
-      setItems((current) => current.filter((item) => item.id !== notificationId));
+      await load(true);
     } catch (cause) {
       setError(errorText(cause));
     } finally {
@@ -110,10 +128,10 @@ function ProviderNotificationBell({ providerId, allowed, onViewAll }: { provider
   return <div className="notification-bell-anchor">
     <button ref={triggerRef} type="button" className="account-notifications notification-bell-trigger" aria-label={items.length ? `View ${items.length} unread notifications` : 'View notifications'} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
       <SvgIcon name="bell" size={19} />
-      {items.length > 0 && <span className="notification-badge" aria-label={`${items.length} unread`}>{items.length > 99 ? '99+' : items.length}</span>}
+      {items.length > 0 && <span className="notification-badge" aria-label={hasMoreUnread ? `${items.length} or more unread` : `${items.length} unread`}>{hasMoreUnread ? `${items.length}+` : items.length > 99 ? '99+' : items.length}</span>}
     </button>
     {open && <div ref={menuRef} className="notification-menu" role="dialog" aria-label="Notifications">
-      <div className="notification-menu-heading"><div><strong>Notifications</strong><small>{items.length ? `${items.length} unread` : 'All caught up'}</small></div><button type="button" className="notification-refresh" onClick={() => void load()} aria-label="Refresh notifications" disabled={loading}><SvgIcon name="activity" size={15} /></button></div>
+      <div className="notification-menu-heading"><div><strong>Notifications</strong><small>{items.length ? `${items.length}${hasMoreUnread ? '+' : ''} unread` : 'All caught up'}</small></div><button type="button" className="notification-refresh" onClick={() => void load(true)} aria-label="Refresh notifications" disabled={loading}><SvgIcon name="activity" size={15} /></button></div>
       {error && <p className="notification-error" role="alert">{error}</p>}
       {loading && !items.length && <p className="notification-state" role="status">Loading notifications…</p>}
       {!loading && !items.length && !error && <p className="notification-state" role="status">You’re all caught up.</p>}

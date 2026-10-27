@@ -1,16 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
-import { stableSubmissionKey, validateOnboardingContact, validateOnboardingLocation } from './provider-onboarding-validation';
+import { normalizeIndianMobile, stableSubmissionKey, validateOnboardingContact, validateOnboardingLocation } from './provider-onboarding-validation';
 
 describe('provider onboarding validation', () => {
   it('accepts the authoritative India contact shape', () => {
     expect(validateOnboardingContact({ display_name: 'Primary contact', email: 'primary@example.test', mobile: '+919888888888', landline: '08040000000' })).toEqual({});
   });
 
+  it('accepts local 10-digit and country-code mobile inputs and normalizes them on save', () => {
+    for (const mobile of ['9198765432', '919198765432', '+919198765432']) {
+      expect(validateOnboardingContact({ display_name: 'Test User', email: 'demo@example.test', mobile, landline: '' })).toEqual({});
+    }
+    expect(normalizeIndianMobile('9198765432')).toBe('+919198765432');
+    expect(normalizeIndianMobile('919198765432')).toBe('+919198765432');
+    expect(normalizeIndianMobile('+919198765432')).toBe('+919198765432');
+  });
+
   it('returns field-level contact errors', () => {
     expect(validateOnboardingContact({ display_name: ' ', email: 'invalid', mobile: '123', landline: 'bad' })).toEqual({
       display_name: 'Enter a contact name.',
       email: 'Enter a valid email address.',
-      mobile: 'Enter an Indian mobile number in +91XXXXXXXXXX format.',
+      mobile: 'Enter a 10-digit Indian mobile number. You can also include the +91 country code.',
       landline: 'Enter a valid Indian landline number.'
     });
   });

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TRISE | PIN-first address entry mock</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; color: #202b3c; background: #f5f7fa; font-synthesis: none; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 34px 24px; }
+    .shell { max-width: 1120px; margin: auto; }
+    .crumb { color: #788497; font-size: 12px; margin-bottom: 14px; }
+    h1 { font-size: 23px; line-height: 1.25; letter-spacing: -.02em; margin: 0; }
+    .intro { color: #6c7889; font-size: 13px; margin: 7px 0 24px; }
+    .steps { display:flex; align-items:center; gap:10px; margin-bottom:22px; color:#768295; font-size:12px; }
+    .step { display:flex; align-items:center; gap:8px; }
+    .num { width:23px;height:23px;border-radius:50%;display:grid;place-items:center;border:1px solid #cbd3df;background:#fff;font-weight:650; }
+    .step.active { color:#3458c8;font-weight:600; }.step.active .num { background:#3458c8;color:#fff;border-color:#3458c8; }
+    .line { width:48px;height:1px;background:#d8dee8; }
+    .grid { display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.8fr);gap:18px;align-items:start; }
+    .card { background:#fff;border:1px solid #e1e6ee;border-radius:9px;box-shadow:0 2px 7px rgba(32,43,60,.035); }
+    .card-head { padding:18px 20px 15px;border-bottom:1px solid #edf0f4; }
+    .card-head h2 { font-size:15px;margin:0 0 4px; }
+    .card-head p,.muted { color:#738094;font-size:12px;line-height:1.5;margin:0; }
+    .body { padding:19px 20px 20px; }
+    label { display:block;font-size:12px;font-weight:600;margin-bottom:7px;color:#344054; }
+    .required { color:#d14949; }
+    input,select { height:38px;width:100%;border:1px solid #cfd6e0;border-radius:6px;padding:0 11px;font:inherit;font-size:13px;color:#344054;background:#fff; }
+    input:focus,select:focus {outline:3px solid rgba(65,101,219,.13);border-color:#5573d1;}
+    .pinrow { display:grid;grid-template-columns:minmax(180px, .8fr) auto;gap:10px;align-items:end;max-width:480px; }
+    .button { border:1px solid #ccd4df;background:#fff;color:#344054;border-radius:6px;height:38px;padding:0 13px;font-size:12px;font-weight:600;white-space:nowrap; }
+    .button.primary { color:#fff;background:#385bc7;border-color:#385bc7; }
+    .result { margin-top:15px;border:1px solid #d8e1f7;background:#f8faff;border-radius:7px;padding:13px 14px; }
+    .result-title { display:flex;gap:8px;align-items:center;font-size:12px;font-weight:650;color:#35445c;margin-bottom:10px; }
+    .check { color:#22845f;font-size:15px; }
+    .offices { display:grid;gap:7px; }
+    .office { display:flex;align-items:center;gap:9px;border:1px solid #e0e6f0;background:#fff;border-radius:6px;padding:9px 10px;font-size:12px; }
+    .office.selected { border-color:#5371ce;box-shadow:0 0 0 2px rgba(83,113,206,.09); }
+    .office input { width:14px;height:14px;margin:0;accent-color:#385bc7; }
+    .office strong { font-weight:600; }.office small { display:block;color:#7a8596;font-size:11px;margin-top:2px; }
+    .autofill { font-size:11px;color:#68768a;margin-top:10px; }
+    .autofill b { color:#416452;font-weight:550; }
+    .fields { display:grid;grid-template-columns:1fr 1fr;gap:15px 14px;margin-top:19px; }
+    .field.wide { grid-column:1/-1; }
+    .helper { font-size:11px;color:#7a8596;margin-top:6px;line-height:1.4; }
+    .manual { display:inline-flex;gap:6px;align-items:center;color:#395cc5;text-decoration:none;font-size:12px;font-weight:550;margin-top:16px; }
+    .actions { display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #edf0f4;padding-top:16px;margin-top:20px; }
+    .side { padding:18px; }
+    .side h3 {font-size:13px;margin:0 0 14px;}
+    .side-row { display:flex;gap:10px;padding:11px 0;border-bottom:1px solid #edf0f4;align-items:flex-start; }
+    .side-row:last-child {border:0;padding-bottom:0;}
+    .icon {width:25px;height:25px;flex:none;display:grid;place-items:center;background:#eef2fc;color:#4763ba;border-radius:6px;font-size:12px;font-weight:700;}
+    .side-row b {font-size:12px;display:block;margin-bottom:3px;}.side-row span {font-size:11px;line-height:1.45;color:#738094;display:block;}
+    .note { margin-top:14px;padding:12px;border-radius:7px;background:#fff8e8;border:1px solid #f0dfb3;color:#765e23;font-size:11px;line-height:1.5; }
+    .footnote {text-align:center;color:#98a1af;font-size:10px;margin-top:18px;}
+    @media(max-width:760px) { body{padding:23px 14px}.grid{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.field.wide{grid-column:auto}.steps{gap:6px}.line{width:20px}.pinrow{grid-template-columns:1fr auto} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="crumb">Provider setup&nbsp; / &nbsp;Community details&nbsp; / &nbsp;Address</div>
+    <h1>Where is your community located?</h1>
+    <p class="intro">Enter the PIN once to find nearby communities. If you create a new one, reuse the same PIN and postal lookup in its address.</p>
+    <div class="steps" aria-label="Setup progress"><div class="step"><span class="num">✓</span>Community</div><span class="line"></span><div class="step active"><span class="num">2</span>Address</div><span class="line"></span><div class="step"><span class="num">3</span>Buildings</div></div>
+    <section class="card" style="margin-bottom:18px">
+      <header class="card-head"><h2>Find an existing community or create one</h2><p>Search by PIN to see communities in that postal area. If yours isn’t listed, create it and add its address below.</p></header>
+      <div class="body" style="padding-top:15px;padding-bottom:15px">
+        <div class="pinrow" style="max-width:510px">
+          <div><label for="find-pin">PIN code</label><input id="find-pin" value="560001" inputmode="numeric" /></div>
+          <button class="button" type="button">⌕&nbsp; Find communities</button>
+        </div>
+        <div class="offices" style="max-width:690px;margin-top:12px">
+          <label class="office"><input type="radio" name="community" /><span><strong>Lakeview Residency</strong><small>Vasanth Nagar, Bengaluru · 3 buildings</small></span><span class="muted" style="margin-left:auto">Select</span></label>
+          <label class="office"><input type="radio" name="community" /><span><strong>Shanti Enclave</strong><small>High Grounds, Bengaluru · 2 buildings</small></span><span class="muted" style="margin-left:auto">Select</span></label>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;max-width:690px;margin-top:12px">
+          <span class="muted">No match?</span><button class="button primary" type="button">＋&nbsp; Create new community</button><span class="helper" style="margin:0">Selected here to show the new-community address form below.</span>
+        </div>
+      </div>
+    </section>
+    <div class="grid">
+      <section class="card">
+        <header class="card-head"><h2>Community address</h2><p>This address will be used for the community and its buildings.</p></header>
+        <div class="body">
+          <div class="muted" style="margin-bottom:10px">PIN code <strong style="color:#344054">560001</strong> · carried forward from community search</div>
+          <div class="result">
+            <div class="result-title"><span class="check">✓</span> 3 postal areas found for 560001 <span class="muted">· choose the one closest to the entrance</span></div>
+            <div class="offices">
+              <label class="office selected"><input type="radio" name="office" checked /><span><strong>Bangalore G.P.O.</strong><small>Delivery office · Bengaluru</small></span></label>
+              <label class="office"><input type="radio" name="office" /><span><strong>Vasanthnagar S.O.</strong><small>Sub office · Bengaluru</small></span></label>
+              <label class="office"><input type="radio" name="office" /><span><strong>HighCourt S.O.</strong><small>Sub office · Bengaluru</small></span></label>
+            </div>
+            <div class="autofill">Matched geography: <b>Karnataka</b> / <b>Bengaluru Urban</b> <span class="muted">(you can correct these)</span></div>
+          </div>
+          <div class="fields">
+            <div class="field wide"><label for="community-name">Community name <span class="required">*</span></label><input id="community-name" value="Green Meadows" placeholder="Enter the community name" /></div>
+            <div class="field"><label for="state">State <span class="required">*</span></label><select id="state"><option>Karnataka</option></select></div>
+            <div class="field"><label for="district">District <span class="required">*</span></label><select id="district"><option>Bengaluru Urban</option></select></div>
+            <div class="field"><label for="city">City / town <span class="required">*</span></label><input id="city" value="Bengaluru" /><div class="helper">Search and select a TRISE city.</div></div>
+            <div class="field"><label for="locality">Locality / area <span class="required">*</span></label><input id="locality" value="Vasanth Nagar" /><div class="helper">Edit this if the postal label differs from your local name.</div></div>
+            <div class="field wide"><label for="street">Street address <span class="required">*</span></label><input id="street" placeholder="Building, street, landmark" /><div class="helper">Example: No. 12, Palace Road, near the park</div></div>
+          </div>
+          <a class="manual" href="#manual" onclick="document.getElementById('manual-note').hidden=false;return false">PIN lookup didn’t work? Enter address manually <span aria-hidden="true">→</span></a>
+          <div id="manual-note" class="helper" hidden>Manual mode keeps the same state, district and city selectors; no address is blocked if postal data is missing.</div>
+          <div class="actions"><button class="button" type="button">Back</button><button class="button primary" type="button">Save address &amp; continue</button></div>
+        </div>
+      </section>
+      <aside>
+        <section class="card side">
+          <h3>How this helps</h3>
+          <div class="side-row"><span class="icon">1</span><div><b>Enter the PIN once</b><span>Community search and postal suggestions are reused when you create a new community.</span></div></div>
+          <div class="side-row"><span class="icon">2</span><div><b>You choose the locality</b><span>A PIN can cover several post offices, so TRISE never silently guesses.</span></div></div>
+          <div class="side-row"><span class="icon">3</span><div><b>Confirm before saving</b><span>State and district are suggested. City and street remain editable.</span></div></div>
+          <div class="note"><b>For buildings:</b> reuse this community address by default. Add a separate address only when a building has a different entrance or postal address.</div>
+        </section>
+        <div class="footnote">Concept mock · sample PIN and post office names illustrate the flow</div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

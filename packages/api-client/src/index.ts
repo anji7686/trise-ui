@@ -1,10 +1,16 @@
-export type RequestContext = { providerId?: string; signal?: AbortSignal };
+export type RequestContext = {
+  providerId?: string;
+  signal?: AbortSignal;
+  cacheTtlMs?: number;
+  forceRefresh?: boolean;
+};
 export type ApiError = { status: number; code: string; message: string; details?: unknown[] };
 
 const SESSION_REFRESH_LOCK = 'trise-session-refresh';
 const SESSION_REFRESH_STORAGE_LOCK = 'trise-session-refresh-lock';
 const SESSION_REFRESH_LOCK_TTL_MS = 10_000;
 const SESSION_REFRESH_LOCK_WAIT_MS = 50;
+const MAX_READ_CACHE_ENTRIES = 100;
 
 type LockManagerLike = {
   request<T>(name: string, options: { mode: 'exclusive' }, callback: () => Promise<T>): Promise<T>;
@@ -14,15 +20,73 @@ export class ApiClient {
   private accessToken: string | null = null;
   private refreshPromise: Promise<string | null> | null = null;
   private contextEpoch = 0;
+  private readCacheGeneration = 0;
+  private readCache = new Map<string, { value: unknown; expiresAt: number }>();
+  private readInFlight = new Map<string, Promise<unknown>>();
+  private forcedReadId = 0;
 
   constructor(private readonly baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000/api/v1') {}
 
-  setAccessToken(token: string | null) { this.accessToken = token; }
-  clearSession() { this.accessToken = null; this.contextEpoch += 1; }
-  changeContext() { this.contextEpoch += 1; }
+  setAccessToken(token: string | null) {
+    if (this.accessToken === token) return;
+    this.accessToken = token;
+    this.contextEpoch += 1;
+    this.invalidateReadCache();
+  }
+  clearSession() {
+    this.accessToken = null;
+    this.contextEpoch += 1;
+    this.invalidateReadCache();
+  }
+  changeContext() {
+    this.contextEpoch += 1;
+    this.invalidateReadCache();
+  }
 
   async request<T>(path: string, init: RequestInit = {}, context: RequestContext = {}): Promise<T> {
+    const method = (init.method || 'GET').toUpperCase();
+    if (method === 'GET' && !context.signal) {
+      const generation = this.readCacheGeneration;
+      const baseKey = JSON.stringify([this.contextEpoch, context.providerId ?? null, path]);
+      const cacheKey = `${generation}:${baseKey}`;
+      if (context.cacheTtlMs && context.cacheTtlMs > 0 && !context.forceRefresh) {
+        const cached = this.readCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) return cached.value as T;
+        if (cached) this.readCache.delete(cacheKey);
+      }
+      const requestKey = context.forceRefresh ? `${cacheKey}:refresh:${++this.forcedReadId}` : cacheKey;
+      const existing = this.readInFlight.get(requestKey);
+      if (existing) return existing as Promise<T>;
+
+      const request = this.perform<T>(path, init, context, true);
+      this.readInFlight.set(requestKey, request);
+      try {
+        const value = await request;
+        if (
+          context.cacheTtlMs && context.cacheTtlMs > 0 &&
+          generation === this.readCacheGeneration
+        ) {
+          for (const [key, entry] of this.readCache) {
+            if (entry.expiresAt <= Date.now()) this.readCache.delete(key);
+          }
+          if (!this.readCache.has(cacheKey) && this.readCache.size >= MAX_READ_CACHE_ENTRIES) {
+            const oldestKey = this.readCache.keys().next().value;
+            if (oldestKey) this.readCache.delete(oldestKey);
+          }
+          this.readCache.set(cacheKey, { value, expiresAt: Date.now() + context.cacheTtlMs });
+        }
+        return value;
+      } finally {
+        if (this.readInFlight.get(requestKey) === request) this.readInFlight.delete(requestKey);
+      }
+    }
     return this.perform<T>(path, init, context, true);
+  }
+
+  private invalidateReadCache() {
+    this.readCacheGeneration += 1;
+    this.readCache.clear();
+    this.readInFlight.clear();
   }
 
   async requestBlob(path: string, init: RequestInit = {}, context: RequestContext = {}): Promise<Blob> {
@@ -49,7 +113,9 @@ export class ApiClient {
     const requestEpoch = this.contextEpoch;
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
-    if (init.body) headers.set('Content-Type', 'application/json');
+    const multipartBody = typeof FormData !== 'undefined' && init.body instanceof FormData;
+    if (multipartBody) headers.delete('Content-Type');
+    else if (init.body) headers.set('Content-Type', 'application/json');
     if (context.providerId) headers.set('X-TRISE-Provider-Id', context.providerId);
     if (this.accessToken) headers.set('Authorization', `Bearer ${this.accessToken}`);
     const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers, signal: context.signal, credentials: 'include' });
@@ -63,7 +129,9 @@ export class ApiClient {
       const body = await response.json().catch(() => ({}));
       throw { status: response.status, code: body.code ?? 'http_error', message: body.message ?? 'Request failed', details: body.details } satisfies ApiError;
     }
-    return response.status === 204 ? (undefined as T) : response.json() as Promise<T>;
+    const result = response.status === 204 ? undefined as T : await response.json() as T;
+    if ((init.method || 'GET').toUpperCase() !== 'GET') this.invalidateReadCache();
+    return result;
   }
 
   async refresh(): Promise<string | null> {

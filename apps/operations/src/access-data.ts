@@ -1,4 +1,5 @@
 import { apiClient } from '@trise/api-client';
+import { DEFAULT_PAGE_SIZE } from './data';
 import type { components } from '../../../packages/api-client/src/generated';
 
 export type AccessRole = components['schemas']['AccessRole'];
@@ -14,7 +15,7 @@ export type AccessPageParams = { q?: string; status?: string; businessOperationI
 export type CustomPolicyPageParams = { q?: string; enabled?: string; status?: string; businessOperationId?: string; sort?: string; limit?: number; after?: string; before?: string };
 
 function pageQuery(params: AccessPageParams | CustomPolicyPageParams) {
-  const query = new URLSearchParams({ 'page[limit]': String(params.limit || 10) });
+  const query = new URLSearchParams({ 'page[limit]': String(params.limit || DEFAULT_PAGE_SIZE) });
   if (params.q) query.set('q', params.q);
   if (params.status) query.set('filter[status]', params.status);
   if ('enabled' in params && params.enabled) query.set('filter[enabled]', params.enabled);
@@ -34,7 +35,7 @@ export const accessData = {
   customRolePolicies: (params: CustomPolicyPageParams = {}) => apiClient.request<components['schemas']['ProviderCustomRolePolicyCollection']>(`/platform/access/custom-role-policies?${pageQuery(params)}`),
   setCustomRolePolicy: (policy: ProviderCustomRolePolicy, key: string) => command<ProviderCustomRolePolicy>(`/platform/access/custom-role-policies/${policy.id}`, 'POST', { expected_revision: policy.attributes.revision, enabled: !policy.attributes.enabled }, key),
   members: (providerId: string, after?: string | null, roleId?: string, filters: { q?: string; status?: string; limit?: number } = {}, before?: string | null) => {
-    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || 10) });
+    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || DEFAULT_PAGE_SIZE) });
     if (after) query.set('page[after]', after);
     if (before) query.set('page[before]', before);
     if (roleId) query.set('roleId', roleId);
@@ -43,7 +44,7 @@ export const accessData = {
     return apiClient.request<components['schemas']['AccessMemberCollection']>(`/provider/access/members${query.size ? `?${query}` : ''}`, {}, { providerId });
   },
   assignmentCandidates: (providerId: string, filters: { q?: string; limit?: number } = {}) => {
-    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || 100) });
+    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || DEFAULT_PAGE_SIZE) });
     if (filters.q) query.set('q', filters.q);
     return apiClient.request<{ data: AssignmentCandidate[]; page?: { next?: string | null; previous?: string | null; limit?: number } }>(`/provider/access/assignment-candidates?${query}`, {}, { providerId });
   },
@@ -53,7 +54,7 @@ export const accessData = {
   transitionMember: (providerId: string, member: AccessMember, action: 'suspend' | 'restore', reason: string, key: string) => command<AccessMember>(`/provider/access/members/${member.id}/${action}`, 'POST', { expected_revision: member.attributes.revision, reason }, key, providerId),
   invitations: (providerId: string, after?: string | null) => apiClient.request<components['schemas']['ProviderAdminInvitationCollection']>(`/provider/access/invitations${after ? `?page[after]=${encodeURIComponent(after)}` : ''}`, {}, { providerId }),
   providerRoles: (providerId: string, after?: string | null, filters: { q?: string; enabled?: string; limit?: number } = {}, before?: string | null) => {
-    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || 10), sort: 'name,id' });
+    const query = new URLSearchParams({ 'page[limit]': String(filters.limit || DEFAULT_PAGE_SIZE), sort: 'name,id' });
     if (after) query.set('page[after]', after);
     if (before) query.set('page[before]', before);
     if (filters.q) query.set('q', filters.q);

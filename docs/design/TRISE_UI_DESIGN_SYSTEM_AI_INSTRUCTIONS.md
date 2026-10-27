@@ -207,6 +207,51 @@ Rules:
 - Check overlap at long translations, long status labels, 200% browser zoom,
   narrow mobile width, and dark theme before accepting the screen.
 
+## 8.2 Data loading and production performance
+
+Build every feature so its response time and request volume remain predictable
+as records and concurrent users grow:
+
+- Keep the first useful screen on the shortest necessary request path. Render
+  the primary resource as soon as it arrives; do not wait for optional
+  lookups, summaries, templates, permissions, or dialog data to settle.
+- Load supporting data independently and show its loading, empty, or error
+  state near the control that needs it. Fetch data used only by a dialog,
+  preview, or secondary tab when that surface opens.
+- Use server-side pagination with a bounded page size. Do not download every
+  page or an unbounded collection just to populate a selector or count. Use a
+  supported search/filter endpoint, or provide a paged lookup interaction.
+- For customer filters on operational lists, search on the authorized resource
+  endpoint instead of loading the customer directory. Support the fields users
+  need (for example email or phone), debounce by at least 300 ms, require a
+  useful minimum term, and keep contact values out of list responses. Apply
+  authorization/provider scope before filtering and keep query work bounded or
+  indexed for expected production volume. Do not fetch selector lookups while
+  rendering a list if the list itself does not need them.
+- Debounce text search and avoid issuing a request for every keystroke. Keep
+  filter and pagination changes scoped to the resource they affect; reuse
+  stable provider-scoped lookups instead of refetching them on every list
+  refresh.
+- Coalesce identical concurrent GETs. Cache only stable lookups for a short,
+  explicit TTL, keyed by session and provider; invalidate cached reads after
+  mutations and authentication or provider context changes. Keep authenticated
+  customer and provider data in memory; do not persist it in `localStorage`.
+- Run independent required requests concurrently, but do not join optional
+  requests into the primary screen's loading gate. Avoid sequential network
+  calls unless the next request needs the previous response.
+- Cancel obsolete work where supported or ignore stale responses. Clear or
+  scope cached data when provider, user, or authorization context changes.
+- Prefer server-side filtering, sorting, and aggregation for large datasets.
+  Keep client-side work bounded to the current page and avoid rendering large
+  collections at once.
+- Review both initial load and repeated interactions: record the primary
+  screen's request count, identify calls triggered by typing/filtering,
+  inspect slow or sequential requests, and verify loading indicators do not
+  make the primary content wait for unrelated work.
+- Do not claim production readiness from a fast local fixture alone. Check
+  representative larger data volumes, bounded pagination, stale-response
+  behavior, and the applicable bundle budget before release.
+
 ## 9. Dialogs, drawers, notices, and previews
 
 - Use `OperationsDialog` or the existing shared dialog pattern. Do not use
@@ -267,6 +312,12 @@ Before declaring a UI change complete, verify:
 - [ ] Role/API authorization, lifecycle status, and allowed actions are shown
       correctly.
 - [ ] Loading, empty, error, denied, conflict, and success states are covered.
+- [ ] The primary content does not wait for optional supporting requests;
+      lookups are bounded, lazy where appropriate, and reused across refreshes.
+- [ ] Search is debounced, pagination is server-side, and stale responses
+      cannot replace newer filter or provider results.
+- [ ] Request count and loading behavior were reviewed for initial load and
+      repeated filter/search interactions at representative data volume.
 - [ ] Buttons use the correct variant, compact size, and no forced full width.
 - [ ] Status/priority labels use the shared semantic foreground/background
       palette in light and dark themes.

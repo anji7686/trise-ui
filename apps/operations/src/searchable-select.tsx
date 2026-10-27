@@ -6,7 +6,11 @@ export function sortedSearchOptions(options: LookupOption[], search: string) {
   return options.filter(option => query.length < 3 || `${option.label} ${option.detail || ''}`.toLocaleLowerCase().includes(query)).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }) || a.id.localeCompare(b.id));
 }
 
-export function SearchableSelect({ label, searchLabel, search, onSearch, value, onChange, options, placeholder = 'Select an option', required = true, disabled = false, error = '' }: { label: string; searchLabel: string; search: string; onSearch: (value: string) => void; value: string; onChange: (value: string) => void; options: LookupOption[]; placeholder?: string; required?: boolean; disabled?: boolean; error?: string }) {
+export function requiresSearchTerm(search: string, required: boolean, minimumLength = 3) {
+  return required && search.trim().length < minimumLength;
+}
+
+export function SearchableSelect({ label, searchLabel, search, onSearch, value, onChange, options, placeholder = 'Select an option', required = true, disabled = false, error = '', searchRequired = false }: { label: string; searchLabel: string; search: string; onSearch: (value: string) => void; value: string; onChange: (value: string) => void; options: LookupOption[]; placeholder?: string; required?: boolean; disabled?: boolean; error?: string; searchRequired?: boolean }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -14,7 +18,8 @@ export function SearchableSelect({ label, searchLabel, search, onSearch, value, 
   const [active, setActive] = useState(0);
   const [selection, setSelection] = useState<LookupOption | null>(null);
   const selected = options.find(option => option.id === value) || (selection?.id === value ? selection : null);
-  const results = sortedSearchOptions(options, search);
+  const needsSearch = requiresSearchTerm(search, searchRequired);
+  const results = needsSearch ? [] : sortedSearchOptions(options, search);
   const text = (option: LookupOption) => `${option.label}${option.detail ? ` · ${option.detail}` : ''}`;
   const display = selected ? text(selected) : search;
   useEffect(() => {
@@ -33,6 +38,6 @@ export function SearchableSelect({ label, searchLabel, search, onSearch, value, 
       if (event.key === 'Enter' && open) { event.preventDefault(); if (results[activeIndex]) select(results[activeIndex]); }
       if (event.key === 'Tab') setOpen(false);
     }} /><button type="button" className="search-select-toggle" disabled={disabled} aria-label={`Search ${label.toLowerCase()}`} onClick={() => { onChange(''); onSearch(''); setOpen(true); input.current?.focus(); }}>⌄</button></div>{error && <span id={`${id}-error`} className="customer-field-error" role="alert">{error}</span>}
-    {open && <div className="search-select-results" id={`${id}-list`} role="listbox" aria-label={`${label} results`}>{results.length ? results.map((option, index) => <button type="button" role="option" aria-selected={option.id === value} id={`${id}-option-${index}`} className={index === activeIndex ? 'highlighted' : ''} key={option.id} onPointerDown={event => event.preventDefault()} onClick={() => select(option)}><strong>{option.label}</strong>{option.detail && <small>{option.detail}</small>}</button>) : <p>No matching records in the loaded results.</p>}</div>}
+    {open && <div className="search-select-results" id={`${id}-list`} role="listbox" aria-label={`${label} results`}>{needsSearch ? <p>Type at least 3 characters to filter the loaded customers.</p> : results.length ? results.map((option, index) => <button type="button" role="option" aria-selected={option.id === value} id={`${id}-option-${index}`} className={index === activeIndex ? 'highlighted' : ''} key={option.id} onPointerDown={event => event.preventDefault()} onClick={() => select(option)}><strong>{option.label}</strong>{option.detail && <small>{option.detail}</small>}</button>) : <p>No matching records in the loaded results.</p>}</div>}
   </div>;
 }

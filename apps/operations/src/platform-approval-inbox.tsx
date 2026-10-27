@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@trise/ui';
 import { AdminEmptyState, AdminPageHeader } from './platform-admin-ui';
 import { OperationsStatus as Status } from './operations-status';
-import { operationsData, type PlatformComplianceRequest, type PlatformComplianceRequirement, type PlatformTeamMember } from './data';
+import { DEFAULT_PAGE_SIZE, operationsData, type PlatformComplianceRequest, type PlatformComplianceRequirement, type PlatformTeamMember } from './data';
 import { formatIndiaDateTime } from './subscription-support';
 import { OperationsDialog } from './operations-dialog';
 import { AdminActionMenu } from './platform-admin-ui';
@@ -15,7 +15,7 @@ const errorText = (error: unknown) => (error as { message?: string })?.message |
 export function PlatformApprovalInbox({ capabilities }: { capabilities: string[] }) {
   const [items, setItems] = useState<PlatformComplianceRequest[]>([]); const [selected, setSelected] = useState<PlatformComplianceRequest | null>(null);
   const [requirements, setRequirements] = useState<PlatformComplianceRequirement[]>([]); const [reviewers, setReviewers] = useState<PlatformTeamMember[]>([]);
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState(''); const [page, setPage] = useState(1); const [meta, setMeta] = useState({ page: 1, per_page: 15, total: 0, total_pages: 1 }); const [tab, setTab] = useState<DetailTab>('changes');
+  const [search, setSearch] = useState(''); const [status, setStatus] = useState(''); const [page, setPage] = useState(1); const [meta, setMeta] = useState({ page: 1, per_page: DEFAULT_PAGE_SIZE, total: 0, total_pages: 1 }); const [tab, setTab] = useState<DetailTab>('changes');
   const [reviewerId, setReviewerId] = useState(''); const [assignmentReason, setAssignmentReason] = useState(''); const [decision, setDecision] = useState<'APPROVE' | 'REJECT' | 'REQUEST_CORRECTIONS'>('APPROVE'); const [decisionReason, setDecisionReason] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [deepLink, setDeepLink] = useState(() => new URLSearchParams(window.location.hash.split('?')[1] || '').get('request'));
   const canAssign = capabilities.includes('PLATFORM_COMPLIANCE_ASSIGN'); const canReview = capabilities.includes('PLATFORM_COMPLIANCE_REVIEW');

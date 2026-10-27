@@ -1,6 +1,12 @@
 import { apiClient } from "@trise/api-client";
 import type { components } from "../../../packages/api-client/src/generated";
 
+export const PLATFORM_AVAILABILITY_CHANGED_EVENT = "trise:platform-availability-changed";
+const PLATFORM_AVAILABILITY_CACHE_MS = 60_000;
+type PlatformAvailabilityResponse = { data: PlatformAvailability };
+let platformAvailabilityCache: { response: PlatformAvailabilityResponse; cachedAt: number } | null = null;
+let platformAvailabilityInFlight: Promise<PlatformAvailabilityResponse> | null = null;
+
 export type ProviderAdminInvitation =
   components["schemas"]["ProviderAdminInvitation"];
 export type SubscriptionEvidenceReviewFeedback =
@@ -422,6 +428,8 @@ export type PlatformComplianceRequirement = Resource<{
 }>;
 export type ProviderBusinessProfile = {
   provider_id: string;
+  operation_code?: string | null;
+  operation_profile_policy?: { fields: Record<string, { label: string; required: boolean; options: string[] }> } | null;
   profile: {
     legal_name?: string | null;
     registration_number?: string | null;
@@ -430,6 +438,7 @@ export type ProviderBusinessProfile = {
     pan_number?: string | null;
     address?: Record<string, string | null>;
     contact_point_ids?: string[];
+    operation_profile_details?: Record<string, string[]>;
   };
   revision: number;
   verification_status: string;
@@ -585,6 +594,16 @@ export type PlatformLogo = {
   transfer?: DocumentTransfer;
 };
 export type ProviderBusinessProfileResponse = { data: ProviderBusinessProfile };
+export type ProviderSetupWorkbookValidation = {
+  valid: boolean;
+  errors: Array<{ sheet: string; field: string; message: string }>;
+  warnings: Array<{ sheet: string; field: string; message: string }>;
+  operation_name: string;
+  expected_revision: number;
+  summary: { profile_fields: number; contacts: number; locations: number; elevator_profile_selections?: number; configuration_types?: number; configuration_masters?: number };
+  preview: { legal_name?: string | null; registration_number?: string | null; gstin?: string | null; pan_number?: string | null; address: string; contacts: Array<{ name?: string; responsibility?: string }>; locations: Array<{ name?: string; city?: string; kind?: string }>; elevator_profile?: Record<string, string[]>; configuration_types?: string[]; configuration_masters?: number };
+};
+export type ProviderSetupWorkbookImportResult = { status: string; revision: number; contacts_added: number; locations_added: number; configuration_master_types: number; configuration_masters_selected: number; next_action: string };
 export type ProviderOnboardingContactAttributes = {
   contact_id: string;
   display_name: string;
@@ -789,6 +808,8 @@ export type IndiaPincodeLookup = {
     sha256?: string | null;
   };
 };
+const INDIA_PINCODE_CACHE_TTL_MS = 5 * 60_000;
+const indiaPincodeLookupCache = new Map<string, { expiresAt: number; request: Promise<IndiaPincodeLookup> }>();
 export type IndiaGeographyEntry = Resource<{
   kind: "COUNTRY" | "STATE_UT" | "DISTRICT" | "CITY";
   code: string;
@@ -1048,6 +1069,11 @@ export type ProviderSetupAttributes = {
   };
 };
 export type ProviderSetupResponse = { data: Resource<ProviderSetupAttributes>; result?: ProviderSetupAttributes['setup'] };
+export type ProviderSetupMastersAttributes = {
+  masters: Record<string, Array<{ id: string; type: string; attributes: GenericAttributes }>>;
+  selected_masters: Record<string, Array<{ id: string; source_revision: number }>>;
+};
+export type ProviderSetupMastersResponse = { data: Resource<ProviderSetupMastersAttributes> };
 export type ProviderOperation = Resource<{
   status: string;
   is_primary: boolean;
@@ -2229,7 +2255,8 @@ export type ProviderWorkFollowUpAttributes = {
   timezone_name?: string;
 };
 
-export const PLATFORM_PAGE_SIZE = 15;
+export const DEFAULT_PAGE_SIZE = 15;
+export const PLATFORM_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 export type PlatformPageParams = {
   after?: string | null;
   before?: string | null;
@@ -2249,6 +2276,8 @@ const platformPageQuery = (params: PlatformPageParams = {}) => {
 
 const query = (path: string, providerId: string) =>
   apiClient.request(path, {}, { providerId });
+const cachedQuery = (path: string, providerId: string, cacheTtlMs = 30_000) =>
+  apiClient.request(path, {}, { providerId, cacheTtlMs });
 export const operationsData = {
   providerOperationsDashboard: (providerId: string, date?: string) =>
     apiClient
@@ -2412,11 +2441,21 @@ export const operationsData = {
         { providerId },
       )
       .then((response) => response.data),
-  notifications: (providerId: string) =>
-    query(
-      "/notifications?page[limit]=25&sort=-created_at,id",
-      providerId,
-    ) as Promise<Collection<NotificationAttributes>>,
+  notifications: (
+    providerId: string,
+    params: { limit?: number; unreadOnly?: boolean; forceRefresh?: boolean } = {},
+  ) => {
+    const search = new URLSearchParams({
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
+      sort: "-created_at,id",
+    });
+    if (params.unreadOnly) search.set("filter[unread]", "true");
+    return apiClient.request<Collection<NotificationAttributes>>(
+      `/notifications?${search}`,
+      {},
+      { providerId, cacheTtlMs: 15_000, forceRefresh: params.forceRefresh },
+    );
+  },
   markNotificationRead: (
     providerId: string,
     notificationId: string,
@@ -2429,7 +2468,7 @@ export const operationsData = {
     ),
   platformNotifications: () =>
     apiClient.request<Collection<NotificationAttributes>>(
-      "/platform/notifications?page[limit]=25&sort=-created_at,id",
+      `/platform/notifications?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
     ),
   markPlatformNotificationRead: (notificationId: string, key: string) =>
     apiClient.request<Resource<NotificationAttributes>>(
@@ -2451,7 +2490,7 @@ export const operationsData = {
     } = {},
   ): Promise<Collection<ServiceCaseAttributes>> => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -2496,7 +2535,7 @@ export const operationsData = {
     } = {},
   ): Promise<Collection<WorkIntakeAttributes>> => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -4598,10 +4637,24 @@ export const operationsData = {
         body: JSON.stringify(body),
       },
     ),
-  indiaPincode: (pincode: string) =>
-    apiClient.request<IndiaPincodeLookup>(
-      `/reference-data/india/pincodes/${encodeURIComponent(pincode)}`,
-    ),
+  indiaPincode: (pincode: string) => {
+    const key = pincode.trim();
+    const cached = indiaPincodeLookupCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.request;
+    if (cached) indiaPincodeLookupCache.delete(key);
+    const request = apiClient.request<IndiaPincodeLookup>(
+      `/reference-data/india/pincodes/${encodeURIComponent(key)}`,
+    ).catch((error) => {
+      indiaPincodeLookupCache.delete(key);
+      throw error;
+    });
+    indiaPincodeLookupCache.set(key, { expiresAt: Date.now() + INDIA_PINCODE_CACHE_TTL_MS, request });
+    if (indiaPincodeLookupCache.size > 200) {
+      const oldest = indiaPincodeLookupCache.keys().next().value;
+      if (oldest) indiaPincodeLookupCache.delete(oldest);
+    }
+    return request;
+  },
   indiaLocations: (
     params: {
       q?: string;
@@ -4624,6 +4677,32 @@ export const operationsData = {
   referenceDataImports: () =>
     apiClient.request<{ data: ReferenceDataImport[] }>(
       "/reference-data/admin/imports",
+    ),
+  stageIndiaPincodeImport: (input: {
+    file: File;
+    scopeType: "ALL_INDIA" | "STATE_UT" | "DISTRICT" | "CITY";
+    state?: string;
+    district?: string;
+    city?: string;
+    sourcePublishedOn?: string;
+    key: string;
+  }) => {
+    const body = new FormData();
+    body.append("file", input.file);
+    body.append("scope_type", input.scopeType);
+    if (input.state) body.append("state", input.state);
+    if (input.district) body.append("district", input.district);
+    if (input.city) body.append("city", input.city);
+    if (input.sourcePublishedOn) body.append("source_published_on", input.sourcePublishedOn);
+    return apiClient.request<ReferenceDataImport>("/reference-data/admin/imports", {
+      method: "POST",
+      headers: { "Idempotency-Key": input.key },
+      body,
+    });
+  },
+  previewStagedIndiaPincode: (importId: string, pincode: string) =>
+    apiClient.request<IndiaPincodeLookup>(
+      `/reference-data/admin/imports/${encodeURIComponent(importId)}/pincodes/${encodeURIComponent(pincode.trim())}`,
     ),
   submitReferenceDataImportReview: (
     id: string,
@@ -4782,7 +4861,7 @@ export const operationsData = {
     id: string,
     kind: "versions" | "audit",
     page = 1,
-    perPage = 10,
+    perPage = DEFAULT_PAGE_SIZE,
   ) =>
     apiClient.request<
       BusinessHistoryPage<BusinessHistoryVersion | BusinessAuditEvent>
@@ -5544,24 +5623,38 @@ export const operationsData = {
     apiClient.request<{ data: PublicPlatformMaintenance | null }>(
       "/platform/maintenance/status",
     ),
-  platformAvailability: async () => {
-    try {
-      return await apiClient.request<{ data: PlatformAvailability }>(
-        "/platform/availability",
-      );
-    } catch (apiError) {
-      const manifestUrl = (
-        import.meta.env.VITE_PLATFORM_AVAILABILITY_S3_URL as string | undefined
-      )?.trim();
-      if (!manifestUrl) throw apiError;
-      const separator = manifestUrl.includes("?") ? "&" : "?";
-      const response = await fetch(
-        `${manifestUrl}${separator}t=${Date.now()}`,
-        { headers: { Accept: "application/json" }, cache: "no-store" },
-      );
-      if (!response.ok) throw apiError;
-      return (await response.json()) as { data: PlatformAvailability };
+  platformAvailability: (forceRefresh = false): Promise<PlatformAvailabilityResponse> => {
+    if (!forceRefresh && platformAvailabilityCache && Date.now() - platformAvailabilityCache.cachedAt < PLATFORM_AVAILABILITY_CACHE_MS) {
+      return Promise.resolve(platformAvailabilityCache.response);
     }
+    if (!forceRefresh && platformAvailabilityInFlight) return platformAvailabilityInFlight;
+    const request = (async () => {
+      try {
+        return await apiClient.request<PlatformAvailabilityResponse>(
+          "/platform/availability",
+          { cache: "no-store" },
+        );
+      } catch (apiError) {
+        const manifestUrl = (
+          import.meta.env.VITE_PLATFORM_AVAILABILITY_S3_URL as string | undefined
+        )?.trim();
+        if (!manifestUrl) throw apiError;
+        const separator = manifestUrl.includes("?") ? "&" : "?";
+        const response = await fetch(
+          `${manifestUrl}${separator}t=${Date.now()}`,
+          { headers: { Accept: "application/json" }, cache: "no-store" },
+        );
+        if (!response.ok) throw apiError;
+        return (await response.json()) as PlatformAvailabilityResponse;
+      }
+    })();
+    platformAvailabilityInFlight = request;
+    return request.then((response) => {
+      platformAvailabilityCache = { response, cachedAt: Date.now() };
+      return response;
+    }).finally(() => {
+      if (platformAvailabilityInFlight === request) platformAvailabilityInFlight = null;
+    });
   },
   activatePlatformMaintenance: (
     body: {
@@ -5818,6 +5911,23 @@ export const operationsData = {
   platformBusinessProfile: (id: string) =>
     apiClient.request<ProviderBusinessProfileResponse>(
       `/platform/providers/${encodeURIComponent(id)}/business-profile`,
+    ),
+  platformProviderSetupWorkbook: (id: string) =>
+    apiClient.requestBlob(`/platform/providers/${encodeURIComponent(id)}/business-profile/setup-workbook`),
+  emailPlatformProviderSetupWorkbook: (id: string, recipient: { contact_id: string } | { email: string }, key: string) =>
+    apiClient.request<{ data: { status: string; message: string } }>(
+      `/platform/providers/${encodeURIComponent(id)}/business-profile/setup-workbook/email`,
+      { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(recipient) },
+    ),
+  validatePlatformProviderSetupWorkbook: (id: string, workbookBase64: string, expectedRevision: number) =>
+    apiClient.request<{ data: ProviderSetupWorkbookValidation }>(
+      `/platform/providers/${encodeURIComponent(id)}/business-profile/setup-workbook/validate`,
+      { method: "POST", body: JSON.stringify({ workbook_base64: workbookBase64, expected_revision: expectedRevision }) },
+    ),
+  importPlatformProviderSetupWorkbook: (id: string, workbookBase64: string, expectedRevision: number, key: string) =>
+    apiClient.request<{ data: ProviderSetupWorkbookImportResult }>(
+      `/platform/providers/${encodeURIComponent(id)}/business-profile/setup-workbook/import`,
+      { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ workbook_base64: workbookBase64, expected_revision: expectedRevision }) },
     ),
   updatePlatformBusinessProfile: (
     id: string,
@@ -6300,12 +6410,32 @@ export const operationsData = {
     ),
   providerBusinessProfileReviews: (providerId: string) =>
     query(
-      "/providers/business-profile/reviews?page[limit]=25&sort=-created_at,id",
+      `/providers/business-profile/reviews?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<ProviderVerificationReviewAttributes>>,
-  providerOnboardingContacts: (providerId: string, after?: string) =>
+  providerSetupWorkbook: (providerId: string) =>
+    apiClient.requestBlob("/providers/business-profile/setup-workbook", {}, { providerId }),
+  emailProviderSetupWorkbook: (providerId: string, contactId: string, key: string) =>
+    apiClient.request<{ data: { status: string; message: string } }>(
+      "/providers/business-profile/setup-workbook/email",
+      { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ contact_id: contactId }) },
+      { providerId },
+    ),
+  validateProviderSetupWorkbook: (providerId: string, workbookBase64: string, expectedRevision: number) =>
+    apiClient.request<{ data: { valid: boolean; errors: Array<{ sheet: string; field: string; message: string }>; warnings: Array<{ sheet: string; field: string; message: string }>; operation_name: string; expected_revision: number; summary: { profile_fields: number; contacts: number; locations: number }; preview: { legal_name?: string | null; registration_number?: string | null; gstin?: string | null; pan_number?: string | null; address: string; contacts: Array<{ name?: string; responsibility?: string }>; locations: Array<{ name?: string; city?: string; kind?: string }> } } }>(
+      "/providers/business-profile/setup-workbook/validate",
+      { method: "POST", body: JSON.stringify({ workbook_base64: workbookBase64, expected_revision: expectedRevision }) },
+      { providerId },
+    ),
+  importProviderSetupWorkbook: (providerId: string, workbookBase64: string, expectedRevision: number, key: string) =>
+    apiClient.request<{ data: { status: string; revision: number; contacts_added: number; locations_added: number; next_action: string } }>(
+      "/providers/business-profile/setup-workbook/import",
+      { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ workbook_base64: workbookBase64, expected_revision: expectedRevision }) },
+      { providerId },
+    ),
+  providerOnboardingContacts: (providerId: string, after?: string, limit = 15) =>
     query(
-      `/providers/onboarding/contacts?page[limit]=15&sort=-created_at,id${after ? `&page[after]=${encodeURIComponent(after)}` : ""}`,
+      `/providers/onboarding/contacts?page[limit]=${Math.min(Math.max(limit, 1), 100)}&sort=-created_at,id${after ? `&page[after]=${encodeURIComponent(after)}` : ""}`,
       providerId,
     ) as Promise<Collection<ProviderOnboardingContactAttributes>>,
   createProviderOnboardingContact: (
@@ -6354,7 +6484,7 @@ export const operationsData = {
     ),
   providerOnboardingLocations: (providerId: string, after?: string) =>
     query(
-      `/providers/onboarding/locations?page[limit]=15&sort=-created_at,id${after ? `&page[after]=${encodeURIComponent(after)}` : ""}`,
+      `/providers/onboarding/locations?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id${after ? `&page[after]=${encodeURIComponent(after)}` : ""}`,
       providerId,
     ) as Promise<Collection<ProviderOfficeLocationAttributes>>,
   createProviderOnboardingLocation: (
@@ -6403,27 +6533,27 @@ export const operationsData = {
     ),
   providerDocuments: (providerId: string, sourceId?: string) =>
     query(
-      `/documents?page[limit]=25&sort=-created_at,id${sourceId ? `&filter[source_id]=${encodeURIComponent(sourceId)}` : ""}`,
+      `/documents?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id${sourceId ? `&filter[source_id]=${encodeURIComponent(sourceId)}` : ""}`,
       providerId,
     ) as Promise<Collection<ProviderDocumentAttributes>>,
   marketingLeadDocuments: (providerId: string, leadId: string) =>
     query(
-      `/documents?page[limit]=25&sort=-created_at,id&filter[lead_id]=${encodeURIComponent(leadId)}`,
+      `/documents?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id&filter[lead_id]=${encodeURIComponent(leadId)}`,
       providerId,
     ) as Promise<Collection<ProviderDocumentAttributes>>,
   journeyActivityDocuments: (providerId: string, activityId: string) =>
     query(
-      `/documents?page[limit]=25&sort=-created_at,id&filter[source_id]=${encodeURIComponent(activityId)}`,
+      `/documents?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id&filter[source_id]=${encodeURIComponent(activityId)}`,
       providerId,
     ) as Promise<Collection<ProviderDocumentAttributes>>,
   journeyResourceDocuments: (providerId: string, resourceId: string) =>
     query(
-      `/documents?page[limit]=25&sort=-created_at,id&filter[source_id]=${encodeURIComponent(resourceId)}`,
+      `/documents?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id&filter[source_id]=${encodeURIComponent(resourceId)}`,
       providerId,
     ) as Promise<Collection<ProviderDocumentAttributes>>,
   shipmentDocuments: (providerId: string, shipmentId: string) =>
     query(
-      `/documents?page[limit]=25&sort=-created_at,id&filter[source_id]=${encodeURIComponent(shipmentId)}`,
+      `/documents?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id&filter[source_id]=${encodeURIComponent(shipmentId)}`,
       providerId,
     ) as Promise<Collection<ProviderDocumentAttributes>>,
   providerLogo: (providerId: string) =>
@@ -6530,21 +6660,38 @@ export const operationsData = {
 
     return { data };
   },
+  customerRelationshipsPage: (
+    providerId: string,
+    params: { after?: string | null; before?: string | null; limit?: number } = {},
+  ) => {
+    const page = new URLSearchParams({
+      "page[limit]": String(params.limit || 100),
+      sort: "-created_at,id",
+    });
+    if (params.after) page.set("page[after]", params.after);
+    if (params.before) page.set("page[before]", params.before);
+    return cachedQuery(`/customer-relationships?${page}`, providerId, 60_000) as Promise<
+      Collection<GenericAttributes>
+    >;
+  },
   locations: (
     providerId: string,
     customerRelationshipId?: string,
     params: {
       query?: string;
+      classification?: string[];
       after?: string;
       before?: string;
       limit?: number;
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
     });
     if (customerRelationshipId)
       page.set("filter[customer_relationship_id]", customerRelationshipId);
+    for (const classification of params.classification || [])
+      page.append("filter[classification][]", classification);
     if (params.query?.trim()) page.set("filter[q]", params.query.trim());
     if (params.after) page.set("page[after]", params.after);
     if (params.before) page.set("page[before]", params.before);
@@ -6667,10 +6814,11 @@ export const operationsData = {
     query("/asset-definitions?page[limit]=100", providerId) as Promise<
       Collection<GenericAttributes>
     >,
-  attributeDefinitions: (providerId: string) =>
-    query("/attribute-definitions?page[limit]=100", providerId) as Promise<
-      Collection<GenericAttributes>
-    >,
+  attributeDefinitions: (providerId: string, assetDefinitionId?: string) => {
+    const params = new URLSearchParams({ "page[limit]": "100" });
+    if (assetDefinitionId) params.set("filter[asset_definition_id]", assetDefinitionId);
+    return query(`/attribute-definitions?${params.toString()}`, providerId) as Promise<Collection<GenericAttributes>>;
+  },
   elevatorRequirementCatalogue: (providerId: string) =>
     apiClient
       .request<{ data: RequirementCatalogue }>(
@@ -6720,7 +6868,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.query?.trim()) page.set("filter[q]", params.query.trim());
@@ -6820,7 +6968,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -6844,7 +6992,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -6853,7 +7001,7 @@ export const operationsData = {
     if (params.status) page.set("filter[status]", params.status);
     if (params.source) page.set("filter[source]", params.source);
     if (params.priority) page.set("filter[priority]", params.priority);
-    return query(`/marketing-leads?${page}`, providerId) as Promise<
+    return cachedQuery(`/marketing-leads?${page}`, providerId) as Promise<
       Collection<MarketingLeadAttributes>
     >;
   },
@@ -7047,7 +7195,7 @@ export const operationsData = {
     ),
   contactRouting: async (providerId: string, requestId: string) => {
     const result = (await query(
-      "/contact-routing/resolutions?page[limit]=25&filter[source_type]=ServiceRequest",
+      `/contact-routing/resolutions?page[limit]=${DEFAULT_PAGE_SIZE}&filter[source_type]=ServiceRequest`,
       providerId,
     )) as Collection<ContactRoutingAttributes>;
     return {
@@ -7091,7 +7239,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -7199,7 +7347,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -7248,7 +7396,7 @@ export const operationsData = {
     params: { after?: string | null; before?: string | null; limit?: number; statuses?: string[] } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 15),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     for (const status of params.statuses || ["PROPOSED", "ASSIGNED", "ACCEPTED", "EN_ROUTE", "ARRIVED", "WORKING"]) {
@@ -7265,7 +7413,7 @@ export const operationsData = {
     const page = new URLSearchParams({
       latitude: String(params.latitude),
       longitude: String(params.longitude),
-      "page[limit]": String(params.limit || 15),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       ...(params.accuracy_m == null ? {} : { accuracy_m: String(params.accuracy_m) }),
       ...(params.radius_m == null ? {} : { radius_m: String(params.radius_m) }),
     });
@@ -7306,7 +7454,7 @@ export const operationsData = {
     ),
   visits: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/visits?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/visits?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<VisitAttributes>>,
   createVisit: (
@@ -7386,7 +7534,7 @@ export const operationsData = {
     ),
   notes: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/notes?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/notes?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<WorkNoteAttributes>>,
   createNote: (
@@ -7406,7 +7554,7 @@ export const operationsData = {
     ),
   parts: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/parts-used?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/parts-used?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<PartUsageAttributes>>,
   recordPart: (
@@ -7436,7 +7584,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.query?.trim()) page.set("filter[q]", params.query.trim());
@@ -7449,7 +7597,7 @@ export const operationsData = {
     >;
   },
   teams: (providerId: string) =>
-    query("/teams?page[limit]=25&sort=-created_at,id", providerId) as Promise<
+    query(`/teams?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`, providerId) as Promise<
       Collection<GenericAttributes>
     >,
   agentsDirectory: (
@@ -7463,7 +7611,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.query) page.set("filter[q]", params.query);
@@ -7518,7 +7666,7 @@ export const operationsData = {
       { providerId },
     ),
   skills: (providerId: string) =>
-    query("/skills?page[limit]=25&sort=-created_at,id", providerId) as Promise<
+    query(`/skills?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`, providerId) as Promise<
       Collection<GenericAttributes>
     >,
   certificationTypes: (providerId: string) =>
@@ -7600,14 +7748,28 @@ export const operationsData = {
     ),
   territories: (providerId: string) =>
     query(
-      "/service-territories?page[limit]=25&sort=-created_at,id",
+      `/service-territories?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<GenericAttributes>>,
   leaveRequests: (providerId: string) =>
     query(
-      "/leave-requests?page[limit]=25&sort=-created_at,id",
+      `/leave-requests?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<GenericAttributes>>,
+  supportCoverage: (providerId: string) =>
+    query(`/support-coverage?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`, providerId) as Promise<Collection<GenericAttributes>>,
+  extraDayCredits: (providerId: string) =>
+    query(`/extra-day-credits?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`, providerId) as Promise<Collection<GenericAttributes>>,
+  eligibleExtraDaySessions: (providerId: string) =>
+    query(`/extra-day-credits/eligible-sessions?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`, providerId) as Promise<Collection<GenericAttributes>>,
+  createSupportCoverage: (providerId: string, body: Record<string, unknown>, key: string) =>
+    apiClient.request<Resource<GenericAttributes>>("/support-coverage", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(body) }, { providerId }),
+  publishSupportCoverage: (providerId: string, id: string, expectedRevision: number, key: string) =>
+    apiClient.request<Resource<GenericAttributes>>(`/support-coverage/${encodeURIComponent(id)}/publish`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ expected_revision: expectedRevision }) }, { providerId }),
+  reviewExtraDayCredit: (providerId: string, id: string, action: string, expectedRevision: number, reason: string, key: string) =>
+    apiClient.request<Resource<GenericAttributes>>(`/extra-day-credits/${encodeURIComponent(id)}/review`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ action, expected_revision: expectedRevision, reason }) }, { providerId }),
+  submitExtraDayCredit: (providerId: string, agentId: string, workSessionId: string, reason: string, key: string) =>
+    apiClient.request<Resource<GenericAttributes>>(`/agents/${encodeURIComponent(agentId)}/work-sessions/${encodeURIComponent(workSessionId)}/extra-day-credits`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ reason }) }, { providerId }),
   workforceMe: (providerId: string) =>
     apiClient
       .request<{ data: Resource<GenericAttributes> }>(
@@ -7618,7 +7780,7 @@ export const operationsData = {
       .then((response) => response.data),
   attendance: (providerId: string) =>
     query(
-      "/attendance?page[limit]=15&sort=-created_at,id",
+      `/attendance?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<GenericAttributes>>,
   attendanceToday: (providerId: string) =>
@@ -7709,30 +7871,36 @@ export const operationsData = {
       limit?: number;
       query?: string;
       status?: string;
+      quotationId?: string;
       customerRelationshipId?: string;
+      customerEmail?: string;
+      customerPhone?: string;
       leadId?: string;
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
     if (params.before) page.set("page[before]", params.before);
     if (params.query) page.set("filter[q]", params.query);
     if (params.status) page.set("filter[status]", params.status);
+    if (params.quotationId) page.set("filter[quotation_id]", params.quotationId);
     if (params.customerRelationshipId)
       page.set(
         "filter[customer_relationship_id]",
         params.customerRelationshipId,
       );
+    if (params.customerEmail) page.set("filter[customer_email]", params.customerEmail);
+    if (params.customerPhone) page.set("filter[customer_phone]", params.customerPhone);
     if (params.leadId) page.set("filter[lead_id]", params.leadId);
     return query(`/quotations?${page}`, providerId) as Promise<
       Collection<GenericAttributes>
     >;
   },
   quotationTaxRules: (providerId: string) =>
-    query("/quotation-tax-rules", providerId) as Promise<
+    cachedQuery("/quotation-tax-rules", providerId, 60_000) as Promise<
       Collection<QuotationTaxRuleAttributes>
     >,
   quotation: (providerId: string, id: string) =>
@@ -7800,7 +7968,7 @@ export const operationsData = {
     } = {},
   ) => {
     const page = new URLSearchParams({
-      "page[limit]": String(params.limit || 10),
+      "page[limit]": String(params.limit || DEFAULT_PAGE_SIZE),
       sort: "-created_at,id",
     });
     if (params.after) page.set("page[after]", params.after);
@@ -7947,7 +8115,7 @@ export const operationsData = {
     apiClient.request<Collection<MaterialScopeTemplateAttributes>>(
       "/provider-material-scope-templates",
       {},
-      { providerId },
+      { providerId, cacheTtlMs: 60_000 },
     ),
   createMaterialScopeTemplate: (
     providerId: string,
@@ -7982,7 +8150,7 @@ export const operationsData = {
     apiClient.request<Collection<QuotationTermsTemplateAttributes>>(
       "/provider-quotation-terms-templates",
       {},
-      { providerId },
+      { providerId, cacheTtlMs: 60_000 },
     ),
   createQuotationTermsTemplate: (
     providerId: string,
@@ -8279,6 +8447,12 @@ export const operationsData = {
       undefined,
       { providerId },
     ),
+  providerConfigurationMasters: (providerId: string) =>
+    apiClient.request<ProviderSetupMastersResponse>("/configuration/setup/masters", undefined, { providerId }),
+  saveProviderMasterSelections: (providerId: string, body: Record<string, unknown>, key: string) =>
+    apiClient.request<ProviderSetupResponse>("/configuration/setup/master-selections", {
+      method: "PUT", headers: { "Idempotency-Key": key }, body: JSON.stringify(body),
+    }, { providerId }),
   dryRunProviderConfigurationSetup: (providerId: string, body: Record<string, unknown>, key: string) =>
     apiClient.request<ProviderSetupResponse>(
       "/configuration/setup/dry-run",
@@ -8477,7 +8651,7 @@ export const operationsData = {
     ),
   timeline: (providerId: string) =>
     query(
-      "/timeline?page[limit]=25&sort=-created_at,id",
+      `/timeline?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<GenericAttributes>>,
   timelineEntry: (providerId: string, id: string) =>
@@ -8486,7 +8660,7 @@ export const operationsData = {
     >,
   checklists: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/checklists?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/checklists?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<ChecklistAttributes>>,
   createChecklist: (
@@ -8542,7 +8716,7 @@ export const operationsData = {
     ) as Promise<Collection<GenericAttributes>>,
   reports: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/reports?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/reports?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<ServiceReportAttributes>>,
   createReport: (
@@ -8577,12 +8751,12 @@ export const operationsData = {
     ),
   proofs: (providerId: string, jobId: string) =>
     query(
-      `/service-jobs/${encodeURIComponent(jobId)}/proofs?page[limit]=25&sort=-created_at,id`,
+      `/service-jobs/${encodeURIComponent(jobId)}/proofs?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<ServiceProofAttributes>>,
   workSessions: (providerId: string, agentId: string) =>
     query(
-      `/agents/${encodeURIComponent(agentId)}/work-sessions?page[limit]=25&sort=-created_at,id`,
+      `/agents/${encodeURIComponent(agentId)}/work-sessions?page[limit]=${DEFAULT_PAGE_SIZE}&sort=-created_at,id`,
       providerId,
     ) as Promise<Collection<WorkSessionAttributes>>,
   startWorkSession: (

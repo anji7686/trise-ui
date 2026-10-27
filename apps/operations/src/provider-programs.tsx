@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button, PageHeader } from "@trise/ui";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
@@ -169,7 +170,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [expiryFilter, setExpiryFilter] = useState("");
-  const [limit, setLimit] = useState(10);
+  const limit = DEFAULT_PAGE_SIZE;
   const [after, setAfter] = useState("");
   const [before, setBefore] = useState("");
   const [action, setAction] = useState<"renew" | "amend" | "iteration" | null>(
@@ -414,7 +415,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
           </form>
           <div className="amc-workspace amc-workspace--full">
           <div className="amc-register-panel">
-            <div className="section-heading"><div><h3>AMC contracts</h3><p>Provider-scoped contract register · filters and page size are applied by the API.</p></div><label className="amc-page-size">Rows per page<select aria-label="Rows per page" value={limit} onChange={(event) => { setSelected(null); setLimit(Number(event.target.value)); setAfter(""); setBefore(""); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label></div>
+            <div className="section-heading"><div><h3>AMC contracts</h3><p>Provider-scoped contract register · filters are applied by the API.</p></div></div>
             {contracts.data.length ? <div className="amc-table-wrap"><table className="amc-contract-table" aria-label="AMC contracts"><thead><tr><th>Contract No.</th><th>Customer</th><th>Assets</th><th>Plan</th><th>Expiry date</th><th>Status</th><th>Renewal</th><th>Actions</th></tr></thead><tbody>{contracts.data.map((contract) => { const expiry = contract.attributes.effective_to; const remaining = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null; return <tr key={contract.id} aria-current={selected?.id === contract.id ? "true" : undefined}><td><strong>{String(contract.attributes.contract_number || label(contract.attributes))}</strong></td><td>{String(contract.attributes.customer_name || "Authorized customer")}</td><td>{String(contract.attributes.asset_count ?? "—")}</td><td>{String(contract.attributes.plan_code || "Service plan")}</td><td>{date(expiry)}</td><td><Status>{String(contract.attributes.status || "VISIBLE")}</Status></td><td>{remaining !== null && remaining <= 90 ? remaining <= 0 ? "Expired" : `${remaining} days` : "Not due"}</td><td><ProviderActionMenu label={`Actions for contract ${String(contract.attributes.contract_number || contract.id.slice(0, 8))}`} actions={[{ id: 'view', label: 'View', onSelect: () => void open(contract) }]} /></td></tr>; })}</tbody></table></div> : <EmptyState title={loading ? "Loading contracts" : "No maintenance contracts"} description={loading ? "Loading the selected provider's authorized contracts." : "No contracts match these server-side filters. New AMC creation remains governed by quotation conversion."} />}
             <div className="server-pagination"><span>Showing {contracts.data.length} records · {limit} per page</span><div><Button variant="secondary" disabled={!contracts.page?.previous || loading} onClick={() => { setAfter(""); setBefore(contracts.page?.previous || ""); }}>Previous</Button><Button variant="secondary" disabled={!contracts.page?.next || loading} onClick={() => { setBefore(""); setAfter(contracts.page?.next || ""); }}>Next</Button></div></div>
           </div>

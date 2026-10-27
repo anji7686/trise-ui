@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { stat } from 'node:fs/promises';
 import { configuredAccount, localSignIn, localSignOut } from './local-auth';
 import { e2eApiV1Base } from './e2e-config';
 import type { Page, TestInfo } from 'playwright/test';
@@ -650,10 +651,90 @@ test('Provider Admin business profile exposes the governed editable fields witho
   await expect(page.getByLabel('PIN code')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Verification status', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save business profile', exact: true })).toBeVisible();
+  const elevatorProfile = page.locator('.provider-elevator-profile-fields');
+  if (await elevatorProfile.count()) {
+    await expect(elevatorProfile.getByRole('checkbox')).toHaveCount(24);
+    await expect(elevatorProfile.getByText('Industries served')).toBeVisible();
+    await expect(elevatorProfile.getByText('Equipment supported')).toBeVisible();
+    await expect(elevatorProfile.getByText('Services offered')).toBeVisible();
+  }
   await capture(page, testInfo, 'provider-admin-business-profile');
   const logoStorageUnavailable = apiFailures.filter(failure => failure === '503 /api/v1/providers/logo');
   expect(apiFailures.filter(failure => failure !== '503 /api/v1/providers/logo')).toEqual([]);
   if (logoStorageUnavailable.length) testInfo.annotations.push({ type: 'environment-blocker', description: 'Private provider-logo storage returned HTTP 503; business profile API and form rendered, but logo retrieval remains blocked by local object-storage availability.' });
+  await localSignOut(page);
+});
+
+test('Provider Admin setup workbook tab is readable in light/dark themes and a narrow viewport', async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith('operations'), 'Provider setup workbook runs in Operations projects only.');
+  await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  await requireProviderContext(page);
+  await navigateHash(page, 'business-profile');
+  await expect(page.getByRole('heading', { name: 'Business profile', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Setup workbook', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Provider setup workbook', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Download workbook', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Validate workbook', exact: true })).toBeDisabled();
+  await expect(page.getByText('Documents and logo are separate uploads.')).toBeVisible();
+  await capture(page, testInfo, 'provider-setup-workbook-light');
+
+  const [workbook, workbookResponse] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30_000 }),
+    page.waitForResponse(response => response.url().endsWith('/providers/business-profile/setup-workbook') && response.request().method() === 'GET'),
+    page.getByRole('button', { name: 'Download workbook', exact: true }).click(),
+  ]).then(([download, response]) => [download, response] as const);
+  expect(workbookResponse.status(), await workbookResponse.text()).toBe(200);
+  expect(workbookResponse.headers()['content-type']).toContain('spreadsheetml.sheet');
+  expect(workbook.suggestedFilename()).toBe('trise-provider-setup.xlsx');
+  const workbookPath = testInfo.outputPath(workbook.suggestedFilename());
+  await workbook.saveAs(workbookPath);
+  const workbookFile = await stat(workbookPath);
+  expect(workbookFile.size).toBeGreaterThan(1_000);
+  await page.getByLabel('Choose completed workbook').setInputFiles(workbookPath);
+  await expect(page.getByRole('button', { name: 'Validate workbook', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Validate workbook', exact: true }).click();
+  await expect(page.locator('.provider-setup-workbook-result')).toBeVisible();
+  await capture(page, testInfo, 'provider-setup-workbook-validation-preview');
+
+  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  await page.locator('#account-theme').selectOption('dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('tab', { name: 'Setup workbook', exact: true }).click();
+  await capture(page, testInfo, 'provider-setup-workbook-dark');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('heading', { name: 'Provider setup workbook', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await capture(page, testInfo, 'provider-setup-workbook-mobile');
+  await localSignOut(page);
+});
+
+test('Provider Admin can inspect support coverage and CompOff without cross-workflow API failures', async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith('operations'), 'Provider workforce setup runs in Operations projects only.');
+  await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
+  await requireProviderContext(page);
+  const apiFailures: string[] = [];
+  page.on('response', response => {
+    if (response.url().includes('/api/v1/') && response.status() >= 400) apiFailures.push(`${response.status()} ${new URL(response.url()).pathname}`);
+  });
+
+  await navigateHash(page, 'configuration/support-coverage');
+  await expect(page.getByRole('heading', { name: 'Support coverage allocation', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Allocate support coverage', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Team member')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save coverage draft', exact: true })).toBeDisabled();
+  await capture(page, testInfo, 'provider-support-coverage');
+
+  await navigateHash(page, 'configuration/extra-day-credits');
+  await expect(page.getByRole('heading', { name: 'Extra day & CompOff ledger', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Submit completed work for CompOff', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Completed work session')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'CompOff review ledger', exact: true })).toBeVisible();
+  await capture(page, testInfo, 'provider-compoff-ledger');
+
+  expect(apiFailures).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await capture(page, testInfo, 'provider-compoff-ledger-mobile');
   await localSignOut(page);
 });
 

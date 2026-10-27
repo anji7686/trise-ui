@@ -185,8 +185,8 @@ test('Business workspace exposes registrations, brands, secure documents and his
 test('Platform provider compliance workspace scopes licences and territories to the selected provider', async ({ page, evidence }) => {
   await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
   await page.goto('/#platform/providers');
-  await page.locator('summary[aria-label^="Actions for"]').first().click();
-  await page.getByRole('button', { name: 'View details', exact: true }).click();
+  const firstProviderRow = page.locator('table tbody tr').first();
+  await firstProviderRow.getByRole('button', { name: 'View details', exact: true }).click();
   await expect(page).toHaveURL(/#platform\/providers\/[^/?]+/);
   const providerId = page.url().match(/#platform\/providers\/([^/?]+)/)?.[1];
   expect(providerId).toBeTruthy();
@@ -202,13 +202,14 @@ test('Provider detail keeps administrator access and subscription as separate co
   await localSignIn(page, configuredAccount('GLOBAL_ADMIN'));
   await page.goto('/#platform/providers');
   await page.locator('summary[aria-label^="Actions for"]').first().click();
-  await page.getByRole('button', { name: 'View details', exact: true }).click();
+  const firstProviderRow = page.locator('table tbody tr').first();
+  await firstProviderRow.getByRole('button', { name: 'View details', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Team & Access', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Subscription & Billing', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Team & Access', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Administrators & access/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Subscription & Billing', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Subscription/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Available published plans', exact: true })).toBeVisible();
   expect(evidence.exceptions).toEqual([]);
   expect(evidence.responses.filter(response => response.status >= 500)).toEqual([]);
 });

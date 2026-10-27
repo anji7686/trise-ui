@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, PageHeader } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
@@ -825,7 +826,7 @@ function MarketingLeadDetail({
       operationsData.leadActivities(providerId, id),
       canOpenQuotationWorkspace
         ? operationsData
-            .quotations(providerId, { leadId: id, limit: 25 })
+            .quotations(providerId, { leadId: id, limit: DEFAULT_PAGE_SIZE })
             .catch(() => ({ data: [] }))
         : Promise.resolve({ data: [] }),
       operationsData
@@ -2071,7 +2072,7 @@ function MarketingLeadRegister({
     after?: string;
     before?: string;
   }>({});
-  const [pageLimit, setPageLimit] = useState(15);
+  const pageLimit = DEFAULT_PAGE_SIZE;
 
   useEffect(() => {
     let active = true;
@@ -2471,24 +2472,6 @@ function MarketingLeadRegister({
                 </option>
               ))}
             </select>
-            <label className="page-size-control">
-              Rows per page
-              <select
-                aria-label="Lead rows per page"
-                value={pageLimit}
-                onChange={(event) => {
-                  setPageLimit(Number(event.target.value));
-                  setPageCursor({});
-                  setSelected(null);
-                  automaticLeadSelection.current = true;
-                }}
-              >
-                <option value="15">15</option>
-                <option value="30">30</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </label>
           </div>
           {filteredLeads.length === 0 ? (
             <p className="notice">

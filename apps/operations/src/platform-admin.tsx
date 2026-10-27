@@ -5,11 +5,12 @@ import { useSubscriptionActions } from './use-subscription-actions';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Button, DetailSection, FilterToolbar, PageHeader, StatePanel } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
-import { operationsData, type BusinessAuditEvent, type BusinessOperation, type BusinessSummary, type PlatformOverview, type PlatformPlan, type PlatformProviderAdminInvitationAttributes, type PlatformProviderAttributes, type PlatformProviderIdentityDomain, type PlatformProviderMemberAttributes, type PlatformSubscription, type PlatformSubscriptionRequest, type PlatformUsage, type ProviderBusinessProfile, type ProviderDocument, type ProviderLifecycleApproval, type ProviderOnboardingContactAttributes, type ProviderOfficeLocationAttributes, type ProviderOperation, type ProviderVerificationReview, type Resource } from './data';
+import { DEFAULT_PAGE_SIZE, operationsData, type BusinessAuditEvent, type BusinessOperation, type BusinessSummary, type PlatformOverview, type PlatformPlan, type PlatformProviderAdminInvitationAttributes, type PlatformProviderAttributes, type PlatformProviderIdentityDomain, type PlatformProviderMemberAttributes, type PlatformSubscription, type PlatformSubscriptionRequest, type PlatformUsage, type ProviderBusinessProfile, type ProviderDocument, type ProviderLifecycleApproval, type ProviderOnboardingContactAttributes, type ProviderOfficeLocationAttributes, type ProviderOperation, type ProviderVerificationReview, type Resource } from './data';
 import { SvgIcon } from './icons';
 import { normalizePlatformHash, parsePlatformProviderRoute, providerOnboardingRoute } from './platform-provider-routing';
-import { stableSubmissionKey, validateOnboardingContact, validateOnboardingLocation, type FieldErrors } from './provider-onboarding-validation';
+import { normalizeIndianMobile, stableSubmissionKey, validateOnboardingContact, validateOnboardingLocation, type FieldErrors } from './provider-onboarding-validation';
 import { ProviderBusinessProfileReadDetails, ProviderLogoEditor } from './provider-business-profile';
+import { ProviderSetupWorkbook } from './provider-setup-workbook';
 import { ProviderDocumentsStep } from './provider-documents';
 import { activationBlocker, lifecycleActions, type ProviderLifecycleAction } from './provider-lifecycle';
 import { PlatformPlansPage } from './platform-plans';
@@ -187,7 +188,7 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
     const key = stableSubmissionKey(contactKey.current, () => crypto.randomUUID());
     contactKey.current = key;
     try {
-      const body = { ...contact, display_name: contact.display_name.trim(), email: contact.email.trim(), mobile: contact.mobile.trim(), landline: contact.landline.trim() };
+      const body = { ...contact, display_name: contact.display_name.trim(), email: contact.email.trim(), mobile: normalizeIndianMobile(contact.mobile)!, landline: contact.landline.trim() };
       const saved = editingContact ? await operationsData.updatePlatformOnboardingContact(providerId, editingContact.attributes.contact_id, { ...body, expected_revision: editingContact.attributes.revision }, key) : await operationsData.createPlatformOnboardingContact(providerId, body, key);
       setContacts((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       contactKey.current = null;
@@ -235,7 +236,7 @@ function ProviderContactsLocationsStep({ providerId, providerName, tab, capabili
         <label>Designation<select disabled={Boolean(busy) || ending.busy || paging} value={contact.designation} onChange={(event) => changeContact('designation', event.target.value)}><option value="PRIMARY">Primary</option><option value="SECONDARY">Secondary</option></select></label>
         <label>Responsibility<select disabled={Boolean(busy) || ending.busy || paging} value={contact.responsibility_type} onChange={(event) => changeContact('responsibility_type', event.target.value)}><option value="BUSINESS_CONTACT">Business contact</option><option value="CUSTOMER_SUPPORT">Customer support</option></select></label>
         <label>Landline <span className="platform-muted">(optional)</span><input disabled={Boolean(busy) || ending.busy || paging} inputMode="tel" aria-invalid={Boolean(contactErrors.landline)} value={contact.landline} onChange={(event) => changeContact('landline', event.target.value)} /><FieldError message={contactErrors.landline} /></label>
-        <label>Mobile <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required inputMode="tel" placeholder="+919876543210" aria-invalid={Boolean(contactErrors.mobile)} value={contact.mobile} onChange={(event) => changeContact('mobile', event.target.value)} /><FieldError message={contactErrors.mobile} /></label>
+        <label>Mobile <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required inputMode="tel" placeholder="9876543210" aria-invalid={Boolean(contactErrors.mobile)} value={contact.mobile} onChange={(event) => changeContact('mobile', event.target.value)} /><FieldError message={contactErrors.mobile} />{!contactErrors.mobile && <small>10-digit Indian number; +91 is added automatically.</small>}</label>
         <label>Email <span aria-hidden="true">*</span><input disabled={Boolean(busy) || ending.busy || paging} required type="email" aria-invalid={Boolean(contactErrors.email)} value={contact.email} onChange={(event) => changeContact('email', event.target.value)} /><FieldError message={contactErrors.email} /></label>
         {!editingContact && capabilities.includes('PLATFORM_PROVIDER_ADMIN_INVITE') && <label className="platform-checkbox-field"><input type="checkbox" checked={contact.invite_as_provider_admin} disabled={Boolean(busy) || ending.busy || paging} onChange={(event) => setContact((current) => ({ ...current, invite_as_provider_admin: event.target.checked }))} /> Invite as Provider Administrator (requires an existing verified identity)</label>}
         <div className="platform-form-actions"><Button type="submit" busy={busy === 'contact'} disabled={Boolean(busy) || ending.busy || paging}><SvgIcon name="plus" size={16} /> {editingContact ? 'Save contact revision' : 'Add contact'}</Button><Button type="button" variant="secondary" disabled={Boolean(busy) || ending.busy} onClick={() => { if (confirmOnboardingNavigation()) { setContactDialog(false); setEditingContact(null); } }}>Cancel</Button></div>
@@ -635,14 +636,14 @@ function ProviderBusinessSections({ section = 'all', business, documents, review
   return <VerificationReviewList reviews={reviews} canDecide={canDecide} onDecision={onDecision} />;
 }
 
-type ProviderDetailTab = 'overview' | 'business' | 'operations' | 'subscription' | 'documents' | 'access' | 'reviews' | 'audit';
+type ProviderDetailTab = 'overview' | 'business' | 'operations' | 'setup-workbook' | 'subscription' | 'documents' | 'access' | 'reviews' | 'audit';
 function PlatformProviderAuditHistory({ events = [], partyName }: { events?: NonNullable<PlatformProviderAttributes['audit_history']>; partyName: string }) {
   const [page, setPage] = useState(0);
   const [from, setFrom] = useState('');
   const [through, setThrough] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [actorFilter, setActorFilter] = useState('');
-  const pageSize = 10;
+  const pageSize = DEFAULT_PAGE_SIZE;
   const filteredEvents = [...events].sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .filter((event) => {
       const time = Date.parse(event.occurred_at);
@@ -683,7 +684,7 @@ type ProviderOnboardingProgressData = {
 };
 
 const providerTabs: { id: ProviderDetailTab; label: string }[] = [
-  { id: 'overview', label: 'Overview' }, { id: 'business', label: 'Business details' }, { id: 'operations', label: 'Operations' }, { id: 'subscription', label: 'Subscription & Billing' },
+  { id: 'overview', label: 'Overview' }, { id: 'business', label: 'Business details' }, { id: 'operations', label: 'Operations' }, { id: 'setup-workbook', label: 'Setup workbook' }, { id: 'subscription', label: 'Subscription & Billing' },
   { id: 'documents', label: 'Documents' }, { id: 'access', label: 'Team & Access' }, { id: 'reviews', label: 'Reviews & Approvals' }, { id: 'audit', label: 'Activity History' },
 ];
 const validProviderTab = (value: string | null): ProviderDetailTab => {
@@ -809,9 +810,9 @@ function ProviderOperationsPanel({ providerId, providerStatus, verificationStatu
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const hasOperationWrite = capabilities.includes('PLATFORM_PROVIDER_PROFILE_WRITE') || capabilities.includes('PLATFORM_PROVIDER_BUSINESS_WRITE');
-  const initialActiveAssignment = providerStatus === 'ACTIVE' && operation === null;
-  const canChange = hasOperationWrite && (initialActiveAssignment || (['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus !== undefined && verificationStatus !== 'PENDING_REVIEW'));
+  const hasOperationWrite = capabilities.includes('PLATFORM_PROVIDER_PROFILE_WRITE');
+  const initialAssignment = operation === null && ['ACTIVE', 'PENDING', 'PENDING_ACTIVATION'].includes(providerStatus);
+  const canChange = hasOperationWrite && (initialAssignment || (['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus !== undefined && verificationStatus !== 'PENDING_REVIEW'));
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -841,10 +842,10 @@ function ProviderOperationsPanel({ providerId, providerStatus, verificationStatu
   if (error && !operation) return <DetailSection title="Business Operation"><StatePanel title="Business Operation unavailable"><span>{error}</span><Button onClick={() => void load()}>Retry</Button></StatePanel></DetailSection>;
   return <DetailSection title="Business Operation" description="One provider account has one operation, its own subscription lifecycle and its own authorized workspace. Business grouping does not grant access to sibling accounts.">
     {error && <p className="platform-field-error" role="alert">{error}</p>}
-    {operation && current ? <div className="provider-operation-detail-card"><dl className="platform-definition-list"><dt>Business Operation</dt><dd><strong>{current.name}</strong><small>{current.code}</small></dd><dt>Industry</dt><dd>{industry ? humanStatus(industry) : 'Not available'}</dd><dt>Operation status</dt><dd><Status>{humanStatus(operation.attributes.status)}</Status></dd><dt>Subscription</dt><dd>{!capabilities.includes('PLATFORM_SUBSCRIPTION_READ') ? 'Not available to this role' : subscriptionError ? 'Unavailable' : subscription ? humanStatus(subscription.attributes.status) : 'No current subscription'}</dd><dt>Workspace readiness</dt><dd>Not available from the current API</dd></dl></div> : <AdminEmptyState title="No Business Operation assigned" description="Select one Business Operation before this provider account is submitted or activated." />}
+    {operation && current ? <div className="provider-operation-detail-card"><h3>Linked Business Operation</h3><dl className="platform-definition-list"><dt>Business Operation</dt><dd><strong>{current.name}</strong><small>{current.code}</small></dd><dt>Industry</dt><dd>{industry ? humanStatus(industry) : 'Not available'}</dd><dt>Operation status</dt><dd><Status>{humanStatus(operation.attributes.status)}</Status></dd><dt>Subscription</dt><dd>{!capabilities.includes('PLATFORM_SUBSCRIPTION_READ') ? 'Not available to this role' : subscriptionError ? 'Unavailable' : subscription ? humanStatus(subscription.attributes.status) : 'No current subscription'}</dd><dt>Workspace readiness</dt><dd>Not available from the current API</dd></dl></div> : <AdminEmptyState title="No Business Operation assigned" description="Select one Business Operation before this provider account is submitted or activated." />}
     {editing && canChange && <div className="provider-operation-edit"><SearchableSelect label="Business Operation" searchLabel="Search Business Operations" search={search} onSearch={setSearch} value={selection} onChange={setSelection} options={options} placeholder="Select one Business Operation" required /><div className="platform-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => { setEditing(false); setSelection(current?.id || ''); }}>Cancel</Button><Button type="button" disabled={busy || !selection || selection === current?.id} onClick={() => setConfirmOpen(true)}>Save Business Operation</Button></div></div>}
     {!editing && canChange && <div className="provider-operation-actions"><Button variant="secondary" onClick={() => setEditing(true)}>Change Business Operation</Button></div>}
-    {initialActiveAssignment && canChange && <p className="platform-muted">This active provider has never had an operation assigned. Assigning its first operation repairs setup; changing an existing operation remains locked after activation.</p>}
+    {initialAssignment && canChange && <p className="platform-muted">This provider has no linked Business Operation yet. Select one from the active, published operations above to complete setup.</p>}
     {!canChange && !['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && <p className="platform-muted">Business Operation changes are locked after provider activation. A controlled transition workflow is not currently available.</p>}
     {!canChange && ['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus === 'PENDING_REVIEW' && <p className="platform-muted">Business Operation changes are unavailable while the business profile is pending review.</p>}
     {!canChange && ['PENDING', 'PENDING_ACTIVATION'].includes(providerStatus) && verificationStatus === undefined && <p className="platform-muted">Business Operation changes are unavailable until the business review state can be verified.</p>}
@@ -1072,6 +1073,7 @@ function ProviderDetailView({ selected, business, documents, reviews, capabiliti
       {tab === 'business' && (sectionErrors.business ? <StatePanel title="Business profile unavailable"><span>{sectionErrors.business}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : <ProviderBusinessSections section="business" business={business} documents={documents} reviews={reviews} canDecide={capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE')} canTransfer={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} onDecision={onDecision} />)}
       {tab === 'subscription' && <PlatformProviderSubscription key={selected.id} providerId={selected.id} capabilities={capabilities} />}
       {tab === 'operations' && <ProviderOperationsPanel providerId={selected.id} providerStatus={selected.attributes.status} verificationStatus={business?.verification_status} capabilities={capabilities} subscription={detailData.subscription} subscriptionError={detailData.errors.subscription} />}
+      {tab === 'setup-workbook' && (sectionErrors.business ? <StatePanel title="Setup workbook unavailable"><span>{sectionErrors.business}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : business ? <ProviderSetupWorkbook providerId={selected.id} providerStatus={selected.attributes.status} verificationStatus={business.verification_status} operationCode={business.operation_code || ''} canChangeOperation={capabilities.includes('PLATFORM_PROVIDER_PROFILE_WRITE')} revision={business.revision} canDownload={capabilities.includes('PLATFORM_PROVIDER_READ') || capabilities.some((capability) => ['PLATFORM_PROVIDER_PROFILE_WRITE', 'PLATFORM_PROVIDER_BUSINESS_WRITE', 'PLATFORM_PROVIDER_REGISTER', 'PLATFORM_PROVIDER_ONBOARD'].includes(capability))} canManage={capabilities.some((capability) => ['PLATFORM_PROVIDER_PROFILE_WRITE', 'PLATFORM_PROVIDER_BUSINESS_WRITE', 'PLATFORM_PROVIDER_REGISTER', 'PLATFORM_PROVIDER_ONBOARD'].includes(capability))} platformMode platformContacts={(detailData.contacts || undefined) as Resource<ProviderOnboardingContactAttributes>[] | undefined} onConfigureOperation={() => selectTab('operations')} onImported={() => window.location.reload()} /> : <StatePanel title="Business profile loading">The current provider profile revision is being retrieved.</StatePanel>)}
       {tab === 'documents' && (sectionErrors.documents ? <StatePanel title="Documents unavailable"><span>{sectionErrors.documents}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : <ProviderBusinessSections section="documents" business={business} documents={documents} reviews={reviews} canDecide={capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE')} canTransfer={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} onDecision={onDecision} />)}
       {tab === 'reviews' && (sectionErrors.reviews ? <StatePanel title="Reviews unavailable"><span>{sectionErrors.reviews}</span><Button onClick={() => window.location.reload()}>Retry</Button></StatePanel> : <ProviderBusinessSections section="reviews" business={business} documents={documents} reviews={reviews} canDecide={capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE')} canTransfer={capabilities.includes('PLATFORM_PROVIDER_DOCUMENTS')} onDecision={onDecision} />)}
       {tab === 'access' && <ProviderAdministratorsPanel providerId={selected.id} businessId={selected.attributes.business_id} capabilities={capabilities} />}

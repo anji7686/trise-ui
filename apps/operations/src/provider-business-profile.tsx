@@ -8,14 +8,15 @@ import { SearchableSelect } from './searchable-select';
 import { useIndiaGeography } from './use-india-geography';
 import { formatIndiaDateTime } from './subscription-support';
 import { ProviderDocumentsStep } from './provider-documents';
+import { ProviderSetupWorkbook } from './provider-setup-workbook';
 import { ProviderContactLocationDetails } from './provider-contact-location-details';
 import { ProviderSubscriptionPage } from './provider-subscription';
 import './operations-pages.css';
 
 type Review = Resource<ProviderVerificationReviewAttributes>;
 type ProfileFields = ProviderBusinessProfile['profile'];
-type BusinessProfileTab = 'overview' | 'business' | 'contacts' | 'assets' | 'subscription';
-const emptyProfile: ProfileFields = { legal_name: '', registration_number: '', tax_identifier: '', gstin: '', pan_number: '', address: {}, contact_point_ids: [] };
+type BusinessProfileTab = 'overview' | 'business' | 'contacts' | 'assets' | 'setup' | 'subscription';
+const emptyProfile: ProfileFields = { legal_name: '', registration_number: '', tax_identifier: '', gstin: '', pan_number: '', address: {}, contact_point_ids: [], operation_profile_details: {} };
 const errorText = (error: unknown) => (error as { message?: string })?.message || 'The business profile request could not be completed.';
 const formatDate = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not available';
 
@@ -271,6 +272,7 @@ export function ProviderBusinessProfileReadDetails({ profile }: { profile: Provi
     <DetailSection title="Business details" description="Registered identity and provider account information."><dl className="platform-definition-list provider-profile-overview-list"><dt>Legal name</dt><dd>{profile.profile.legal_name || 'Not supplied'}</dd><dt>Registration number</dt><dd>{profile.profile.registration_number || 'Not supplied'}</dd></dl></DetailSection>
     <DetailSection title="Business address" description="The canonical India address associated with this provider profile."><dl className="platform-definition-list provider-profile-overview-list"><dt>Address line</dt><dd>{address.address_line || 'Not supplied'}</dd><dt>Locality / area</dt><dd>{address.locality || 'Not supplied'}</dd><dt>State / UT</dt><dd>{address.state || 'Not supplied'}</dd><dt>District</dt><dd>{address.district || 'Not supplied'}</dd><dt>City</dt><dd>{address.city || 'Not supplied'}</dd><dt>PIN code</dt><dd>{address.pin_code || 'Not supplied'}</dd><dt>Landmark</dt><dd>{address.landmark || 'Not supplied'}</dd><dt>Country</dt><dd>{address.country || 'India'}</dd></dl></DetailSection>
     <DetailSection title="Indian tax registration" description="Indian tax identity values saved with this provider revision."><dl className="platform-definition-list provider-profile-overview-list"><dt>GSTIN</dt><dd>{profile.profile.gstin || 'Not supplied'}</dd><dt>PAN</dt><dd>{profile.profile.pan_number || 'Not supplied'}</dd><dt>Other tax identifier</dt><dd>{profile.profile.tax_identifier || 'Not supplied'}</dd></dl></DetailSection>
+    {profile.operation_profile_policy && <DetailSection title="Elevator & lift service profile" description="Operation-specific service coverage and supported equipment."><dl className="platform-definition-list provider-profile-overview-list">{Object.entries(profile.operation_profile_policy.fields).map(([key, field]) => <div key={key}><dt>{field.label}</dt><dd>{(profile.profile.operation_profile_details?.[key] || []).join(', ') || 'Not supplied'}</dd></div>)}</dl></DetailSection>}
   </div>;
 }
 
@@ -281,7 +283,7 @@ function ProviderBusinessProfileReadView({ profile, onUpdate }: { profile: Provi
   </div>;
 }
 
-export function ProviderBusinessProfilePage({ providerId, canViewSubscription = false, initialTab = 'overview' }: { providerId: string; canViewSubscription?: boolean; initialTab?: BusinessProfileTab }) {
+export function ProviderBusinessProfilePage({ providerId, canViewSubscription = false, canManageSetup = false, initialTab = 'overview' }: { providerId: string; canViewSubscription?: boolean; canManageSetup?: boolean; initialTab?: BusinessProfileTab }) {
   const [profile, setProfile] = useState<ProviderBusinessProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [documents, setDocuments] = useState<ProviderDocument[]>([]);
@@ -308,6 +310,16 @@ export function ProviderBusinessProfilePage({ providerId, canViewSubscription = 
   useEffect(() => { if (canViewSubscription && initialTab === 'subscription') setTab('subscription'); }, [canViewSubscription, initialTab]);
 
   function change(key: keyof ProfileFields, value: string) { setDirty(true); setFields((current) => ({ ...current, [key]: value })); }
+  function changeOperationSelection(key: string, option: string, checked: boolean) {
+    setDirty(true);
+    setFields((current) => {
+      const selections = { ...(current.operation_profile_details || {}) };
+      const values = new Set(selections[key] || []);
+      if (checked) values.add(option); else values.delete(option);
+      selections[key] = [...values];
+      return { ...current, operation_profile_details: selections };
+    });
+  }
   function changeAddress(key: string, value: string) { setDirty(true); setFields((current) => ({ ...current, address: { ...(current.address || {}), [key]: value } })); }
   function chooseAddressReference(key: 'state' | 'district' | 'city', id: string) {
     const options = key === 'state' ? geography.stateOptions : key === 'district' ? geography.districtOptions : geography.cityOptions;
@@ -316,7 +328,7 @@ export function ProviderBusinessProfilePage({ providerId, canViewSubscription = 
     if (key === 'state') { geography.setDistrictSearch(''); geography.setCitySearch(''); }
     if (key === 'district') geography.setCitySearch('');
   }
-  function validate() { if (!fields.legal_name?.trim()) return 'Legal name is required.'; if (!fields.address?.state?.trim()) return 'State is required.'; if (!fields.address?.district?.trim()) return 'District is required.'; if (!fields.address?.city?.trim()) return 'City is required.'; if (!/^[1-9]\d{5}$/.test(fields.address?.pin_code?.trim() || '')) return 'Enter a valid 6-digit Indian PIN code.'; return ''; }
+  function validate() { if (!fields.legal_name?.trim()) return 'Legal name is required.'; if (!fields.address?.state?.trim()) return 'State is required.'; if (!fields.address?.district?.trim()) return 'District is required.'; if (!fields.address?.city?.trim()) return 'City is required.'; if (!/^[1-9]\d{5}$/.test(fields.address?.pin_code?.trim() || '')) return 'Enter a valid 6-digit Indian PIN code.'; if (profile?.operation_profile_policy && Object.entries(profile.operation_profile_policy.fields).some(([key, field]) => field.required && !(fields.operation_profile_details?.[key] || []).length)) return 'Complete the required operation-specific service profile selections.'; return ''; }
   function draftPayload() {
     const address = { ...(fields.address || {}), country: 'India', country_code: 'IN', ...(geography.stateCode ? { state_code: geography.stateCode } : {}), ...(geography.districtCode ? { district_code: geography.districtCode } : {}), ...(geography.cityCode ? { city_code: geography.cityCode } : {}) };
     return { business_profile: { ...fields, address } };
@@ -347,7 +359,7 @@ export function ProviderBusinessProfilePage({ providerId, canViewSubscription = 
   ]).filter((item) => item.at).sort((left, right) => new Date(right.at).getTime() - new Date(left.at).getTime());
   const latestActivity = reviewActivities[0] || (profile.verified_at ? { at: profile.verified_at, by: 'Platform reviewer', event: 'Profile verified' } : profile.submitted_at ? { at: profile.submitted_at, by: 'Provider administrator', event: 'Profile submitted' } : { at: '', by: 'Not available', event: 'No review activity yet' });
   return <section className="platform-page provider-business-profile-page">
-    <PageHeader eyebrow="Provider administration" title="Business profile" description="Manage provider identity, verification records, subscription terms, and related activity." action={tab !== 'subscription' ? <Button onClick={() => void submit()} disabled={pendingReview && !dirty || submitting || saving}>{submitting ? 'Saving and submitting…' : pendingReview && !dirty ? 'Awaiting review' : 'Submit for review'}</Button> : undefined} />
+    <PageHeader eyebrow="Provider administration" title="Business profile" description="Manage provider identity, verification records, subscription terms, and related activity." action={['overview', 'business'].includes(tab) ? <Button onClick={() => void submit()} disabled={pendingReview && !dirty || submitting || saving}>{submitting ? 'Saving and submitting…' : pendingReview && !dirty ? 'Awaiting review' : 'Submit for review'}</Button> : undefined} />
     <div className="provider-profile-identity-banner">
       <div className="provider-profile-identity-main"><span className="provider-profile-identity-icon" aria-hidden="true"><SvgIcon name="building" size={22} /></span><div><span className="platform-eyebrow">Provider identity</span><h2>{fields.legal_name || 'Complete business identity'}</h2><p>{fields.address?.city && fields.address?.state ? `${fields.address.city}, ${fields.address.state}` : 'India provider account · Address not completed'}</p></div></div>
       <div className="provider-profile-identity-status"><Status>{profile.verification_status}</Status><small>Profile revision {profile.revision}</small></div>
@@ -358,6 +370,7 @@ export function ProviderBusinessProfilePage({ providerId, canViewSubscription = 
       <button type="button" role="tab" aria-selected={tab === 'business'} className={tab === 'business' ? 'active' : ''} onClick={() => setTab('business')}><SvgIcon name="building" size={16} /><span>Business details</span></button>
       <button type="button" role="tab" aria-selected={tab === 'contacts'} className={tab === 'contacts' ? 'active' : ''} onClick={() => setTab('contacts')}><SvgIcon name="users" size={16} /><span>Contacts &amp; locations</span></button>
       <button type="button" role="tab" aria-selected={tab === 'assets'} className={tab === 'assets' ? 'active' : ''} onClick={() => setTab('assets')}><SvgIcon name="grid" size={16} /><span>Assets &amp; documents</span><small>{documents.length}</small></button>
+      <button type="button" role="tab" aria-selected={tab === 'setup'} className={tab === 'setup' ? 'active' : ''} onClick={() => setTab('setup')}><SvgIcon name="clipboard" size={16} /><span>Setup workbook</span></button>
       {canViewSubscription && <button type="button" role="tab" aria-selected={tab === 'subscription'} className={tab === 'subscription' ? 'active' : ''} onClick={() => setTab('subscription')}><SvgIcon name="clipboard" size={16} /><span>Subscription &amp; activity</span></button>}
     </div>
     {tab === 'overview' && <><ProviderLogoEditor providerId={providerId} /><div className="provider-profile-overview">
@@ -368,10 +381,12 @@ export function ProviderBusinessProfilePage({ providerId, canViewSubscription = 
       <div className="platform-form-section"><h2>Business details</h2><p className="platform-muted">Use the registered or operating information your platform reviewer can verify.</p><label className="admin-form-field--full">Legal name <span aria-hidden="true">*</span><input value={fields.legal_name || ''} onChange={(event) => change('legal_name', event.target.value)} maxLength={200} disabled={locked} autoComplete="organization" /></label><label>Registration number <span className="platform-muted">(optional)</span><input value={fields.registration_number || ''} onChange={(event) => change('registration_number', event.target.value)} maxLength={100} disabled={locked} /></label></div>
       <div className="platform-form-section"><h2>Business address</h2><p className="platform-form-note">India-only address. State/UT, district, and city use canonical platform reference data. Address lines, locality, landmark, and PIN remain provider-entered because they describe the exact premises.</p><div className="platform-form-grid"><label className="admin-form-field--full">Address line<input value={String(fields.address?.address_line || '')} onChange={(event) => changeAddress('address_line', event.target.value)} inputMode="text" maxLength={200} disabled={locked} /></label><label>Locality / area<input value={String(fields.address?.locality || '')} onChange={(event) => changeAddress('locality', event.target.value)} maxLength={200} disabled={locked} /></label><SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={geography.stateSearch} onSearch={geography.setStateSearch} value={geography.stateCode} onChange={(id) => chooseAddressReference('state', id)} options={geography.stateOptions} placeholder="Select state / UT" required disabled={locked} /><SearchableSelect label="District" searchLabel="Search districts in selected state" search={geography.districtSearch} onSearch={geography.setDistrictSearch} value={geography.districtCode} onChange={(id) => chooseAddressReference('district', id)} options={geography.districtOptions} placeholder="Select district" required disabled={!geography.stateCode || locked} /><SearchableSelect label="City" searchLabel="Search cities in selected district" onSearch={geography.setCitySearch} search={geography.citySearch} value={geography.cityCode} onChange={(id) => chooseAddressReference('city', id)} options={geography.cityOptions} placeholder="Select city" required disabled={!geography.districtCode || locked} /><label>PIN code <span aria-hidden="true">*</span><input value={String(fields.address?.pin_code || '')} onChange={(event) => changeAddress('pin_code', event.target.value)} inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} disabled={locked} /></label><label>Landmark<input value={String(fields.address?.landmark || '')} onChange={(event) => changeAddress('landmark', event.target.value)} maxLength={200} disabled={locked} /></label><label>Country<select value="IN" disabled><option value="IN">India</option></select></label></div></div>
       <div className="platform-form-section"><h2>Indian tax registration</h2><p className="platform-muted">Capture GSTIN, PAN, and any other tax identifier when they apply to this provider. Supporting documents are reviewed as separate private document versions.</p><label>GSTIN <span className="platform-muted">(when applicable)</span><input value={fields.gstin || ''} onChange={(event) => change('gstin', event.target.value.toUpperCase())} maxLength={15} pattern="[0-9A-Z]{15}" disabled={locked} /></label><label>PAN <span className="platform-muted">(when applicable)</span><input value={fields.pan_number || ''} onChange={(event) => change('pan_number', event.target.value.toUpperCase())} maxLength={10} pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" disabled={locked} /></label><label>Other tax identifier <span className="platform-muted">(optional)</span><input value={fields.tax_identifier || ''} onChange={(event) => change('tax_identifier', event.target.value)} maxLength={100} disabled={locked} /></label></div>
+      {profile.operation_profile_policy && <div className="platform-form-section provider-elevator-profile-fields"><h2>Elevator &amp; lift service profile</h2><p className="platform-muted">Select the industries, equipment, and services your provider supports. These choices are saved with the provider profile and required fields are validated on submission.</p>{Object.entries(profile.operation_profile_policy.fields).map(([key, field]) => <fieldset key={key}><legend>{field.label} {field.required && <span aria-hidden="true">*</span>}</legend><div className="provider-elevator-profile-options">{field.options.map((option) => <label key={option}><input type="checkbox" checked={(fields.operation_profile_details?.[key] || []).includes(option)} onChange={(event) => changeOperationSelection(key, option, event.target.checked)} disabled={locked} />{option}</label>)}</div></fieldset>)}</div>}
       <div className="platform-form-actions"><Button type="button" variant="quiet" onClick={() => void load()} disabled={saving || submitting}>Reload current revision</Button><Button type="submit" disabled={locked || saving || submitting}>{saving ? 'Saving…' : 'Save business profile'}</Button></div>
     </form> : <ProviderBusinessProfileReadView profile={profile} onUpdate={() => { setError(''); setMessage(''); setBusinessEditing(true); }} />)}
     {tab === 'contacts' && <ProviderContactLocationDetails providerId={providerId} />}
     {tab === 'assets' && <><ProviderAssetGallery providerId={providerId} documents={documents} reviews={reviews} documentSubmitting={documentSubmitting} onSubmitDocument={(document) => void submitDocument(document)} /><DetailSection title="Upload provider documents" description="Provider administrators can add private business-verification evidence. Files are validated before upload, versioned, and kept provider-scoped."><ProviderDocumentsStep providerId={providerId} scope="provider" canUpload showUploadHeading={false} showDocumentList={false} onChanged={() => void load()} /></DetailSection></>}
+    {tab === 'setup' && <ProviderSetupWorkbook providerId={providerId} operationCode={profile.operation_code || ''} revision={profile.revision} canManage={canManageSetup} onImported={load} />}
     {tab === 'subscription' && canViewSubscription && <ProviderSubscriptionPage providerId={providerId} embedded />}
   </section>;
 }

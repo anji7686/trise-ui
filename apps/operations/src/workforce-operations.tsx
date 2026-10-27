@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, FilterToolbar, PageHeader } from "@trise/ui";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
@@ -22,7 +23,7 @@ const label = (row: GenericAttributes) =>
 
 export function WorkforceOperations({ providerId, canManageWorkforce = false, canManageAccess = false, canReviewLeave = false }: { providerId: string; canManageWorkforce?: boolean; canManageAccess?: boolean; canReviewLeave?: boolean }) {
   const [tab, setTab] = useState<"team" | "availability" | "skills" | "leave">("team");
-  const [pageSize, setPageSize] = useState(10);
+  const pageSize = DEFAULT_PAGE_SIZE;
   const [agents, setAgents] = useState<Collection<GenericAttributes>>({
     data: [],
   });
@@ -488,7 +489,6 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
                 <option value="SUSPENDED">Suspended</option>
               </select>
             </label>
-            <label>Rows per page<select aria-label="Workforce rows per page" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setAgentCursor({}); }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label>
           </FilterToolbar>
           {agents.data.map((agent) => (
             <button

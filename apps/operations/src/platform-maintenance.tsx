@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, DetailSection, StatePanel } from '@trise/ui';
-import { operationsData, type Resource } from './data';
+import { operationsData, PLATFORM_AVAILABILITY_CHANGED_EVENT, type Resource } from './data';
 import { AdminPageHeader } from './platform-admin-ui';
 import { OperationsDialog } from './operations-dialog';
 import { OperationsStatus as Status } from './operations-status';
@@ -34,6 +34,7 @@ const indiaDateTimeInput = (value = new Date()) => {
 const defaultMaintenanceStart = () => indiaDateTimeInput(new Date(Date.now() + 60_000));
 const indiaDateTimeTimestamp = (value: string) => `${value}:00+05:30`;
 const indiaDateTimeFromServer = (value?: string | null) => value ? indiaDateTimeInput(new Date(value)) : '';
+const notifyAvailabilityChanged = () => window.dispatchEvent(new Event(PLATFORM_AVAILABILITY_CHANGED_EVENT));
 const modeDescriptions: Record<Mode, { title: string; description: string; impact: string }> = {
   FULL_PLATFORM: { title: 'Full platform maintenance', description: 'Temporarily blocks all authenticated write activities across the platform.', impact: 'Reads, login, notification viewing and Global Administrator recovery remain available. Existing records are not changed.' },
   NEW_ACTIVITY_INTAKE: { title: 'Pause new activity intake', description: 'Blocks new requests, bookings, leads, jobs, cases, quotations and subscription requests.', impact: 'Existing provider work and records can continue to be updated. No provider or operation status is suspended.' },
@@ -78,6 +79,7 @@ export function PlatformMaintenancePage({ capabilities = [] }: { capabilities?: 
     try {
       const response = await operationsData.activatePlatformMaintenance({ mode, reason: reason.trim(), scheduled_start_at: indiaDateTimeTimestamp(scheduledStartAt), scheduled_end_at: indiaDateTimeTimestamp(scheduledEndAt) }, crypto.randomUUID());
       setCurrent(response.data); setLatest(response.data); setReason(''); setScheduledStartAt(indiaDateTimeFromServer(response.data.attributes.starts_at) || indiaDateTimeInput()); setScheduledEndAt(indiaDateTimeFromServer(response.data.attributes.scheduled_end_at)); setMessage(response.data.attributes.status === 'SCHEDULED' ? 'Maintenance is scheduled. Service Provider administrators were notified.' : 'Maintenance is active. Service Provider administrators were notified.');
+      notifyAvailabilityChanged();
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
   }
@@ -107,6 +109,7 @@ export function PlatformMaintenancePage({ capabilities = [] }: { capabilities?: 
     try {
       const response = await operationsData.deactivatePlatformMaintenance({ expected_revision: current.attributes.revision, reason: reason.trim() }, crypto.randomUUID());
       setCurrent(null); setLatest(response.data); setReason(''); setScheduledStartAt(defaultMaintenanceStart()); setScheduledEndAt(''); setMessage('Maintenance ended. Normal platform activity is available again.');
+      notifyAvailabilityChanged();
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
   }
@@ -122,6 +125,7 @@ export function PlatformMaintenancePage({ capabilities = [] }: { capabilities?: 
     try {
       const response = await operationsData.updatePlatformMaintenanceWindow({ expected_revision: current.attributes.revision, scheduled_start_at: indiaDateTimeTimestamp(scheduledStartAt), scheduled_end_at: indiaDateTimeTimestamp(scheduledEndAt), reason: reason.trim() }, crypto.randomUUID());
       setCurrent(response.data); setLatest(response.data); setReason(''); setScheduledStartAt(indiaDateTimeFromServer(response.data.attributes.starts_at) || defaultMaintenanceStart()); setScheduledEndAt(indiaDateTimeFromServer(response.data.attributes.scheduled_end_at)); setMessage('The maintenance window was updated and recorded in the audit history.');
+      notifyAvailabilityChanged();
     } catch (cause) { setError(errorText(cause)); }
     finally { setBusy(false); }
   }

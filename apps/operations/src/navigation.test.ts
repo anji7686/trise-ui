@@ -181,4 +181,15 @@ describe('Operations capability navigation', () => {
     expect(providerRouteAllowed(session, 'provider-1', 'jobs', 'my-work')).toBe(false);
     expect(providerRouteAllowed({ ...session, providerCapabilities: [context(['jobs', 'my_work'])] }, 'provider-1', 'jobs', 'my-work')).toBe(true);
   });
+
+  it('allows CompOff self-service only to workforce users with attendance or work capabilities', () => {
+    expect(providerRouteAllowed({ providerCapabilities: [context(['extra_day_credits'])] }, 'provider-1', 'configuration', undefined, 'extra-day-credits')).toBe(true);
+    expect(providerRouteAllowed({ providerCapabilities: [context(['customers'])] }, 'provider-1', 'configuration', undefined, 'extra-day-credits')).toBe(false);
+  });
+
+  it('exposes the workforce setup routes only with their server-projected capabilities', () => {
+    expect(providerRouteAllowed({ providerCapabilities: [context(['support_coverage'])] }, 'provider-1', 'configuration', undefined, 'support-coverage')).toBe(true);
+    expect(providerRouteAllowed({ providerCapabilities: [context(['job_assign'])] }, 'provider-1', 'configuration', undefined, 'support-coverage')).toBe(false);
+    expect(providerRouteAllowed({ providerCapabilities: [context(['extra_day_credits'])] }, 'provider-1', 'configuration', undefined, 'extra-day-credits')).toBe(true);
+  });
 });

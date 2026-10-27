@@ -5,7 +5,7 @@ import { OperationsStatus as Status } from './operations-status';
 import { ProviderDocumentsStep } from './provider-documents';
 import { INDIA_COUNTRY_CODE } from './india-geography';
 import { IndiaStateSelect } from './use-india-geography';
-import { operationsData, type BusinessAuditEvent, type BusinessDocument, type BusinessHistoryVersion, type BusinessSummary, type PlatformBusinessDetails, type PlatformComplianceRequest, type PlatformComplianceRequirement, type PlatformProviderAttributes, type ProviderLicenceAuthorization, type Resource } from './data';
+import { DEFAULT_PAGE_SIZE, operationsData, type BusinessAuditEvent, type BusinessDocument, type BusinessHistoryVersion, type BusinessSummary, type PlatformBusinessDetails, type PlatformComplianceRequest, type PlatformComplianceRequirement, type PlatformProviderAttributes, type ProviderLicenceAuthorization, type Resource } from './data';
 import { displayName } from './human-readable';
 import { formatIndiaDate, indiaDateTimeToIso } from './subscription-support';
 
@@ -46,7 +46,7 @@ export function BusinessCompliancePage({ businessId, capabilities }: { businessI
   const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(window.location.hash.split('?')[1] || '').get('tab') as Tab) || 'overview');
   const [historyKind, setHistoryKind] = useState<'versions' | 'audit'>('versions');
   const [requestPage, setRequestPage] = useState(1); const [versionPage, setVersionPage] = useState(1); const [auditPage, setAuditPage] = useState(1);
-  const [requestMeta, setRequestMeta] = useState({ page: 1, per_page: 10, total: 0, total_pages: 1 }); const [versionMeta, setVersionMeta] = useState(requestMeta); const [auditMeta, setAuditMeta] = useState(requestMeta);
+  const [requestMeta, setRequestMeta] = useState({ page: 1, per_page: DEFAULT_PAGE_SIZE, total: 0, total_pages: 1 }); const [versionMeta, setVersionMeta] = useState(requestMeta); const [auditMeta, setAuditMeta] = useState(requestMeta);
   const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [dialog, setDialog] = useState<'legal' | 'gst' | 'request' | 'upload' | 'request-detail' | 'preview' | 'history-detail' | 'lifecycle' | null>(null); const [uploadClassification, setUploadClassification] = useState('BUSINESS_VERIFICATION');
   const [selectedRequest, setSelectedRequest] = useState<PlatformComplianceRequest | null>(null); const [selectedHistory, setSelectedHistory] = useState<BusinessHistoryVersion | BusinessAuditEvent | null>(null); const [preview, setPreview] = useState<{ name: string; mediaType: string; url: string } | null>(null); const [replaceDocument, setReplaceDocument] = useState<BusinessDocument | null>(null);
   const [legal, setLegal] = useState({ legal_name: '', business_constitution_code: '', incorporation_or_commencement_date: '', state_or_union_territory: '', reason: '' });

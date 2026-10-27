@@ -1,16 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { Button, PageHeader } from "@trise/ui";
 import {
   operationsData,
+  DEFAULT_PAGE_SIZE,
   type Collection,
   type GenericAttributes,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
-import { indiaDateTimeToIso } from './subscription-support';
+import { formatIndiaDateTime, indiaDateTimeToIso } from './subscription-support';
 
 const failureText = (error: unknown) =>
   (error as { message?: string })?.message ||
   "Audit history could not be loaded.";
+const humanize = (value: string) => value.replace(/[_-]+/g, " ").toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 
 export function ProviderAudit({ providerId, accessOnly = false, embedded = false }: { providerId: string; accessOnly?: boolean; embedded?: boolean }) {
   const [records, setRecords] = useState<Collection<GenericAttributes> | null>(
@@ -28,7 +30,7 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
     from: "",
     through: "",
   });
-  const [limit, setLimit] = useState(10);
+  const limit = DEFAULT_PAGE_SIZE;
   const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,35 +89,22 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
   }
 
   return (
-    <section className="content feature-page">
+    <section className="content feature-page provider-audit-page">
       {embedded ? <header className="provider-access-audit-heading"><h2>Roles &amp; Access audit log</h2><p>Review immutable Provider-scoped changes to role definitions, assignments and memberships.</p></header> : <PageHeader
-        title="Audit Logs"
-        description="Review immutable provider-authorized operational history."
+        title="Audit History"
+        description="Review a readable, provider-scoped record of operational changes."
       />}
-      <form onSubmit={apply}>
-        <FilterToolbar
-          resultLabel={
-            loading
-              ? "Loading audit history…"
-              : `${records?.data.length || 0} audit events returned by the server`
-          }
-        >
+      <div className="provider-audit-overview"><span className="provider-audit-overview-icon" aria-hidden="true">↻</span><div><strong>Immutable activity history</strong><p>Events are returned by the server and remain scoped to your provider permissions.</p></div><Status>{loading ? "Loading" : `${records?.data.length || 0} events`}</Status></div>
+      <form className="provider-audit-filter-form" onSubmit={apply}>
+        <div className="provider-audit-filter-heading"><div><h2>Filter history</h2><p>Set any combination, then apply to refresh the results.</p></div><span>{loading ? "Loading…" : `${records?.data.length || 0} rows · ${limit} per page`}</span></div>
+        <div className="provider-audit-filter-grid">
           <label>
-            Source record ID
-            <input
-              aria-label="Filter audit by source record ID"
-              value={sourceId}
-              onChange={(event) => setSourceId(event.target.value)}
-              placeholder="UUID of a request, job or asset"
-            />
-          </label>
-          <label>
-            Audit action (immutable events)
+            Event action
             <input
               aria-label="Filter audit by action"
               value={action}
               onChange={(event) => setAction(event.target.value)}
-              placeholder="ROLE_UPDATED"
+              placeholder="For example, SERVICE_JOB_ASSIGNED"
               maxLength={100}
             />
           </label>
@@ -129,7 +118,6 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
               maxLength={100}
             />
           </label>}
-          <p className="form-help">{accessOnly ? "This view is limited by the server to role and Provider membership audit records." : "Action and resource-kind filters query immutable audit events and require the server-granted Audit Read permission. A denied request is reported without falling back to broader data."}</p>
           <label>
             From
             <input
@@ -148,62 +136,43 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
               onChange={(event) => setThrough(event.target.value)}
             />
           </label>
-          <Button type="submit" disabled={loading}>
-            Apply filters
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={loading}
-            onClick={() => {
-              setSourceId("");
-              setAction("");
-              setResourceKind("");
-              setFrom("");
-              setThrough("");
-              setCursor({});
+          <div className="provider-audit-filter-actions">
+            <Button type="button" variant="secondary" disabled={loading} onClick={() => {
+              setSourceId(""); setAction(""); setResourceKind(""); setFrom(""); setThrough(""); setCursor({});
               setFilters({ sourceId: "", action: "", resourceKind: "", from: "", through: "" });
-            }}
-          >
-            Reset
-          </Button>
-        </FilterToolbar>
+            }}>Reset</Button>
+            <Button type="submit" disabled={loading}>Apply filters</Button>
+          </div>
+        </div>
+        <details className="provider-audit-advanced-filter">
+          <summary>Advanced filter · specific record</summary>
+          <label>
+            Source record ID
+            <input aria-label="Filter audit by source record ID" value={sourceId} onChange={(event) => setSourceId(event.target.value)} placeholder="Paste a record reference" />
+          </label>
+        </details>
+        <p className="provider-audit-filter-note">{accessOnly ? "This view is limited by the server to role and Provider membership audit records." : "Event action and resource filters require the server-granted Audit Read permission. Results remain provider-scoped."}</p>
       </form>
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
+      <section className="provider-audit-results" aria-label="Audit activity">
+      <div className="provider-audit-results-heading"><h2>Audit activity</h2><span>Newest first · Asia/Kolkata</span></div>
       {records?.data.length ? (
-        <div className="feature-list">
+        <div className="provider-audit-list">
           {records.data.map((record) => {
             const source = record.relationships?.source;
-            const sourceId = Array.isArray(source) ? source[0]?.id : source?.id;
+            const sourceLink = Array.isArray(source) ? source[0] : source;
+            const actionName = String(record.attributes.event_name || record.attributes.action || "EVENT");
+            const resourceKind = String(record.attributes.resource_kind || sourceLink?.type || "Operational activity");
+            const actorName = String(record.attributes.actor_name || (record.attributes.actor_user_id ? "Authorized team member" : "System event"));
             return (
-              <article className="feature-row" key={record.id}>
-                <div>
-                  <Status>
-                    {String(record.attributes.event_name || record.attributes.action || "EVENT")}
-                  </Status>
-                  <h3>
-                    {String(
-                      record.attributes.summary ||
-                        record.attributes.event_name ||
-                        record.attributes.action ||
-                        "Audit event",
-                    )}
-                  </h3>
-                  <p>
-                    {String(
-                      record.attributes.occurred_at ||
-                        record.attributes.created_at ||
-                        "Timestamp unavailable",
-                    )}
-                  </p>
-                  <small>
-                    Source {sourceId || "not available"} · Event {record.id}
-                  </small>
-                </div>
+              <article className="provider-audit-row" key={record.id}>
+                <span className="provider-audit-marker" aria-hidden="true" />
+                <div className="provider-audit-row-main"><div className="provider-audit-row-title"><h3>{humanize(String(record.attributes.summary || actionName))}</h3><Status>{humanize(resourceKind)}</Status></div><p>{actorName}</p></div>
+                <time dateTime={String(record.attributes.occurred_at || record.attributes.created_at || "")}>{formatIndiaDateTime(String(record.attributes.occurred_at || record.attributes.created_at || ""))}</time>
               </article>
             );
           })}
@@ -211,28 +180,10 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
       ) : (
         !loading &&
         !error && (
-          <p className="notice">
-            No authorized audit events match these filters.
-          </p>
+          <p className="provider-audit-empty">No authorized audit events match these filters.</p>
         )
       )}
       <div className="server-pagination" aria-label="Audit history pages">
-        <label className="page-size-control">
-          Rows per page
-          <select
-            aria-label="Audit rows per page"
-            value={limit}
-            onChange={(event) => {
-              setLimit(Number(event.target.value));
-              setCursor({});
-            }}
-          >
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </label>
         <div>
           <Button
             type="button"
@@ -255,6 +206,7 @@ export function ProviderAudit({ providerId, accessOnly = false, embedded = false
           </Button>
         </div>
       </div>
+      </section>
     </section>
   );
 }

@@ -7,6 +7,13 @@ const optionsFor = (items: IndiaGeographyEntry[]): LookupOption[] => items.map((
   label: item.attributes.name,
   detail: item.attributes.kind === 'STATE_UT' ? (item.attributes.state_code || item.attributes.code) : item.attributes.code,
 }));
+const normalizeReferenceName = (value: string) => value.trim().toLocaleLowerCase('en-IN').replace(/[^a-z0-9]/g, '');
+const indiaReferenceNameAliases: Record<string, string> = { bangalore: 'bengaluruurban' };
+export function matchesIndiaReferenceName(referenceName: string, sourceName: string) {
+  const reference = normalizeReferenceName(referenceName);
+  const source = normalizeReferenceName(sourceName);
+  return reference === source || reference === indiaReferenceNameAliases[source];
+}
 let geographyCataloguePromise: Promise<IndiaGeographyEntry[]> | null = null;
 function loadGeographyCatalogue() {
   if (!geographyCataloguePromise) {
@@ -46,10 +53,10 @@ export function useIndiaGeography(address: Record<string, unknown> = {}) {
     return () => { current = false; };
   }, []);
 
-  const selectedState = stateOptions.find((option) => option.label === stateName || option.id === stateIdentity);
+  const selectedState = stateOptions.find((option) => matchesIndiaReferenceName(option.label, stateName) || option.id === stateIdentity);
   const stateCode = selectedState?.id || '';
-  const districtCode = districtOptions.find((option) => option.label === districtName || option.id === districtIdentity)?.id || '';
-  const cityCode = cityOptions.find((option) => option.label === cityName || option.id === cityIdentity)?.id || '';
+  const districtCode = districtOptions.find((option) => matchesIndiaReferenceName(option.label, districtName) || option.id === districtIdentity)?.id || '';
+  const cityCode = cityOptions.find((option) => matchesIndiaReferenceName(option.label, cityName) || option.id === cityIdentity)?.id || '';
 
   useEffect(() => {
     if (!stateCode) { setDistrictOptions([]); setCityOptions([]); return undefined; }

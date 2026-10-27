@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, PageHeader } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import {
+  DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
@@ -152,7 +153,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
     after?: string;
     before?: string;
   }>({});
-  const [pageLimit, setPageLimit] = useState(15);
+  const pageLimit = DEFAULT_PAGE_SIZE;
   const [selectedRelationshipId, setSelectedRelationshipId] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
@@ -266,10 +267,10 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
     const timer = window.setTimeout(() => {
       const checks = [
         canCheckPhone
-          ? operationsData.customers(providerId, { phone: phoneDigits, limit: 15 }).then((result) => ({ kind: "phone" as const, result }))
+          ? operationsData.customers(providerId, { phone: phoneDigits, limit: DEFAULT_PAGE_SIZE }).then((result) => ({ kind: "phone" as const, result }))
           : Promise.resolve(null),
         canCheckEmail
-          ? operationsData.customers(providerId, { email, limit: 15 }).then((result) => ({ kind: "email" as const, result }))
+          ? operationsData.customers(providerId, { email, limit: DEFAULT_PAGE_SIZE }).then((result) => ({ kind: "email" as const, result }))
           : Promise.resolve(null),
       ];
       void Promise.all(checks).then((results) => {
@@ -1038,21 +1039,6 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
             <dl><dt>Party type</dt><dd>{String(attrs(selectedCustomer).party_kind || "—")}</dd><dt>Provider relationship</dt><dd>{String(attrs(selectedRelationship || { id: "", attributes: {} }).status || "—")}</dd><dt>Phone</dt><dd>{String(((attrs(selectedCustomer).contact || {}) as Record<string, unknown>).phone || "Not recorded")}</dd><dt>Email</dt><dd>{String(((attrs(selectedCustomer).contact || {}) as Record<string, unknown>).email || "Not recorded")}</dd><dt>Billing address</dt><dd>{(() => { const address = (attrs(selectedCustomer).billing_address || {}) as Record<string, unknown>; return [address.address_line, address.address_line_2, address.locality, address.city, address.district, address.state, address.pin_code].filter(Boolean).map(String).join(", ") || "Not recorded"; })()}</dd></dl>
           </section>}
           <div className="server-pagination">
-            <label>
-              Rows per page
-              <select
-                value={pageLimit}
-                onChange={(event) => {
-                  setPageLimit(Number(event.target.value));
-                  setCustomerPage({});
-                  setLocationPage({});
-                  setAssetPage({});
-                }}
-              >
-                <option value="15">15</option>
-                <option value="30">30</option>
-              </select>
-            </label>
             <Button
               variant="secondary"
               disabled={!customers.page?.previous}
@@ -1111,22 +1097,6 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
             <dl><dt>Classification</dt><dd>{String(attrs(selectedLocation).classification || "—")}</dd><dt>Site code</dt><dd>{String(attrs(selectedLocation).service_location_code || "—")}</dd><dt>Service location type</dt><dd>{String(attrs(selectedLocation).service_location_type || "—")}</dd><dt>Parent site</dt><dd>{titleOf(locations.data.find((row) => row.id === relatedId(selectedLocation.relationships.parent)) || selectedLocation)}</dd><dt>Address</dt><dd>{Array.isArray(attrs(selectedLocation).address_lines) ? (attrs(selectedLocation).address_lines as unknown[]).map(String).join(", ") : "—"}</dd><dt>Time zone</dt><dd>{String(attrs(selectedLocation).time_zone || "—")}</dd></dl>
           </section>}
           <div className="server-pagination">
-            <label>
-              Rows per page
-              <select
-                aria-label="Locations rows per page"
-                value={pageLimit}
-                onChange={(event) => {
-                  setPageLimit(Number(event.target.value));
-                  setCustomerPage({});
-                  setLocationPage({});
-                  setAssetPage({});
-                }}
-              >
-                <option value="15">15</option>
-                <option value="30">30</option>
-              </select>
-            </label>
             <Button
               variant="secondary"
               disabled={!locations.page?.previous}
@@ -1213,22 +1183,6 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
             </dl>
           </section>}
           <div className="server-pagination">
-            <label>
-              Rows per page
-              <select
-                aria-label="Assets rows per page"
-                value={pageLimit}
-                onChange={(event) => {
-                  setPageLimit(Number(event.target.value));
-                  setCustomerPage({});
-                  setLocationPage({});
-                  setAssetPage({});
-                }}
-              >
-                <option value="15">15</option>
-                <option value="30">30</option>
-              </select>
-            </label>
             <Button
               variant="secondary"
               disabled={!assets.page?.previous}

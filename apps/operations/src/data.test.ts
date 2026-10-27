@@ -4,6 +4,36 @@ import { operationsData } from "./data";
 afterEach(() => vi.restoreAllMocks());
 
 describe("operations execution contracts", () => {
+  it("requests a bounded unread-only notification preview", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], page: { limit: 5, next: null, previous: null } }), { status: 200 }),
+    );
+
+    await operationsData.notifications("provider-7", { limit: 5, unreadOnly: true });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/notifications?page%5Blimit%5D=5");
+    expect(url).toContain("filter%5Bunread%5D=true");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
+  });
+
+  it("loads customer relationship lookup data as a bounded cursor page", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], page: { limit: 50, next: "cursor-2", previous: null } }), { status: 200 }),
+    );
+
+    const result = await operationsData.customerRelationshipsPage("provider-7", {
+      after: "cursor-1",
+      limit: 50,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/customer-relationships?page%5Blimit%5D=50");
+    expect(url).toContain("page%5Bafter%5D=cursor-1");
+    expect(result.page?.next).toBe("cursor-2");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
+  });
+
   it("keeps customer, site, and asset filters provider-scoped and server-side", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [], page: { limit: 10, next: null, previous: null } }), { status: 200 }),
@@ -21,6 +51,26 @@ describe("operations execution contracts", () => {
     expect(url).toContain("filter%5Bcustomer_relationship_id%5D=relationship-1");
     expect(url).toContain("filter%5Blocation_id%5D=location-1");
     expect(url).toContain("page%5Blimit%5D=20");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
+  });
+
+  it("sends bounded quotation customer email and phone search to the authorized list endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [], page: { limit: 15, next: null, previous: null } }), { status: 200 }),
+    );
+
+    await operationsData.quotations("provider-7", {
+      quotationId: "Q-abc123def456",
+      customerEmail: "accounts@example.test",
+      customerPhone: "+91 90000 00000",
+      limit: 15,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("filter%5Bquotation_id%5D=Q-abc123def456");
+    expect(url).toContain("filter%5Bcustomer_email%5D=accounts%40example.test");
+    expect(url).toContain("filter%5Bcustomer_phone%5D=%2B91+90000+00000");
+    expect(url).toContain("page%5Blimit%5D=15");
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
   });
 
@@ -478,7 +528,7 @@ describe("operations execution contracts", () => {
       "document-review-1",
     );
     expect(String(fetchMock.mock.calls[0][0])).toContain(
-      "/documents?page[limit]=25",
+      "/documents?page[limit]=15",
     );
     expect(
       new Headers(fetchMock.mock.calls[0][1]?.headers).get(
@@ -641,6 +691,19 @@ describe("operations execution contracts", () => {
         "X-TRISE-Provider-Id",
       ),
     ).toBeNull();
+  });
+
+  it("keeps platform setup workbook requests scoped to the selected provider", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ data: { status: "QUEUED", message: "Queued" } }), { status: 202 }));
+    await operationsData.emailPlatformProviderSetupWorkbook("provider-1", { email: "contact@example.test" }, "platform-workbook-email-1");
+    await operationsData.validatePlatformProviderSetupWorkbook("provider-1", "eA==", 3);
+    await operationsData.importPlatformProviderSetupWorkbook("provider-1", "eA==", 3, "platform-workbook-import-1");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/platform/providers/provider-1/business-profile/setup-workbook/email");
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ email: "contact@example.test" });
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Idempotency-Key")).toBe("platform-workbook-email-1");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/platform/providers/provider-1/business-profile/setup-workbook/validate");
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+    expect(String(fetchMock.mock.calls[2][0])).toContain("/platform/providers/provider-1/business-profile/setup-workbook/import");
   });
 
   it("keeps provider-logo metadata and activation scoped to the intended authority", async () => {
@@ -872,6 +935,19 @@ describe("operations execution contracts", () => {
     ).toBeNull();
   });
 
+  it("loads elevator specification fields for only the selected asset definition", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ data: [], page: { limit: 100, next: null, previous: null } }), { status: 200 }),
+    );
+    const definitionId = "5fe77b2d-4444-4f5f-8c8f-615f858fdc51";
+    await operationsData.attributeDefinitions("provider-1", definitionId);
+    const requestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestUrl.pathname).toBe("/api/v1/attribute-definitions");
+    expect(requestUrl.searchParams.get("filter[asset_definition_id]")).toBe(definitionId);
+    expect(requestUrl.searchParams.get("page[limit]")).toBe("100");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-1");
+  });
+
   it("uses persisted work-session pause and resume commands with revisions", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -962,7 +1038,7 @@ describe("operations execution contracts", () => {
     expect(configurationRequest.searchParams.get("page[limit]")).toBe("15");
     expect(configurationRequest.searchParams.get("sort")).toBe("-created_at,id");
     expect(String(fetchMock.mock.calls[1][0])).toContain(
-      "/timeline?page[limit]=25",
+      "/timeline?page[limit]=15",
     );
   });
 
@@ -1187,6 +1263,40 @@ describe("operations execution contracts", () => {
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
   });
 
+  it("stages a scoped PIN CSV and previews a PIN from the selected import", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "import-2" }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { pincode: "560036", found: true, ambiguous: false, post_offices: [] }, dataset: { retrieved_at: "2026-10-27T00:00:00Z" } }), { status: 200 }));
+    const file = new File(["pincode,officename,district,statename\n560036,Office,Bengaluru,Karnataka"], "karnataka.csv", { type: "text/csv" });
+
+    await operationsData.stageIndiaPincodeImport({ file, scopeType: "STATE_UT", state: "Karnataka", key: "pin-stage-1" });
+    await operationsData.previewStagedIndiaPincode("import-2", "560036");
+
+    const body = fetchMock.mock.calls[0][1]?.body as FormData;
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/reference-data/admin/imports");
+    expect(body.get("scope_type")).toBe("STATE_UT");
+    expect(body.get("state")).toBe("Karnataka");
+    expect(body.get("file")).toBe(file);
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("Idempotency-Key")).toBe("pin-stage-1");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/reference-data/admin/imports/import-2/pincodes/560036");
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("sends exact city scope fields with the uploaded PIN CSV", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "import-city" }), { status: 201 }),
+    );
+    const file = new File(["pincode,officename,district,statename,city\n560036,Office,Bengaluru,Karnataka,Whitefield"], "city-pins.csv", { type: "text/csv" });
+
+    await operationsData.stageIndiaPincodeImport({ file, scopeType: "CITY", state: "Karnataka", district: "Bengaluru", city: "Whitefield", key: "pin-city-stage-1" });
+
+    const body = fetchMock.mock.calls[0][1]?.body as FormData;
+    expect(body.get("scope_type")).toBe("CITY");
+    expect(body.get("state")).toBe("Karnataka");
+    expect(body.get("district")).toBe("Bengaluru");
+    expect(body.get("city")).toBe("Whitefield");
+  });
+
   it("loads the consolidated platform configuration audit without provider scope", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ audit: [], events: [] }), { status: 200 }),
@@ -1219,5 +1329,27 @@ describe("operations execution contracts", () => {
     expect(url).toContain("q=Bengaluru");
     expect(url).toContain("limit=50");
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBeNull();
+  });
+
+  it("deduplicates platform availability reads and refreshes only when requested", async () => {
+    const available = { data: { status: "AVAILABLE", maintenance_active: false, maintenance: null, checked_at: "2026-10-26T00:00:00Z", timezone: "Asia/Kolkata", operations: [] } };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify(available), { status: 200 }),
+    );
+
+    const [first, second] = await Promise.all([
+      operationsData.platformAvailability(),
+      operationsData.platformAvailability(),
+    ]);
+    expect(first).toEqual(available);
+    expect(second).toBe(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain("/platform/availability");
+    expect(fetchMock.mock.calls[0][1]?.cache).toBe("no-store");
+
+    await operationsData.platformAvailability();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await operationsData.platformAvailability(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
