@@ -5,7 +5,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Button } from "@trise/ui";
+import { Button, SortedSelect } from "@trise/ui";
 import { accessData } from "./access-data";
 import {
   operationsData,
@@ -1530,13 +1530,13 @@ export function WorkflowFollowUps({
               >
                 <label>
                   Interaction type
-                  <select name="activity_type" defaultValue="CALL">
+                  <SortedSelect name="activity_type" defaultValue="CALL">
                     <option value="CALL">Call</option>
                     <option value="EMAIL">Email</option>
                     <option value="MEETING">Meeting</option>
                     <option value="SITE_VISIT">Site visit</option>
                     <option value="OTHER">Other</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Occurred at
@@ -1729,7 +1729,7 @@ export function WorkflowFollowUps({
                   </label>
                   <label>
                     Purpose
-                    <select
+                    <SortedSelect
                       value={form.purpose}
                       onChange={(event) =>
                         updateForm("purpose", event.target.value)
@@ -1740,11 +1740,11 @@ export function WorkflowFollowUps({
                           {text}
                         </option>
                       ))}
-                    </select>
+                    </SortedSelect>
                   </label>
                   <label>
                     Journey stage
-                    <select
+                    <SortedSelect
                       value={form.stage}
                       onChange={(event) =>
                         updateForm("stage", event.target.value)
@@ -1755,7 +1755,7 @@ export function WorkflowFollowUps({
                           {text}
                         </option>
                       ))}
-                    </select>
+                    </SortedSelect>
                   </label>
                   <label>
                     Scheduled time *
@@ -1776,7 +1776,7 @@ export function WorkflowFollowUps({
                   </label>
                   <label>
                     Reminder
-                    <select
+                    <SortedSelect
                       value={form.reminderMinutes}
                       onChange={(event) =>
                         updateForm("reminderMinutes", event.target.value)
@@ -1787,11 +1787,11 @@ export function WorkflowFollowUps({
                       <option value="30">30 minutes before</option>
                       <option value="60">1 hour before</option>
                       <option value="1440">1 day before</option>
-                    </select>
+                    </SortedSelect>
                   </label>
                   <label>
                     Assign to
-                    <select
+                    <SortedSelect
                       value={form.assignedToUserId}
                       onChange={(event) =>
                         updateForm("assignedToUserId", event.target.value)
@@ -1811,7 +1811,7 @@ export function WorkflowFollowUps({
                             : ""}
                         </option>
                       ))}
-                    </select>
+                    </SortedSelect>
                   </label>
                   <label>
                     Contact name

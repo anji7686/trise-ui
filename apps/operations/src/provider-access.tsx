@@ -1,6 +1,6 @@
 import { AddMemberEditor, ProviderMembers, ProviderInvitations } from './provider-members';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Button, PageHeader } from '@trise/ui';
+import { Button, PageHeader, SortedSelect } from '@trise/ui';
 import { accessData, type AccessRole, type AccessPermission, type RoleTemplateAdoptionPreview } from './access-data';
 import { AccessMatrix } from './access-matrix';
 import { OperationsDialog } from './operations-dialog';
@@ -80,7 +80,7 @@ export function ProviderRoles({ providerId, providerName = 'Selected Service Pro
       <form className="provider-role-filters" onSubmit={applyRoleFilters}>
         <label>Search roles<input aria-label="Search provider roles" value={roleSearch} maxLength={100} onChange={event => setRoleSearch(event.target.value)} placeholder="Role name or description" /></label>
         <nav className="provider-role-category-tabs" aria-label="Role type filters">{([['all', 'All roles', latestRoles.length], ['default', 'System templates', templateCount], ['custom', 'Provider roles', providerRoleCount]] as const).map(([key, label, count]) => <button type="button" key={key} aria-pressed={category === key} className={category === key ? 'is-active' : ''} onClick={() => { setRolePage(1); setCategory(key); }}><span>{label}</span><strong>{count}</strong></button>)}</nav>
-        <label>Status<select aria-label="Filter roles by enabled status" value={enabledFilter} onChange={event => setEnabledFilter(event.target.value)}><option value="">All statuses</option><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+        <label>Status<SortedSelect aria-label="Filter roles by enabled status" value={enabledFilter} onChange={event => setEnabledFilter(event.target.value)}><option value="">All statuses</option><option value="true">Enabled</option><option value="false">Disabled</option></SortedSelect></label>
         <Button type="submit" disabled={roles.loading}>Apply filters</Button>
         <Button type="button" variant="quiet" disabled={roles.loading && !roles.records.length} onClick={() => { setRoleSearch(''); setEnabledFilter(''); setRoleFilters({ q: '', enabled: '' }); setCategory('all'); setRolePage(1); }}>Reset</Button>
       </form>

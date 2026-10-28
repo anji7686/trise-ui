@@ -56,7 +56,7 @@ const providerItems: OperationsNavigationItem[] = [
   { key: 'audit', label: 'Audit History', hash: 'audit', capability: 'audit', group: 'Governance' },
   { key: 'reports', label: 'Reports & Analytics', hash: 'reports', capability: 'reports', group: 'Insights' },
   { key: 'configuration', label: 'Provider Configuration', hash: 'configuration', capability: 'configuration', group: 'Administration' },
-  { key: 'quotation-terms-templates', label: 'Quotation Templates', hash: 'configuration/quotation-terms-templates', capability: 'quotation_terms_admin', group: 'Administration' },
+  { key: 'quotation-terms-templates', label: 'Quotation Terms', hash: 'configuration/quotation-terms-templates', capability: 'quotation_terms_admin', group: 'Administration' },
   { key: 'business-profile', label: 'Business Profile', hash: 'business-profile', capability: 'business_profile', group: 'Administration' },
   { key: 'team-access', label: 'Team & Roles', hash: 'team-access', capability: 'team_access', group: 'Administration' },
   { key: 'notifications', label: 'Notification inbox', hash: 'notifications', capability: 'notifications', group: 'Administration' }

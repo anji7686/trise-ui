@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, PageHeader } from '@trise/ui';
+import { Button, PageHeader, SortedSelect } from '@trise/ui';
 import { CONFIGURATION_TYPE_GROUPS } from './configuration';
 import { operationsData, type ProviderSetupAttributes, type ProviderSetupMastersAttributes } from './data';
 import { SvgIcon } from './icons';
@@ -271,7 +271,7 @@ export function ProviderConfigurationHub({ providerId, providerName }: { provide
         <section id="provider-master-selector" className="provider-configuration-master-picker">
           <div className="provider-configuration-card-heading"><div><h2>Select platform masters</h2><p>Choose the published defaults this provider uses. No catalogue is copied; selections retain each source revision.</p></div><span className="provider-configuration-badge">Platform managed</span></div>
           {!masterCatalogue ? <p className="notice">Loading published masters…</p> : <>
-            <div className="provider-configuration-master-toolbar"><label><span>Configuration group</span><select aria-label="Master configuration group" value={masterKind} onChange={(event) => setMasterKind(event.target.value)}>{masterKinds.map((kind) => <option key={kind} value={kind}>{typeLabel(kind)}</option>)}</select></label><span>{selectedForKind.length} selected{hasExplicitSelection ? ' · provider selection' : ' · platform default'}</span></div>
+            <div className="provider-configuration-master-toolbar"><label><span>Configuration group</span><SortedSelect aria-label="Master configuration group" value={masterKind} onChange={(event) => setMasterKind(event.target.value)}>{masterKinds.map((kind) => <option key={kind} value={kind}>{typeLabel(kind)}</option>)}</SortedSelect></label><span>{selectedForKind.length} selected{hasExplicitSelection ? ' · provider selection' : ' · platform default'}</span></div>
             <div className="provider-configuration-master-list">{mastersForKind.map((record) => <label key={record.id} className="provider-configuration-master-row"><input type="checkbox" checked={selectedForKind.includes(record.id)} onChange={(event) => setSelectedMasters((current) => ({ ...current, [masterKind]: event.target.checked ? [...selectedForKind, record.id] : selectedForKind.filter((id) => id !== record.id) }))} /><span><strong>{masterName(record)}</strong><small>Published platform default · {typeLabel(masterKind)}</small></span><span className="status status-success">Available</span></label>)}{!mastersForKind.length && <p className="notice">No published platform masters are available in this group.</p>}</div>
             <div className="provider-configuration-master-footer"><small>Published masters are enabled by default. Changes are provider scoped, revision checked and recorded in the audit log.</small><Button type="button" busy={savingMasters} disabled={savingMasters} onClick={() => void saveMasterSelection()}>Save master selections</Button></div>
           </>}

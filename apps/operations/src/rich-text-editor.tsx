@@ -1,3 +1,4 @@
+import { SortedSelect } from '@trise/ui';
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 const allowedTags = new Set(["P", "BR", "STRONG", "EM", "B", "I", "UL", "OL", "LI", "H3", "H4", "DIV", "SPAN", "FONT"]);
@@ -238,7 +239,7 @@ export function RichTextEditor({
         <button type="button" onMouseDown={preserveSelection} onClick={() => command("formatBlock", "<h3>")} aria-label="Heading">H</button>
         <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertUnorderedList")} aria-label="Bulleted list">• List</button>
         <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertOrderedList")} aria-label="Numbered list">1. List</button>
-        <select className="rich-text-font-family" aria-label="Font family" title="Choose font family" defaultValue="" onFocus={rememberSelection} onMouseDown={rememberSelectionOnly} onChange={(event) => { if (event.target.value) command("fontName", event.target.value); }}>
+        <SortedSelect className="rich-text-font-family" aria-label="Font family" title="Choose font family" defaultValue="" onFocus={rememberSelection} onMouseDown={rememberSelectionOnly} onChange={(event) => { if (event.target.value) command("fontName", event.target.value); }}>
           <option value="">Font family</option>
           <option value="Arial">Arial</option>
           <option value="Helvetica">Helvetica</option>
@@ -246,15 +247,15 @@ export function RichTextEditor({
           <option value="Verdana">Verdana</option>
           <option value="Times New Roman">Times New Roman</option>
           <option value="Courier New">Courier New</option>
-        </select>
-        <select className="rich-text-font-size" aria-label="Font size" title="Choose font size" defaultValue="" onFocus={rememberSelection} onMouseDown={rememberSelectionOnly} onChange={(event) => { if (event.target.value) command("fontSize", event.target.value); }}>
+        </SortedSelect>
+        <SortedSelect className="rich-text-font-size" aria-label="Font size" title="Choose font size" defaultValue="" onFocus={rememberSelection} onMouseDown={rememberSelectionOnly} onChange={(event) => { if (event.target.value) command("fontSize", event.target.value); }}>
           <option value="">Font size</option>
           <option value="2">Small</option>
           <option value="3">Normal</option>
           <option value="4">Large</option>
           <option value="5">Extra large</option>
           <option value="6">Display</option>
-        </select>
+        </SortedSelect>
         <div className="rich-text-color-control" role="group" aria-label="Text color">
           <span>Color</span>
           <span className="rich-text-color-presets">

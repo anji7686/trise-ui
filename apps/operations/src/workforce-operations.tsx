@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
 import {
   DEFAULT_PAGE_SIZE,
   operationsData,
@@ -294,14 +294,14 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             {["leave", "availability", "certification", "verifySkill", "verifyCertification"].includes(mode) && (
               <label>
                 Agent *
-                <select name="agent_id" required defaultValue={selectedAgent}>
+                <SortedSelect name="agent_id" required defaultValue={selectedAgent}>
                   <option value="">Select agent</option>
                   {agents.data.map((agent) => (
                     <option key={agent.id} value={agent.id}>
                       {label(agent)}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
             )}
             {["leave", "availability"].includes(mode) && (
@@ -319,18 +319,18 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
               <>
                 <label>
                   Leave type
-                  <select name="leave_type">
+                  <SortedSelect name="leave_type">
                     <option>ANNUAL</option>
                     <option>SICK</option>
                     <option>PERSONAL</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Extent
-                  <select name="extent">
+                  <SortedSelect name="extent">
                     <option value="full_day">Full day</option>
                     <option value="partial_day">Partial day</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Reason *<textarea name="reason" required />
@@ -340,7 +340,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             {mode === "reviewLeave" && selectedLeaveRequest && (
               <>
                 <p><strong>{String(attrs(selectedLeaveRequest).leave_type || "Leave request")}</strong><br />{String(attrs(selectedLeaveRequest).starts_at || "Start time unavailable")} – {String(attrs(selectedLeaveRequest).ends_at || "End time unavailable")}</p>
-                <label>Decision *<select name="action" required><option value="approve">Approve</option><option value="reject">Reject</option></select></label>
+                <label>Decision *<SortedSelect name="action" required><option value="approve">Approve</option><option value="reject">Reject</option></SortedSelect></label>
                 <label>Reason *<textarea name="reason" required minLength={1} maxLength={1000} /></label>
                 <p className="notice">The server checks the request revision and lifecycle before recording this decision.</p>
               </>
@@ -348,10 +348,10 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             {mode === "availability" && (
               <label>
                 State
-                <select name="available">
+                <SortedSelect name="available">
                   <option value="true">Available</option>
                   <option value="false">Unavailable</option>
-                </select>
+                </SortedSelect>
               </label>
             )}
             {mode === "skill" && (
@@ -362,14 +362,14 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
                 </label>
                 <label>
                   Skill *
-                  <select name="skill_id" required>
+                  <SortedSelect name="skill_id" required>
                     <option value="">Select skill</option>
                     {skills.data.map((skill) => (
                       <option key={skill.id} value={skill.id}>
                         {label(skill)}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Proficiency *
@@ -389,14 +389,14 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
               <>
                 <label>
                   Certification *
-                  <select name="certification_type_id" required>
+                  <SortedSelect name="certification_type_id" required>
                     <option value="">Select certification</option>
                     {certificationTypes.data.map((item) => (
                       <option key={item.id} value={item.id}>
                         {label(item)}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Issuer *<input name="issuer" required />
@@ -422,11 +422,11 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
                 </p>
                 <label>
                   Decision
-                  <select name="action">
+                  <SortedSelect name="action">
                     <option value="verify">Verify</option>
                     <option value="reject">Reject</option>
                     <option value="revoke">Revoke</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Reason *<textarea name="reason" required />
@@ -475,7 +475,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
             </label>
             <label>
               Status
-              <select
+              <SortedSelect
                 aria-label="Filter agents by status"
                 value={agentStatus}
                 onChange={(event) => {
@@ -487,7 +487,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
                 <option value="SUSPENDED">Suspended</option>
-              </select>
+              </SortedSelect>
             </label>
           </FilterToolbar>
           {agents.data.map((agent) => (
@@ -733,7 +733,7 @@ export function WorkforceSelfService({
         <form className="provider-form workforce-self-form" onSubmit={(event) => void submit(event)}>
           {(dialog === "check-in" || dialog === "check-out" || dialog === "cancel-leave") && <label>{dialog === "cancel-leave" ? "Cancellation reason" : "Note (optional)"}<textarea rows={3} maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} placeholder={dialog === "check-in" ? "Optional context for today’s check-in" : "Optional context for this action"} /></label>}
           {dialog === "leave" && <>
-            <div className="workforce-self-form-grid"><label>Leave type<select value={leaveForm.leave_type} onChange={(event) => setLeaveForm({ ...leaveForm, leave_type: event.target.value })}><option value="ANNUAL">Annual leave</option><option value="SICK">Sick leave</option><option value="CASUAL">Casual leave</option><option value="UNPAID">Unpaid leave</option></select></label><label>Extent<select value={leaveForm.extent} onChange={(event) => setLeaveForm({ ...leaveForm, extent: event.target.value })}><option value="full_day">Full day</option><option value="partial_day">Partial day</option></select></label><label>Starts at<input type="datetime-local" required value={leaveForm.starts_at} onChange={(event) => setLeaveForm({ ...leaveForm, starts_at: event.target.value })} /></label><label>Ends at<input type="datetime-local" required value={leaveForm.ends_at} onChange={(event) => setLeaveForm({ ...leaveForm, ends_at: event.target.value })} /></label></div><label>Reason (optional)<textarea rows={3} maxLength={2000} value={leaveForm.reason} onChange={(event) => setLeaveForm({ ...leaveForm, reason: event.target.value })} /></label>
+            <div className="workforce-self-form-grid"><label>Leave type<SortedSelect value={leaveForm.leave_type} onChange={(event) => setLeaveForm({ ...leaveForm, leave_type: event.target.value })}><option value="ANNUAL">Annual leave</option><option value="SICK">Sick leave</option><option value="CASUAL">Casual leave</option><option value="UNPAID">Unpaid leave</option></SortedSelect></label><label>Extent<SortedSelect value={leaveForm.extent} onChange={(event) => setLeaveForm({ ...leaveForm, extent: event.target.value })}><option value="full_day">Full day</option><option value="partial_day">Partial day</option></SortedSelect></label><label>Starts at<input type="datetime-local" required value={leaveForm.starts_at} onChange={(event) => setLeaveForm({ ...leaveForm, starts_at: event.target.value })} /></label><label>Ends at<input type="datetime-local" required value={leaveForm.ends_at} onChange={(event) => setLeaveForm({ ...leaveForm, ends_at: event.target.value })} /></label></div><label>Reason (optional)<textarea rows={3} maxLength={2000} value={leaveForm.reason} onChange={(event) => setLeaveForm({ ...leaveForm, reason: event.target.value })} /></label>
           </>}
           <div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setDialog(null)}>Cancel</Button><Button type="submit" variant={dialog === "cancel-leave" ? "danger" : "primary"} busy={busy}>{dialog === "check-in" ? "Confirm check-in" : dialog === "check-out" ? "Confirm check-out" : dialog === "leave" ? "Submit leave request" : "Cancel leave request"}</Button></div>
         </form>

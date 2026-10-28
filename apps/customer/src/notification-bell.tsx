@@ -24,17 +24,27 @@ export function CustomerNotificationBell({ providerId, onViewAll }: { providerId
   const [busyId, setBusyId] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<{ providerId: string; promise: Promise<NotificationResource[]> } | null>(null);
+  const lastLoadedAt = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     if (!providerId) return;
+    if (!force && Date.now() - lastLoadedAt.current < 15_000) return;
+    if (requestRef.current?.providerId === providerId) {
+      try { setItems(await requestRef.current.promise); } catch (cause) { setError(errorText(cause)); }
+      return;
+    }
     setLoading(true);
     setError('');
+    const promise = customerData.notifications(providerId, force).then((result) => result.data.filter((item) => !item.attributes.read_at));
+    requestRef.current = { providerId, promise };
     try {
-      const result = await customerData.notifications(providerId);
-      setItems(result.data.filter((item) => !item.attributes.read_at));
+      setItems(await promise);
+      lastLoadedAt.current = Date.now();
     } catch (cause) {
       setError(errorText(cause));
     } finally {
+      if (requestRef.current?.promise === promise) requestRef.current = null;
       setLoading(false);
     }
   }, [providerId]);
@@ -44,7 +54,8 @@ export function CustomerNotificationBell({ providerId, onViewAll }: { providerId
     setItems([]);
     if (!providerId) return;
     void load();
-    const timer = window.setInterval(() => void load(), 60_000);
+    lastLoadedAt.current = 0;
+    const timer = window.setInterval(() => void load(true), 60_000);
     return () => window.clearInterval(timer);
   }, [load, providerId]);
 

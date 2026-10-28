@@ -1,9 +1,9 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 export type LookupOption = { id: string; label: string; detail?: string };
 export function sortedSearchOptions(options: LookupOption[], search: string) {
   const query = search.trim().toLocaleLowerCase();
-  return options.filter(option => query.length < 3 || `${option.label} ${option.detail || ''}`.toLocaleLowerCase().includes(query)).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }) || a.id.localeCompare(b.id));
+  return options.filter(option => !query || `${option.label} ${option.detail || ''}`.toLocaleLowerCase().includes(query)).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }) || a.id.localeCompare(b.id));
 }
 
 export function requiresSearchTerm(search: string, required: boolean, minimumLength = 3) {
@@ -19,9 +19,11 @@ export function SearchableSelect({ label, searchLabel, search, onSearch, value, 
   const [selection, setSelection] = useState<LookupOption | null>(null);
   const selected = options.find(option => option.id === value) || (selection?.id === value ? selection : null);
   const needsSearch = requiresSearchTerm(search, searchRequired);
-  const results = needsSearch ? [] : sortedSearchOptions(options, search);
+  const results = useMemo(() => needsSearch ? [] : sortedSearchOptions(options, search), [needsSearch, options, search]);
   const text = (option: LookupOption) => `${option.label}${option.detail ? ` · ${option.detail}` : ''}`;
   const display = selected ? text(selected) : search;
+  const selectedResultIndex = selected ? results.findIndex(option => option.id === selected.id) : -1;
+  const activeIndex = active < 0 ? 0 : Math.min(active, Math.max(0, results.length - 1));
   useEffect(() => {
     const outside = (event: Event) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
     document.addEventListener('pointerdown', outside);
@@ -29,15 +31,32 @@ export function SearchableSelect({ label, searchLabel, search, onSearch, value, 
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', outside); };
   }, []);
   function select(option: LookupOption) { setSelection(option); onChange(option.id); setOpen(false); input.current?.focus(); }
-  const activeIndex = Math.min(active, Math.max(0, results.length - 1));
+  function openResults() {
+    if (!open) {
+      if (search) onSearch('');
+      setActive(0);
+    }
+    setOpen(true);
+  }
   return <div ref={root} className={`subscription-combobox${error ? ' has-error' : ''}`}>
     <label htmlFor={id}>{label}</label>
-    <div className="search-select-control"><input ref={input} id={id} type="text" disabled={disabled} required={required} value={display} pattern={selected ? undefined : '(?!)'} title={placeholder} placeholder={searchLabel} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-list`} aria-activedescendant={open && results.length ? `${id}-option-${activeIndex}` : undefined} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} onClick={() => setOpen(true)} onFocus={() => setOpen(true)} onChange={event => { onChange(''); onSearch(event.target.value); setActive(0); setOpen(true); }} onKeyDown={event => {
+    <div className="search-select-control"><input ref={input} id={id} type="text" disabled={disabled} required={required} value={display} pattern={selected ? undefined : '(?!)'} title={placeholder} placeholder={searchLabel} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-list`} aria-activedescendant={open && results.length ? `${id}-option-${activeIndex}` : undefined} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} onClick={openResults} onFocus={openResults} onChange={event => { onChange(''); onSearch(event.target.value); setActive(0); setOpen(true); }} onKeyDown={event => {
       if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); }
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); setActive(index => Math.max(0, Math.min(results.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))); }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const direction = event.key === 'ArrowDown' ? 1 : -1;
+        setOpen(true);
+        setActive(index => {
+          if (!open) return selectedResultIndex >= 0 ? selectedResultIndex : direction > 0 ? 0 : Math.max(0, results.length - 1);
+          if (index < 0) return direction > 0 ? 0 : Math.max(0, results.length - 1);
+          return Math.max(0, Math.min(results.length - 1, index + direction));
+        });
+      }
+      if (event.key === 'Home' && open && results.length) { event.preventDefault(); setActive(0); }
+      if (event.key === 'End' && open && results.length) { event.preventDefault(); setActive(results.length - 1); }
       if (event.key === 'Enter' && open) { event.preventDefault(); if (results[activeIndex]) select(results[activeIndex]); }
       if (event.key === 'Tab') setOpen(false);
-    }} /><button type="button" className="search-select-toggle" disabled={disabled} aria-label={`Search ${label.toLowerCase()}`} onClick={() => { onChange(''); onSearch(''); setOpen(true); input.current?.focus(); }}>⌄</button></div>{error && <span id={`${id}-error`} className="customer-field-error" role="alert">{error}</span>}
+    }} /><button type="button" className="search-select-toggle" disabled={disabled} aria-label={`Search ${label.toLowerCase()}`} onClick={() => { onChange(''); onSearch(''); setOpen(true); setActive(0); input.current?.focus(); }}>⌄</button></div>{error && <span id={`${id}-error`} className="customer-field-error" role="alert">{error}</span>}
     {open && <div className="search-select-results" id={`${id}-list`} role="listbox" aria-label={`${label} results`}>{needsSearch ? <p>Type at least 3 characters to filter the loaded customers.</p> : results.length ? results.map((option, index) => <button type="button" role="option" aria-selected={option.id === value} id={`${id}-option-${index}`} className={index === activeIndex ? 'highlighted' : ''} key={option.id} onPointerDown={event => event.preventDefault()} onClick={() => select(option)}><strong>{option.label}</strong>{option.detail && <small>{option.detail}</small>}</button>) : <p>No matching records in the loaded results.</p>}</div>}
   </div>;
 }

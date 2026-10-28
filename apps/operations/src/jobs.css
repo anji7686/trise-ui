@@ -38,6 +38,8 @@
 .job-register { width:100%; min-width:760px; border-collapse:collapse; text-align:left; font-size:.86rem; }
 .job-register th { padding:12px 10px; border-bottom:1px solid var(--border,#dce5f0); background:color-mix(in srgb,var(--primary,#264673) 4%,var(--surface,#fff)); color:var(--secondary,#405775); font-weight:700; white-space:nowrap; }
 .job-register td { padding:11px 10px; border-bottom:1px solid var(--border,#e8edf4); color:var(--text,#354b68); }
+.job-register td[data-label="Status"] { min-width:106px; white-space:nowrap; }
+.job-register td[data-label="Status"] .status { max-width:none; white-space:nowrap; }
 .job-register tbody tr:hover { background:color-mix(in srgb,var(--primary,#264673) 5%,var(--surface,#fff)); }
 .job-register tbody tr.is-selected { background:color-mix(in srgb,var(--primary,#264673) 9%,var(--surface,#fff)); }
 .job-register tbody tr:last-child td { border-bottom:0; }

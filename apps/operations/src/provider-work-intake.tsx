@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@trise/auth";
-import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import {
   ActionFeedback,
@@ -15,6 +15,8 @@ import {
   ProviderActionMenu,
 } from "./operations-shared";
 import { OperationsStatus as Status } from "./operations-status";
+import { SearchableSelect } from "./searchable-select";
+import { emptyIndiaPostalAddress, formatIndiaPostalAddress, indiaPostalAddressComplete, IndiaPostalAddressFields, type IndiaPostalAddress } from "./india-postal-address-fields";
 import {
   operationsData,
   DEFAULT_PAGE_SIZE,
@@ -38,17 +40,12 @@ import {
   WorkflowFollowUpAction,
   WorkflowFollowUpDialog,
 } from "./workflow-follow-ups";
+import {
+  WORK_SOURCE_OPTIONS,
+  workSourceLabel,
+} from "./workflow-reference-options";
 import "./provider-work-intake.css";
 
-const SOURCES = [
-  "MARKETING",
-  "PROVIDER_DIRECT",
-  "REFERRAL",
-  "EXISTING_ASSET",
-  "AMC_RENEWAL",
-  "INTERNAL_REQUEST",
-  "PARTNER",
-];
 const WORK_TYPES = [
   "NEW_INSTALLATION",
   "MODIFICATION",
@@ -197,12 +194,14 @@ export function ProviderWorkIntakeWorkspace({
   canCreate,
   canEdit,
   canAssign,
+  canAccessLeads,
 }: {
   providerId: string;
   route: OperationsRoute;
   canCreate: boolean;
   canEdit: boolean;
   canAssign: boolean;
+  canAccessLeads: boolean;
 }) {
   const [items, setItems] = useState<Collection<WorkIntakeAttributes> | null>(
     null,
@@ -356,6 +355,7 @@ export function ProviderWorkIntakeWorkspace({
           id={route.id}
           canEdit={canEdit}
           canAssign={canAssign}
+          canAccessLeads={canAccessLeads}
           back={back}
           onHeaderActions={updateDetailHeaderActions}
           changed={async (message) => {
@@ -450,7 +450,7 @@ export function ProviderWorkIntakeWorkspace({
             <div className="provider-work-intake-filter-grid">
               <label>
                 Source
-                <select
+                <SortedSelect
                   aria-label="Filter by source"
                   value={source}
                   onChange={(event) => {
@@ -459,16 +459,16 @@ export function ProviderWorkIntakeWorkspace({
                   }}
                 >
                   <option value="">All sources</option>
-                  {SOURCES.map((item) => (
-                    <option key={item} value={item}>
-                      {label(item)}
+                  {WORK_SOURCE_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Work type
-                <select
+                <SortedSelect
                   aria-label="Filter by work type"
                   value={workType}
                   onChange={(event) => {
@@ -482,11 +482,11 @@ export function ProviderWorkIntakeWorkspace({
                       {label(item)}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Status
-                <select
+                <SortedSelect
                   aria-label="Filter by status"
                   value={status}
                   onChange={(event) => {
@@ -500,11 +500,11 @@ export function ProviderWorkIntakeWorkspace({
                       {label(item)}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Relationship
-                <select
+                <SortedSelect
                   aria-label="Filter by relationship status"
                   value={relationshipStatus}
                   onChange={(event) => {
@@ -520,7 +520,7 @@ export function ProviderWorkIntakeWorkspace({
                       </option>
                     ),
                   )}
-                </select>
+                </SortedSelect>
               </label>
             </div>
           </details>
@@ -587,7 +587,7 @@ export function ProviderWorkIntakeWorkspace({
                           </small>
                         </td>
                         <td data-label="Channel">
-                          <span>{label(item.attributes.source)}</span>
+                          <span>{workSourceLabel(item.attributes.source)}</span>
                           <small>
                             {label(item.attributes.work_type)}
                             {item.attributes.source === "REFERRAL" &&
@@ -711,6 +711,7 @@ function IntakeCreateDialog({
     source: "",
     work_type: "",
     title: "",
+    customer_relationship_id: "",
     requester_name: "",
     requester_contact_reference: "",
     site_summary: "",
@@ -727,8 +728,12 @@ function IntakeCreateDialog({
   });
   const [requirementCatalogue, setRequirementCatalogue] =
     useState<RequirementCatalogue | null>(null);
+  const [customerRelationships, setCustomerRelationships] = useState<Collection<GenericAttributes> | null>(null);
   const [step, setStep] = useState(1);
   const [assetQuery, setAssetQuery] = useState("");
+  const [siteMode, setSiteMode] = useState<"EXISTING" | "NEW">("EXISTING");
+  const [newSiteName, setNewSiteName] = useState("");
+  const [siteAddress, setSiteAddress] = useState<IndiaPostalAddress>(emptyIndiaPostalAddress());
   const [locationQuery, setLocationQuery] = useState("");
   const [locations, setLocations] =
     useState<Collection<GenericAttributes> | null>(null);
@@ -741,6 +746,30 @@ function IntakeCreateDialog({
     capturedAt: "",
   });
   const [geoStatus, setGeoStatus] = useState("");
+  const locationOptions = (locations?.data || []).map((location) => ({
+    id: location.id,
+    label: locationLabel(location),
+    detail: String(
+      location.attributes.service_location_code ||
+        location.attributes.address_line_1 ||
+        location.attributes.city ||
+        "Authorized service location",
+    ),
+  }));
+  const selectedLocation = locations?.data.find(
+    (location) => location.id === selectedLocationId,
+  );
+  const selectedCustomerRelationship = customerRelationships?.data.find(
+    (relationship) => relationship.id === form.customer_relationship_id,
+  );
+  const postalAddress = formatIndiaPostalAddress(siteAddress);
+  const formattedNewSiteAddress = [newSiteName.trim(), postalAddress].filter(Boolean).join(" · ");
+  const siteSummaryForReview =
+    siteMode === "NEW"
+      ? formattedNewSiteAddress || "Not specified"
+      : selectedLocation
+        ? locationLabel(selectedLocation)
+        : "Not specified";
   const [matches, setMatches] = useState<WorkIntakeMatch[]>([]);
   const [matchChecked, setMatchChecked] = useState(false);
   const [selection, setSelection] = useState<WorkIntakeMatch | null>(null);
@@ -752,6 +781,13 @@ function IntakeCreateDialog({
       .elevatorRequirementCatalogue(providerId)
       .then(setRequirementCatalogue)
       .catch(() => setRequirementCatalogue(null));
+  }, [providerId]);
+  useEffect(() => {
+    let active = true;
+    void operationsData.customerRelationships(providerId)
+      .then((result) => { if (active) setCustomerRelationships(result); })
+      .catch(() => { if (active) setCustomerRelationships({ data: [] }); });
+    return () => { active = false; };
   }, [providerId]);
   useEffect(() => {
     let active = true;
@@ -778,7 +814,14 @@ function IntakeCreateDialog({
         providerId,
         {
           title: form.title,
-          site_summary: form.site_summary,
+          site_summary:
+            siteMode === "NEW"
+              ? newSiteName
+              : selectedLocation
+                ? locationLabel(selectedLocation)
+                : undefined,
+          service_location_id:
+            siteMode === "EXISTING" ? selectedLocationId || undefined : undefined,
           asset_query: assetQuery || undefined,
         },
       );
@@ -823,7 +866,15 @@ function IntakeCreateDialog({
       delete body.unit_stops;
       delete body.unit_capacity;
       delete body.unit_type;
-      if (selectedLocationId) body.service_location_id = selectedLocationId;
+      delete body.site_summary;
+      if (siteMode === "NEW") {
+        body.site_summary = formattedNewSiteAddress || undefined;
+      } else if (selectedLocationId) {
+        body.service_location_id = selectedLocationId;
+        body.site_summary = selectedLocation
+          ? locationLabel(selectedLocation)
+          : undefined;
+      }
       if (coordinates.latitude || coordinates.longitude) {
         body.site_latitude = Number(coordinates.latitude);
         body.site_longitude = Number(coordinates.longitude);
@@ -878,7 +929,7 @@ function IntakeCreateDialog({
       : step === 2
         ? referralComplete
         : step === 3
-          ? coordinatesComplete
+          ? coordinatesComplete && (siteMode !== "NEW" || !siteAddress.pin_code || (indiaPostalAddressComplete(siteAddress) && formattedNewSiteAddress.length <= 240))
           : ready;
   function captureCoordinates() {
     if (!navigator.geolocation) {
@@ -955,9 +1006,24 @@ function IntakeCreateDialog({
               </p>
             </div>
             <div className="provider-work-intake-form-grid">
+              <label className="wide">
+                Existing customer or prospect (optional)
+                <SortedSelect
+                  value={form.customer_relationship_id}
+                  onChange={(event) => setForm({ ...form, customer_relationship_id: event.target.value })}
+                >
+                  <option value="">Leave unlinked for now</option>
+                  {(customerRelationships?.data || []).map((relationship) => (
+                    <option key={relationship.id} value={relationship.id}>
+                      {String(relationship.attributes.display_name || relationship.attributes.name || "Customer")}
+                    </option>
+                  ))}
+                </SortedSelect>
+                <small>Choose an existing provider relationship when the requester is already known. The selected relationship carries into Lead &amp; Survey.</small>
+              </label>
               <label>
                 Work source *
-                <select
+                <SortedSelect
                   required
                   value={form.source}
                   onChange={(event) =>
@@ -965,16 +1031,16 @@ function IntakeCreateDialog({
                   }
                 >
                   <option value="">Choose source</option>
-                  {SOURCES.map((item) => (
-                    <option key={item} value={item}>
-                      {label(item)}
+                  {WORK_SOURCE_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Work type *
-                <select
+                <SortedSelect
                   required
                   value={form.work_type}
                   onChange={(event) =>
@@ -987,7 +1053,7 @@ function IntakeCreateDialog({
                       {label(item)}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label className="wide">
                 Work title *
@@ -999,17 +1065,6 @@ function IntakeCreateDialog({
                   value={form.title}
                   onChange={(event) =>
                     setForm({ ...form, title: event.target.value })
-                  }
-                />
-              </label>
-              <label className="wide">
-                Site or project name
-                <input
-                  maxLength={240}
-                  placeholder="Example: PG Building, Bengaluru"
-                  value={form.site_summary}
-                  onChange={(event) =>
-                    setForm({ ...form, site_summary: event.target.value })
                   }
                 />
               </label>
@@ -1063,7 +1118,7 @@ function IntakeCreateDialog({
                   </label>
                   <label>
                     Equipment type
-                    <select
+                    <SortedSelect
                       value={form.unit_type}
                       onChange={(event) =>
                         setForm({ ...form, unit_type: event.target.value })
@@ -1079,7 +1134,7 @@ function IntakeCreateDialog({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </SortedSelect>
                   </label>
                 </div>
                 {!requirementsComplete && (
@@ -1183,7 +1238,7 @@ function IntakeCreateDialog({
                     </label>
                     <label>
                       Referral relationship / role
-                      <select
+                      <SortedSelect
                         value={form.referral_contact_role}
                         onChange={(event) =>
                           setForm({
@@ -1198,7 +1253,7 @@ function IntakeCreateDialog({
                             {role}
                           </option>
                         ))}
-                      </select>
+                      </SortedSelect>
                     </label>
                     <label className="wide">
                       Referral notes
@@ -1238,37 +1293,77 @@ function IntakeCreateDialog({
               <span>Step 3 of 4</span>
               <h3>Confirm the site</h3>
               <p>
-                Link an authorized service location or capture the coordinates
-                observed at intake. This snapshot will not overwrite the
-                canonical site.
+                Choose an authorized site, or enter a new site name. PIN lookup
+                is optional; if used, confirm the post office, locality, and city.
+                Coordinates can also be captured at intake.
               </p>
             </div>
             <div className="provider-work-intake-form-grid">
               <label className="wide">
-                Search authorized service locations
-                <input
-                  autoFocus
-                  value={locationQuery}
-                  onChange={(event) => setLocationQuery(event.target.value)}
-                  placeholder="Search site name or address"
-                />
-              </label>
-              <label className="wide">
-                Linked service location
-                <select
-                  value={selectedLocationId}
+                Site selection
+                <SortedSelect
+                  value={siteMode}
                   onChange={(event) =>
-                    setSelectedLocationId(event.target.value)
+                    setSiteMode(event.target.value as "EXISTING" | "NEW")
                   }
                 >
-                  <option value="">No existing site selected</option>
-                  {locations?.data.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {locationLabel(location)}
-                    </option>
-                  ))}
-                </select>
+                  <option value="EXISTING">Select an existing site</option>
+                  <option value="NEW">Enter a new or unlisted site</option>
+                </SortedSelect>
               </label>
+              {siteMode === "EXISTING" ? (
+                <div className="wide">
+                  <SearchableSelect
+                    label="Authorized service location"
+                    searchLabel="Search site name or address"
+                    search={locationQuery}
+                    onSearch={setLocationQuery}
+                    value={selectedLocationId}
+                    onChange={(value) => {
+                      setSelectedLocationId(value);
+                      const location = locations?.data.find(
+                        (item) => item.id === value,
+                      );
+                      if (location) {
+                        setForm((current) => ({
+                          ...current,
+                          site_summary: locationLabel(location),
+                        }));
+                      }
+                    }}
+                    options={locationOptions}
+                    placeholder="Leave blank if the site is not listed"
+                    required={false}
+                  />
+                  <small className="provider-work-intake-location-message">
+                    Only authorized locations can be linked to this provider.
+                  </small>
+                </div>
+              ) : (
+                <div className="provider-work-intake-address-entry wide">
+                  <label>
+                    Site or project name *
+                    <input
+                      required
+                      maxLength={100}
+                      placeholder="Example: PG Building"
+                      value={newSiteName}
+                      onChange={(event) => setNewSiteName(event.target.value)}
+                    />
+                  </label>
+                  <IndiaPostalAddressFields value={siteAddress} onChange={setSiteAddress} required={false} />
+                  {siteAddress.pin_code && !indiaPostalAddressComplete(siteAddress) && (
+                    <small className="provider-work-intake-address-message" role="status">
+                      PIN lookup is optional. If you enter a PIN code, find the address and complete its locality and city before continuing.
+                    </small>
+                  )}
+                  {formattedNewSiteAddress.length > 240 && (
+                    <small className="provider-work-intake-address-message" role="alert">
+                      Keep the site name and address within 240 characters total.
+                    </small>
+                  )}
+                </div>
+              )}
               <div className="provider-work-intake-location-actions wide">
                 <Button
                   type="button"
@@ -1355,7 +1450,7 @@ function IntakeCreateDialog({
                 <span>Request</span>
                 <strong>{form.title || "Not supplied"}</strong>
                 <small>
-                  {label(form.source)} · {label(form.work_type)}
+                  {workSourceLabel(form.source)} · {label(form.work_type)}
                 </small>
               </div>
               <div>
@@ -1369,10 +1464,15 @@ function IntakeCreateDialog({
                 </small>
               </div>
               <div>
+                <span>Customer</span>
+                <strong>{String(selectedCustomerRelationship?.attributes.display_name || "Not linked yet")}</strong>
+                <small>{selectedCustomerRelationship ? "Selected for the downstream Lead & Survey" : "You can link a customer during Lead creation"}</small>
+              </div>
+              <div>
                 <span>Site</span>
-                <strong>{form.site_summary || "Not specified"}</strong>
+                <strong>{siteSummaryForReview}</strong>
                 <small>
-                  {selectedLocationId
+                  {siteMode === "EXISTING" && selectedLocationId
                     ? "Authorized location selected"
                     : coordinates.latitude && coordinates.longitude
                       ? "Coordinates captured"
@@ -1381,11 +1481,11 @@ function IntakeCreateDialog({
               </div>
             </div>
             <label className="provider-work-intake-asset-lookup">
-              Optional existing Asset or Project lookup
+              Search an existing asset or project (optional)
               <input
                 value={assetQuery}
                 onChange={(event) => setAssetQuery(event.target.value)}
-                placeholder="Name, identifier, or provider-scoped ID"
+                placeholder="Search by asset or project name"
               />
             </label>
             <div className="provider-work-intake-match-check">
@@ -1396,16 +1496,18 @@ function IntakeCreateDialog({
                 disabled={!form.title.trim() && !assetQuery.trim()}
                 onClick={() => void checkMatches()}
               >
-                Check possible matches
+                Search assets and projects
               </Button>
-              <span>Searches are provider-scoped warnings only.</span>
+              <span>
+                Select a result to link it. TRISE adds its record ID for you.
+              </span>
             </div>
             {matchChecked && (
               <section
                 className="provider-work-intake-candidates"
-                aria-label="Possible related records"
+                aria-label="Asset and project search results"
               >
-                <h3>Provider-scoped suggestions</h3>
+                <h3>Search results</h3>
                 {matches.length ? (
                   matches.map((match) => (
                     <article
@@ -1431,14 +1533,14 @@ function IntakeCreateDialog({
                         >
                           {selection?.id === match.id
                             ? "Selected"
-                            : "Select relationship"}
+                            : "Select this record"}
                         </Button>
                       )}
                     </article>
                   ))
                 ) : (
                   <p>
-                    No matching Asset or Project was found. You can continue; an
+                    No matching asset or project was found. You can continue; an
                     assessment task will be created.
                   </p>
                 )}
@@ -1475,14 +1577,18 @@ function IntakeCreateDialog({
           </Button>
           {step < 4 ? (
             <Button
+              key="continue"
               type="button"
               disabled={!stepReady}
-              onClick={() => setStep(step + 1)}
+              onClick={(event) => {
+                event.preventDefault();
+                setStep(step + 1);
+              }}
             >
               Continue
             </Button>
           ) : (
-            <Button type="submit" busy={busy} disabled={!ready}>
+            <Button key="create" type="submit" busy={busy} disabled={!ready}>
               Create intake
             </Button>
           )}
@@ -1497,6 +1603,7 @@ function IntakeDetail({
   id,
   canEdit,
   canAssign,
+  canAccessLeads,
   back,
   onHeaderActions,
   changed,
@@ -1505,6 +1612,7 @@ function IntakeDetail({
   id: string;
   canEdit: boolean;
   canAssign: boolean;
+  canAccessLeads: boolean;
   back: () => void;
   onHeaderActions: (actions: ReactNode) => void;
   changed: (message: string) => Promise<void>;
@@ -1530,6 +1638,8 @@ function IntakeDetail({
   const [assignmentKind, setAssignmentKind] = useState("QUALIFICATION");
   const [assignmentUserId, setAssignmentUserId] = useState("");
   const [assignmentReason, setAssignmentReason] = useState("");
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [skipReason, setSkipReason] = useState("");
   const [assignmentBusy, setAssignmentBusy] = useState(false);
   const [assignmentError, setAssignmentError] = useState("");
   const [routeSelection, setRouteSelection] = useState("");
@@ -1894,7 +2004,14 @@ function IntakeDetail({
           ),
         );
         setAssignmentUserId(
-          (current) => current || item?.attributes.assigned_to_user_id || "",
+          (current) =>
+            current ||
+            item?.attributes.assigned_to_user_id ||
+            result.data.find(
+              (candidate) =>
+                candidate.attributes.user_id === session?.userId,
+            )?.attributes.user_id ||
+            "",
         );
       })
       .catch((cause) => {
@@ -1903,7 +2020,7 @@ function IntakeDetail({
     return () => {
       active = false;
     };
-  }, [canAssign, providerId, item?.attributes.assigned_to_user_id]);
+  }, [canAssign, providerId, item?.attributes.assigned_to_user_id, session?.userId]);
   async function decide(
     action: "REVIEW" | "DISMISS" | "CONFIRM",
     match: WorkIntakeMatch,
@@ -1982,12 +2099,6 @@ function IntakeDetail({
       );
       return;
     }
-    if (assignmentReason.trim().length < 3) {
-      setAssignmentError(
-        "Add a short reason so the assignment history is clear.",
-      );
-      return;
-    }
     setAssignmentBusy(true);
     setAssignmentError("");
     try {
@@ -1997,7 +2108,7 @@ function IntakeDetail({
         {
           assigned_to_user_id: assignmentUserId,
           assignment_kind: assignmentKind,
-          reason: assignmentReason.trim(),
+          reason: assignmentReason.trim() || "Provider team owner assigned",
           expected_revision: item.attributes.revision,
         },
         newKey(),
@@ -2005,9 +2116,49 @@ function IntakeDetail({
       setItem(response);
       focusWorkflowStep(response);
       setAssignmentReason("");
+      setAssignmentDialogOpen(false);
       await changed(
         "Assignment saved. The selected provider team member was notified.",
       );
+    } catch (cause) {
+      setAssignmentError(errorMessage(cause));
+    } finally {
+      setAssignmentBusy(false);
+    }
+  }
+  async function skipToLeadSurvey() {
+    if (!item) return;
+    setAssignmentBusy(true);
+    setAssignmentError("");
+    try {
+      const reason =
+        skipReason.trim() || "Manager advanced New Installation to Lead & Survey";
+      let response = await operationsData.updateProviderWorkIntakeAssessment(
+        providerId,
+        id,
+        {
+          status: "COMPLETED",
+          reason,
+          expected_revision: item.attributes.revision,
+        },
+        newKey(),
+      );
+      if (!response.attributes.workflow_route) {
+        response = await operationsData.decideProviderWorkIntakeRoute(
+          providerId,
+          id,
+          {
+            workflow_route: "LEAD",
+            reason,
+            expected_revision: response.attributes.revision,
+          },
+          newKey(),
+        );
+      }
+      setItem(response);
+      focusWorkflowStep(response);
+      setSkipReason("");
+      await changed("Work Intake sent to the Lead & Survey workflow.");
     } catch (cause) {
       setAssignmentError(errorMessage(cause));
     } finally {
@@ -2213,13 +2364,12 @@ function IntakeDetail({
     attributes.journey_stage_status === "COMPLETED" ||
     attributes.journey_status === "CANCELLED";
   canEdit = canEdit && !workflowConcluded;
-  const recommended = nextAction(attributes);
   const step = intakeStep(attributes);
   const steps: Array<{ key: IntakeStep; title: string }> = [
     { key: "RELATIONSHIP", title: "Relationship" },
     { key: "REQUIREMENTS", title: "Requirements" },
     { key: "ASSETS", title: "Assets & documents" },
-    { key: "ASSESSMENT", title: "Owner & assessment" },
+    { key: "ASSESSMENT", title: "Next step" },
     { key: "HANDOFF", title: "Handoff" },
   ];
   const workflowStep: IntakeStep | null =
@@ -2228,7 +2378,21 @@ function IntakeDetail({
     0,
     steps.findIndex((entry) => entry.key === workflowStep),
   );
-  const leadLinked = Boolean(item.relationships.marketing_lead);
+  const leadRelationship = item.relationships.marketing_lead;
+  const linkedLeadId = Array.isArray(leadRelationship)
+    ? leadRelationship[0]?.id
+    : leadRelationship?.id;
+  const leadLinked = Boolean(linkedLeadId);
+  const canSkipToLeadSurvey =
+    canEdit &&
+    canAccessLeads &&
+    attributes.work_type === "NEW_INSTALLATION" &&
+    attributes.assessment_task.status === "OPEN" &&
+    !attributes.assigned_to_user_id &&
+    !leadLinked;
+  const recommended = canSkipToLeadSurvey
+    ? "Send to Lead & Survey"
+    : nextAction(attributes);
   const showAssignment =
     canAssign &&
     !workflowConcluded &&
@@ -2268,7 +2432,7 @@ function IntakeDetail({
             </Status>
             <h2>{attributes.title}</h2>
             <p>
-              {attributes.reference_code} · {label(attributes.source)} ·{" "}
+              {attributes.reference_code} · {workSourceLabel(attributes.source)} ·{" "}
               {label(attributes.work_type)}
             </p>
             {attributes.journey_status_label === "ABANDONED" && (
@@ -2285,7 +2449,11 @@ function IntakeDetail({
               Current workflow step
             </span>
             <strong>{recommended}</strong>
-            <small>{nextActionDescription(attributes, recommended)}</small>
+            <small>
+              {canSkipToLeadSurvey
+                ? "Owner assignment and assessment are optional for this manager-led handoff."
+                : nextActionDescription(attributes, recommended)}
+            </small>
           </div>
           {workflowConcluded && (
             <div
@@ -2310,6 +2478,17 @@ function IntakeDetail({
                     : "Closed record retained. Continue in the linked downstream workflow."}
                 </small>
               </span>
+              {linkedLeadId && canAccessLeads && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    window.location.hash = `leads/${encodeURIComponent(linkedLeadId)}`;
+                  }}
+                >
+                  Open Lead details
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -2564,8 +2743,12 @@ function IntakeDetail({
             </div>
             <dl>
               <div>
-                <dt>Requester</dt>
+                <dt>Requester name</dt>
                 <dd>{attributes.requester_name || "Not supplied"}</dd>
+              </div>
+              <div>
+                <dt>Linked customer</dt>
+                <dd>{attributes.customer_relationship_name || "Not linked yet"}</dd>
               </div>
               <div>
                 <dt>Contact reference</dt>
@@ -2574,7 +2757,7 @@ function IntakeDetail({
                 </dd>
               </div>
               <div>
-                <dt>Site</dt>
+                <dt>Site or project name &amp; address</dt>
                 <dd>{attributes.site_summary || "Not specified"}</dd>
               </div>
               {attributes.source === "REFERRAL" && (
@@ -2600,7 +2783,7 @@ function IntakeDetail({
                 </div>
               )}
               <div>
-                <dt>Coordinates</dt>
+                <dt>Site coordinates</dt>
                 <dd>
                   {attributes.site_coordinates?.latitude != null &&
                   attributes.site_coordinates.longitude != null
@@ -2609,7 +2792,7 @@ function IntakeDetail({
                 </dd>
               </div>
               <div>
-                <dt>Description</dt>
+                <dt>Request notes</dt>
                 <dd>{attributes.description || "No description supplied."}</dd>
               </div>
               <div>
@@ -2623,40 +2806,87 @@ function IntakeDetail({
       {activeDetailStep === "ASSESSMENT" && (
         <section
           className="provider-work-intake-assignment-workspace"
-          aria-label="Work Intake owner and assessment"
+          aria-label="Work Intake next step"
         >
           <div className="provider-work-intake-assessment-workspace-header">
             <div>
-              <span className="provider-work-intake-eyebrow">Assign owner</span>
-              <h3>Choose the person responsible for this intake</h3>
+              <span className="provider-work-intake-eyebrow">
+                {canSkipToLeadSurvey ? "Recommended next action" : "Next workflow action"}
+              </span>
+              <h3>
+                {canSkipToLeadSurvey
+                  ? "Send to Lead & Survey"
+                  : "Qualification / intake review"}
+              </h3>
               <p>
-                Managers and provider administrators select one team member.
-                That person is notified and completes the work assessment in the
-                next tab.
+                {canSkipToLeadSurvey
+                  ? "This New Installation can move directly to Lead & Survey without an intake review. Assign a reviewer below only if this request needs the review first."
+                  : attributes.assigned_to
+                    ? `Review owner: ${transitionName(attributes.assigned_to)}. ${ownerIsCurrentUser ? "Accept the intake below to start." : "The owner must accept the intake before work starts."}`
+                    : "Choose yourself to start the review, or select a teammate to own it."}
               </p>
             </div>
             <Status>
-              {attributes.assigned_to ? "Assigned" : "Needs assignment"}
+              {canSkipToLeadSurvey
+                ? "Ready to hand off"
+                : attributes.assigned_to
+                  ? ownerIsCurrentUser
+                    ? "Assigned to you"
+                    : "Waiting for owner"
+                  : "Owner needed"}
             </Status>
           </div>
+          {canSkipToLeadSurvey && (
+            <div className="provider-work-intake-recommended-route">
+              <div>
+                <span className="provider-work-intake-eyebrow">
+                  Continue without intake review
+                </span>
+                <p>
+                  This completes the intake assessment and routes the request
+                  to Lead &amp; Survey.
+                </p>
+              </div>
+              <label>
+                Reason (optional)
+                <input
+                  value={skipReason}
+                  maxLength={500}
+                  onChange={(event) => setSkipReason(event.target.value)}
+                  placeholder="Add a reason if useful"
+                />
+              </label>
+              <Button
+                type="button"
+                busy={assignmentBusy}
+                onClick={() => void skipToLeadSurvey()}
+              >
+                Send to Lead &amp; Survey
+              </Button>
+            </div>
+          )}
           {showAssignment ? (
             <div className="provider-work-intake-assessment-block provider-work-intake-assignment-block">
               <div className="provider-work-intake-assessment-block-heading">
                 <div>
-                  <h4>Owner assignment</h4>
+                  <h4>
+                    {canSkipToLeadSurvey
+                      ? "Or complete the intake review"
+                      : attributes.assigned_to
+                        ? "Review owner"
+                        : "Choose who will do the review"}
+                  </h4>
                   <small>
-                    Assignment changes ownership only; it does not complete the
-                    Work Intake.
+                    {canSkipToLeadSurvey
+                      ? "Choose a reviewer only when the request needs qualification before Lead & Survey."
+                      : attributes.assigned_to
+                        ? "The review already has an owner. Change the owner only if the work needs to move to someone else."
+                        : "Select yourself to start now, or choose another active provider member to hand the review to them."}
                   </small>
                 </div>
                 <SvgIcon name="users" size={22} />
               </div>
-              {assignmentError && (
-                <div className="provider-work-intake-error" role="alert">
-                  {assignmentError}
-                </div>
-              )}
-              <div className="provider-work-intake-assignment-grid">
+              <div className="provider-work-intake-assignment-actions">
                 <div className="provider-work-intake-current-assignee">
                   <span>Current intake owner</span>
                   <strong>
@@ -2664,83 +2894,25 @@ function IntakeDetail({
                   </strong>
                   <small>
                     {attributes.assigned_to?.email ||
-                      "Select a provider team member below"}
+                      (assignmentCandidates.length
+                        ? `${assignmentCandidates.length} active team members available`
+                        : "Loading active team members…")}
                   </small>
-                  {attributes.assigned_to?.membership_context && (
-                    <em>{label(attributes.assigned_to.membership_context)}</em>
-                  )}
                 </div>
-                <label>
-                  Assignment type
-                  <select
-                    value={assignmentKind}
-                    onChange={(event) => setAssignmentKind(event.target.value)}
-                  >
-                    <option value="QUALIFICATION">
-                      Qualification / intake review
-                    </option>
-                    <option value="SITE_SURVEY">Site survey</option>
-                    <option value="TECHNICAL_ASSESSMENT">
-                      Technical assessment
-                    </option>
-                    <option value="COMMERCIAL_FOLLOW_UP">
-                      Commercial follow-up
-                    </option>
-                    <option value="INTAKE_OWNER">Overall intake owner</option>
-                  </select>
-                </label>
-                <label>
-                  Provider team member
-                  <select
-                    value={assignmentUserId}
-                    onChange={(event) =>
-                      setAssignmentUserId(event.target.value)
-                    }
-                    disabled={!assignmentCandidates.length}
-                  >
-                    <option value="">Select active team member</option>
-                    {assignmentCandidates.map((candidate) => (
-                      <option
-                        value={candidate.attributes.user_id}
-                        key={candidate.id}
-                      >
-                        {candidate.attributes.name ||
-                          candidate.attributes.email ||
-                          "Provider member"}{" "}
-                        ·{" "}
-                        {label(
-                          candidate.attributes.membership_context ||
-                            "Provider team",
-                        )}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Reason
-                  <input
-                    value={assignmentReason}
-                    maxLength={500}
-                    onChange={(event) =>
-                      setAssignmentReason(event.target.value)
-                    }
-                    placeholder="Why is this person taking the next action?"
-                  />
-                </label>
-              </div>
-              <div className="provider-work-intake-assignment-actions">
-                <small>
-                  {assignmentCandidates.length
-                    ? `${assignmentCandidates.length} active provider team members available`
-                    : "Loading active provider team members…"}
-                </small>
                 <Button
                   type="button"
-                  busy={assignmentBusy}
-                  disabled={!assignmentCandidates.length}
-                  onClick={() => void saveAssignment()}
+                  variant={attributes.assigned_to || canSkipToLeadSurvey ? "secondary" : "primary"}
+                  disabled={!assignmentCandidates.length || assignmentBusy}
+                  onClick={() => {
+                    setAssignmentError("");
+                    setAssignmentDialogOpen(true);
+                  }}
                 >
-                  Save assignment &amp; notify
+                  {attributes.assigned_to
+                    ? "Change owner"
+                    : canSkipToLeadSurvey
+                      ? "Assign reviewer"
+                      : "Choose review owner"}
                 </Button>
               </div>
             </div>
@@ -2754,12 +2926,141 @@ function IntakeDetail({
               <span>
                 {attributes.assigned_to
                   ? "Only an authorized manager or provider administrator can change the owner."
-                  : "You do not have permission to assign this Work Intake. An authorized manager must assign it before assessment can begin."}
+                  : canAccessLeads
+                    ? "You do not have assignment permission. You can still use the Lead & Survey option if you have edit access."
+                    : "You do not have permission to assign this Work Intake. An authorized manager must assign it before assessment can begin."}
               </span>
             </div>
           )}
         </section>
       )}
+          {assignmentDialogOpen &&
+            activeDetailStep === "ASSESSMENT" &&
+            showAssignment && (
+            <OperationsDialog
+              title="Choose who will complete the review"
+              busy={assignmentBusy}
+              className="provider-work-intake-assignment-dialog"
+              onClose={() => {
+                if (!assignmentBusy) {
+                  setAssignmentDialogOpen(false);
+                  setAssignmentError("");
+                }
+              }}
+            >
+              <form
+                className="provider-work-intake-assignment-dialog-form"
+                onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                  event.preventDefault();
+                  void saveAssignment();
+                }}
+              >
+                <p>
+                  Your selection becomes the review owner. Choose yourself to
+                  start now, or select a teammate to notify them.
+                </p>
+                {assignmentError && (
+                  <div className="provider-work-intake-error" role="alert">
+                    {assignmentError}
+                  </div>
+                )}
+                <div className="provider-work-intake-assignment-grid">
+                  <label>
+                    Assignment type
+                    <SortedSelect
+                      value={assignmentKind}
+                      onChange={(event) => setAssignmentKind(event.target.value)}
+                    >
+                      <option value="QUALIFICATION">
+                        Qualification / intake review
+                      </option>
+                      <option value="SITE_SURVEY">Site survey</option>
+                      <option value="TECHNICAL_ASSESSMENT">
+                        Technical assessment
+                      </option>
+                      <option value="COMMERCIAL_FOLLOW_UP">
+                        Commercial follow-up
+                      </option>
+                      <option value="INTAKE_OWNER">Overall intake owner</option>
+                    </SortedSelect>
+                  </label>
+                  <label>
+                    Provider team member
+                    <SortedSelect
+                      value={assignmentUserId}
+                      onChange={(event) =>
+                        setAssignmentUserId(event.target.value)
+                      }
+                      disabled={!assignmentCandidates.length}
+                    >
+                      <option value="">Select active team member</option>
+                      {assignmentCandidates.map((candidate) => (
+                        <option
+                          value={candidate.attributes.user_id}
+                          key={candidate.id}
+                        >
+                          {candidate.attributes.name ||
+                            candidate.attributes.email ||
+                            "Provider member"}{" "}
+                          ·{" "}
+                          {label(
+                            candidate.attributes.membership_context ||
+                              "Provider team",
+                          )}
+                        </option>
+                      ))}
+                    </SortedSelect>
+                  </label>
+                  <label>
+                    Reason (optional)
+                    <input
+                      value={assignmentReason}
+                      maxLength={500}
+                      onChange={(event) =>
+                        setAssignmentReason(event.target.value)
+                      }
+                      placeholder="Add context for the assignment"
+                    />
+                  </label>
+                </div>
+                <div className="provider-work-intake-assignment-dialog-current">
+                  Current intake owner: {attributes.assigned_to?.name || "Not assigned"}
+                  {assignmentCandidates.length > 0 && (
+                    <span>
+                      {assignmentCandidates.length} active provider team members
+                    </span>
+                  )}
+                </div>
+                <div className="provider-work-intake-assignment-dialog-actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={assignmentBusy}
+                    onClick={() => {
+                      setAssignmentDialogOpen(false);
+                      setAssignmentError("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant={
+                      assignmentUserId === session?.userId
+                        ? "secondary"
+                        : "primary"
+                    }
+                    busy={assignmentBusy}
+                    disabled={!assignmentCandidates.length || !assignmentUserId}
+                  >
+                    {assignmentUserId === session?.userId
+                      ? "Continue to assessment"
+                      : "Assign & notify"}
+                  </Button>
+                </div>
+              </form>
+            </OperationsDialog>
+          )}
       {activeDetailStep === "ASSESSMENT" && (
         <section
           className="provider-work-intake-assessment-workspace"
@@ -2770,19 +3071,20 @@ function IntakeDetail({
               <span className="provider-work-intake-eyebrow">
                 Work assessment
               </span>
-              <h3>Complete the assigned work</h3>
+              <h3>
+                {canSkipToLeadSurvey
+                  ? "Complete the intake review instead"
+                  : "Complete the assigned work"}
+              </h3>
               <p>
-                {attributes.assigned_to
-                  ? `Assigned to ${transitionName(attributes.assigned_to)}.`
-                  : "No owner has been assigned yet."}{" "}
-                {leadLinked
-                  ? "The Lead is already linked; this intake carries the shared assessment context."
-                  : "Only the selected owner completes this step before the intake moves to the next workflow."}
+                {canSkipToLeadSurvey
+                  ? "Choose this path only when the request needs qualification first. Select Assign reviewer above to start the review; the direct Lead & Survey handoff is available above."
+                  : `${attributes.assigned_to ? `Assigned to ${transitionName(attributes.assigned_to)}. ` : "No owner has been assigned yet. "}${leadLinked ? "The Lead is already linked; this intake carries the shared assessment context." : "Only the selected owner completes this step before the intake moves to the next workflow."}`}
               </p>
             </div>
             <Status>{label(attributes.assessment_task.status)}</Status>
           </div>
-          {canTakeOver && (
+          {canTakeOver && !canSkipToLeadSurvey && (
             <section
               className="provider-work-intake-takeover"
               aria-label="Owner acceptance"
@@ -2806,7 +3108,8 @@ function IntakeDetail({
               </Button>
             </section>
           )}
-          {attributes.assessment_task.status === "OPEN" &&
+          {!canSkipToLeadSurvey &&
+            attributes.assessment_task.status === "OPEN" &&
             attributes.assigned_to &&
             !ownerIsCurrentUser && (
               <div className="provider-work-intake-owner-waiting" role="status">
@@ -2895,12 +3198,13 @@ function IntakeDetail({
                 </Button>
               </div>
             )}
-            {!attributes.assigned_to && (
+            {!canSkipToLeadSurvey && !attributes.assigned_to && (
               <div className="provider-work-intake-owner-waiting" role="status">
-                <strong>Owner required</strong>
+                <strong>Choose who will do the review</strong>
                 <span>
-                  Open the Assign owner tab and select a team member before work
-                  can begin.
+                  {showAssignment
+                    ? "Select yourself to start now, or choose a teammate in the optional assignment above."
+                    : "An authorized manager or provider administrator must assign this intake before the review can start."}
                 </span>
               </div>
             )}
@@ -2981,7 +3285,7 @@ function IntakeDetail({
               {(attributes.allowed_workflow_routes || []).length > 1 ? (
                 <label>
                   Next workflow
-                  <select
+                  <SortedSelect
                     value={routeSelection}
                     onChange={(event) => setRouteSelection(event.target.value)}
                   >
@@ -2990,7 +3294,7 @@ function IntakeDetail({
                         {label(route)}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
               ) : (
                 <div className="provider-work-intake-route-fixed">
@@ -3269,7 +3573,7 @@ function IntakeDetail({
                   </label>
                   <label>
                     Equipment type
-                    <select
+                    <SortedSelect
                       value={editForm.unit_type}
                       onChange={(event) =>
                         setEditForm({
@@ -3285,7 +3589,7 @@ function IntakeDetail({
                       <option value="PASSENGER_MRL">Passenger MRL</option>
                       <option value="FREIGHT_TRACTION">Freight traction</option>
                       <option value="HYDRAULIC">Hydraulic</option>
-                    </select>
+                    </SortedSelect>
                   </label>
                 </div>
               </section>
@@ -3357,7 +3661,7 @@ function IntakeDetail({
                     </label>
                     <label>
                       Referral relationship / role
-                      <select
+                      <SortedSelect
                         value={editForm.referral_contact_role}
                         onChange={(event) =>
                           setEditForm({
@@ -3380,7 +3684,7 @@ function IntakeDetail({
                             {role}
                           </option>
                         ))}
-                      </select>
+                      </SortedSelect>
                     </label>
                     <label className="wide">
                       Referral notes
@@ -3450,7 +3754,7 @@ function IntakeDetail({
             </label>
             <label>
               Payment disposition
-              <select
+              <SortedSelect
                 value={abandonPaymentDisposition}
                 onChange={(event) =>
                   setAbandonPaymentDisposition(event.target.value)
@@ -3463,7 +3767,7 @@ function IntakeDetail({
                 <option value="REFUND_ALREADY_COMPLETED">
                   Refund already completed — payments must be reversed
                 </option>
-              </select>
+              </SortedSelect>
             </label>
             <div className="provider-form-actions">
               <Button
@@ -3573,7 +3877,7 @@ function IntakeDetail({
                 </label>
                 <label>
                   Equipment type *
-                  <select
+                  <SortedSelect
                     required
                     value={requirementsForm.unit_type}
                     onChange={(event) =>
@@ -3588,7 +3892,7 @@ function IntakeDetail({
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
               </div>
             </div>

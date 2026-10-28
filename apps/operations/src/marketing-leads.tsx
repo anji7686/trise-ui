@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader } from "@trise/ui";
+import { Button, PageHeader, SortedSelect } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
   DEFAULT_PAGE_SIZE,
@@ -29,6 +29,10 @@ import {
 import { RequirementMultiChoice } from "./requirement-multi-choice";
 import { JourneyAbandonAction } from "./journey-abandon-action";
 import { accessData } from "./access-data";
+import {
+  WORK_SOURCE_OPTIONS,
+  workSourceLabel,
+} from "./workflow-reference-options";
 import {
   WorkflowFollowUpAction,
   WorkflowFollowUpDialog,
@@ -443,7 +447,7 @@ function RequirementRevisionSection({
             <div className="lead-requirements-grid">
               <label>
                 Equipment type
-                <select
+                <SortedSelect
                   name="equipment_type_code"
                   required
                   defaultValue={optionValue(
@@ -457,11 +461,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Industry / site segment
-                <select
+                <SortedSelect
                   name="industry_segment"
                   required
                   defaultValue={optionValue("industry_segment")}
@@ -472,11 +476,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Application
-                <select
+                <SortedSelect
                   name="application"
                   required
                   defaultValue={optionValue("application")}
@@ -487,11 +491,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Technology
-                <select
+                <SortedSelect
                   name="technology"
                   required
                   defaultValue={optionValue("technology")}
@@ -502,7 +506,7 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
             </div>
           </div>
@@ -543,7 +547,7 @@ function RequirementRevisionSection({
               </label>
               <label>
                 Speed band
-                <select
+                <SortedSelect
                   name="speed_band"
                   required
                   defaultValue={optionValue("speed_band")}
@@ -554,11 +558,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Door configuration
-                <select
+                <SortedSelect
                   name="door_configuration"
                   required
                   defaultValue={optionValue("door_configuration")}
@@ -569,11 +573,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Door type
-                <select
+                <SortedSelect
                   name="door_type"
                   required
                   defaultValue={optionValue("door_type")}
@@ -584,11 +588,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Machine room
-                <select
+                <SortedSelect
                   name="machine_room"
                   required
                   defaultValue={optionValue("machine_room")}
@@ -599,11 +603,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Control system
-                <select
+                <SortedSelect
                   name="control_system"
                   required
                   defaultValue={optionValue("control_system")}
@@ -614,11 +618,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Finish
-                <select
+                <SortedSelect
                   name="finish"
                   required
                   defaultValue={optionValue("finish")}
@@ -629,11 +633,11 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Drive type
-                <select
+                <SortedSelect
                   name="drive_type"
                   required
                   defaultValue={optionValue("drive_type")}
@@ -644,7 +648,7 @@ function RequirementRevisionSection({
                       {option.label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
             </div>
           </div>
@@ -798,6 +802,7 @@ function MarketingLeadDetail({
     useState<LocationCandidate | null>(null);
   const [locationBusy, setLocationBusy] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  const [linkedIntakeStatus, setLinkedIntakeStatus] = useState("");
   const [journeyStepBusy, setJourneyStepBusy] = useState(false);
   const [activeJourneyStep, setActiveJourneyStep] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -863,6 +868,23 @@ function MarketingLeadDetail({
     });
   }
 
+  const linkedWorkIntakeId = journey?.attributes.links.find((link) => link.resource_kind === "ProviderWorkIntake")?.resource_id || "";
+  useEffect(() => {
+    if (!linkedWorkIntakeId) {
+      setLinkedIntakeStatus("MISSING");
+      return undefined;
+    }
+    let current = true;
+    setLinkedIntakeStatus("LOADING");
+    void operationsData.genericDetail(providerId, `/provider-work-intakes/${encodeURIComponent(linkedWorkIntakeId)}`)
+      .then((record) => { if (current) setLinkedIntakeStatus(String((record as Resource<WorkIntakeAttributes>).attributes.status || "UNAVAILABLE")); })
+      .catch(() => { if (current) setLinkedIntakeStatus("UNAVAILABLE"); });
+    return () => { current = false; };
+  }, [providerId, linkedWorkIntakeId]);
+  useEffect(() => {
+    const intakeMutable = ["OPEN", "ASSESSMENT", "EXECUTION"].includes(linkedIntakeStatus);
+    if (lead?.attributes.journey_stage_status === "COMPLETED" || (journey && journey.attributes.status !== "ACTIVE") || !intakeMutable) setLocationCandidate(null);
+  }, [lead?.attributes.journey_stage_status, journey?.attributes.status, linkedIntakeStatus]);
   useEffect(() => {
     void load().catch((cause) =>
       setError((cause as Error).message || "Lead details could not be loaded."),
@@ -972,9 +994,12 @@ function MarketingLeadDetail({
   }
 
   async function confirmCurrentLocation() {
-    const intakeId = journey?.attributes.links.find(
-      (link) => link.resource_kind === "ProviderWorkIntake",
-    )?.resource_id;
+    if (workflowConcluded || !["OPEN", "ASSESSMENT", "EXECUTION"].includes(linkedIntakeStatus)) {
+      setLocationCandidate(null);
+      setLocationMessage("This linked Work Intake is closed or unavailable. Site location cannot be updated.");
+      return;
+    }
+    const intakeId = linkedWorkIntakeId;
     if (!locationCandidate || !intakeId) {
       setLocationMessage(
         "This Lead has no linked Work Intake location record to update.",
@@ -988,6 +1013,9 @@ function MarketingLeadDetail({
         providerId,
         `/provider-work-intakes/${encodeURIComponent(intakeId)}`,
       )) as Resource<WorkIntakeAttributes>;
+      if (intake.attributes.status === "CLOSED") {
+        throw new Error("This linked Work Intake is closed and read-only. Site location cannot be updated.");
+      }
       await operationsData.updateProviderWorkIntake(
         providerId,
         intakeId,
@@ -1111,6 +1139,12 @@ function MarketingLeadDetail({
     attributes.status === "NEW" &&
     activities.length === 0 &&
     !workflowConcluded;
+  const qualificationReviewAvailable =
+    attributes.status === "NEW" &&
+    activities.length > 0 &&
+    !workflowConcluded &&
+    !reviewOnly &&
+    canEditLead;
   const linkedQuotation = quotations[0] || null;
   const openQuotation = () => {
     if (!canOpenQuotationWorkspace) return;
@@ -1118,6 +1152,9 @@ function MarketingLeadDetail({
       ? `quotations/${linkedQuotation.id}`
       : "quotations";
   };
+  const quotationAccessGuidance = roleContext === "MARKETING_EXECUTIVE"
+    ? "Your Marketing Executive role can review the submitted survey but cannot open quotations. Ask a Marketing Manager or Provider Admin with Quotation access to continue."
+    : "Your current provider role does not include Quotation access. Ask a Provider Admin to assign it or an authorized Sales & Quotations user to continue.";
   const displayedJourneyStep = leadStopsAtQuotation
     ? Math.min(activeJourneyStep, 3)
     : activeJourneyStep;
@@ -1172,6 +1209,7 @@ function MarketingLeadDetail({
             </Button>
             {!workflowConcluded &&
               canEditLead &&
+              !qualificationReviewAvailable &&
               ["NEW", "CONTACTED"].includes(attributes.status) && (
                 <Button
                   onClick={() => {
@@ -1233,7 +1271,7 @@ function MarketingLeadDetail({
             <h2>{attributes.title}</h2>
             <p>
               {attributes.reference_code} · {attributes.prospect_name} ·{" "}
-              {leadEventLabel(attributes.source)}
+              {workSourceLabel(attributes.source)}
             </p>
           </div>
           <div className="lead-detail-current-step-inline">
@@ -1337,8 +1375,8 @@ function MarketingLeadDetail({
             <span className="eyebrow">Next required action</span>
             <h2>Record the first interaction</h2>
             <p>
-              Save the first call, email, meeting, or site visit. The Lead can
-              move to Contacted after this activity is recorded.
+              Save the first call, email, meeting, or site visit. Then review
+              the Lead and decide whether to qualify or reject it.
             </p>
           </div>
           <Button type="button" onClick={() => setFollowUpOpen(true)}>
@@ -1346,22 +1384,57 @@ function MarketingLeadDetail({
           </Button>
         </section>
       )}
+      {qualificationReviewAvailable && (
+        <section
+          className="lead-detail-next-action"
+          aria-label="Next Lead action"
+        >
+          <div>
+            <span className="eyebrow">Next step</span>
+            <h2>Review qualification</h2>
+            <p>
+              The first interaction is recorded. Decide whether to accept and
+              qualify this prospect or reject it with a reason. After
+              qualification, continue to the site survey and requirements.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              setQualificationDecision("QUALIFIED");
+              setQualificationOpen(true);
+            }}
+          >
+            Review qualification
+          </Button>
+        </section>
+      )}
       <div className="lead-detail-summary-grid">
         <section>
-          <span>Prospect</span>
+          <span>Requester name</span>
           <strong>{attributes.prospect_name}</strong>
           <small>
             {attributes.primary_contact_reference || "No contact reference"}
           </small>
         </section>
         <section>
-          <span>Origin</span>
+          <span>Linked customer</span>
+          <strong>{String(attributes.customer_relationship_name || "Not linked")}</strong>
+          <small>Used by this Lead, its Survey and related quotations</small>
+        </section>
+        <section>
+          <span>Work type</span>
           <strong>
             {context?.work?.work_type
               ? leadEventLabel(context.work.work_type)
               : "Marketing Lead"}
           </strong>
-          <small>{leadEventLabel(context?.work?.source || attributes.source)}</small>
+          <small>{workSourceLabel(context?.work?.source || attributes.source)}</small>
+          {attributes.source_details && (
+            <small>
+              {attributes.source === "REFERRAL" ? "Referral notes" : "Source details"}: {attributes.source_details}
+            </small>
+          )}
         </section>
         <section>
           <span>Referral</span>
@@ -1441,7 +1514,7 @@ function MarketingLeadDetail({
               Record revision <strong>R{attributes.revision}</strong>
             </span>
             <span>
-              Source <strong>{leadEventLabel(attributes.source)}</strong>
+              Work source <strong>{workSourceLabel(attributes.source)}</strong>
             </span>
             <span>
               Site capture{" "}
@@ -1492,8 +1565,7 @@ function MarketingLeadDetail({
                 <h2>Site survey and active requirements</h2>
               </div>
               <small>
-                {surveys.length} survey record(s) · {requirements.length}{" "}
-                requirement revision(s)
+                {surveys.length} {surveys.length === 1 ? "survey" : "surveys"} · {requirements.length} saved requirement {requirements.length === 1 ? "set" : "sets"}
               </small>
             </div>
             <SiteSurveyWizard
@@ -1505,7 +1577,7 @@ function MarketingLeadDetail({
               }}
               onRequirementSaved={async () => {
                 setMessage(
-                  "Requirement revision saved. A new timeline event was recorded.",
+                  "Survey requirements saved. A timeline event was recorded.",
                 );
                 await load();
               }}
@@ -1516,7 +1588,23 @@ function MarketingLeadDetail({
                   "Location captured. Review the coordinates before saving.",
                 );
               }}
+              onNextStep={
+                ["QUALIFIED", "QUOTATION_PENDING"].includes(attributes.status) &&
+                canOpenQuotationWorkspace
+                  ? openQuotation
+                  : undefined
+              }
+              nextStepLabel={
+                linkedQuotation ? "Open quotation" : "Continue to Sales & Quotations"
+              }
+              nextStepUnavailable={
+                ["QUALIFIED", "QUOTATION_PENDING"].includes(attributes.status) &&
+                !canOpenQuotationWorkspace
+                  ? quotationAccessGuidance
+                  : undefined
+              }
               readOnly={workflowConcluded || !canEditLead}
+              locationReadOnly={!linkedWorkIntakeId || !["OPEN", "ASSESSMENT", "EXECUTION"].includes(linkedIntakeStatus)}
             />
           </section>
         </>
@@ -1748,7 +1836,7 @@ function MarketingLeadDetail({
               <legend>Decision</legend>
               <label>
                 Outcome
-                <select
+                <SortedSelect
                   name="decision"
                   value={qualificationDecision}
                   onChange={(event) =>
@@ -1759,7 +1847,7 @@ function MarketingLeadDetail({
                 >
                   <option value="QUALIFIED">Accept · Qualified</option>
                   <option value="LOST">Reject · Closed</option>
-                </select>
+                </SortedSelect>
               </label>
               <label className="lead-form-span">
                 Rejection reason
@@ -1824,12 +1912,12 @@ function MarketingLeadDetail({
             <fieldset>
               <legend>Lead identity</legend>
               <label>
-                Reference code
+                Lead reference code
                 <input value={attributes.reference_code} readOnly />
                 <small>Reference codes remain immutable.</small>
               </label>
               <label>
-                Prospect
+                Requester name
                 <input
                   name="prospect_name"
                   required
@@ -1838,7 +1926,7 @@ function MarketingLeadDetail({
                 />
               </label>
               <label>
-                Opportunity title
+                Work title
                 <input
                   name="title"
                   required
@@ -1847,11 +1935,24 @@ function MarketingLeadDetail({
                 />
               </label>
               <label>
-                Primary contact reference
+                Contact reference
                 <input
                   name="primary_contact_reference"
                   maxLength={320}
+                  placeholder="Phone or email"
                   defaultValue={attributes.primary_contact_reference || ""}
+                />
+              </label>
+              <label className="lead-form-span">
+                {attributes.source === "REFERRAL"
+                  ? "Referral notes (optional)"
+                  : "Source details (optional)"}
+                <textarea
+                  name="source_details"
+                  maxLength={500}
+                  rows={2}
+                  placeholder="Referrer, campaign, partner, or other source context"
+                  defaultValue={attributes.source_details || ""}
                 />
               </label>
             </fieldset>
@@ -1859,11 +1960,11 @@ function MarketingLeadDetail({
               <legend>Sales management</legend>
               <label>
                 Priority
-                <select name="priority" defaultValue={attributes.priority}>
+                <SortedSelect name="priority" defaultValue={attributes.priority}>
                   <option value="LOW">Low</option>
                   <option value="NORMAL">Normal</option>
                   <option value="HIGH">High</option>
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Lead stage
@@ -1978,13 +2079,13 @@ function MarketingLeadDetail({
                 </label>
                 <label>
                   Activity type
-                  <select name="activity_type" defaultValue="CALL">
+                  <SortedSelect name="activity_type" defaultValue="CALL">
                     <option value="CALL">Call</option>
                     <option value="EMAIL">Email</option>
                     <option value="MEETING">Meeting</option>
                     <option value="SITE_VISIT">Site visit</option>
                     <option value="OTHER">Other</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Activity date
@@ -2061,6 +2162,7 @@ function MarketingLeadRegister({
   const [activityOpen, setActivityOpen] = useState(false);
   const [surveyId, setSurveyId] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [createLeadSource, setCreateLeadSource] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -2171,6 +2273,7 @@ function MarketingLeadRegister({
           prospect_name: form.get("prospect_name"),
           primary_contact_reference:
             form.get("primary_contact_reference") || undefined,
+          source_details: form.get("source_details") || undefined,
           customer_relationship_id:
             form.get("customer_relationship_id") || undefined,
         },
@@ -2205,6 +2308,7 @@ function MarketingLeadRegister({
           prospect_name: form.get("prospect_name"),
           primary_contact_reference:
             form.get("primary_contact_reference") || undefined,
+          source_details: form.get("source_details") || undefined,
           priority: form.get("priority"),
           next_follow_up_at: form.get("next_follow_up_at")
             ? new Date(String(form.get("next_follow_up_at"))).toISOString()
@@ -2305,7 +2409,7 @@ function MarketingLeadRegister({
           </p>
         </div>
         {canCreateLead && (
-          <Button aria-label="New lead" onClick={() => setFormOpen(true)}>
+          <Button aria-label="New lead" onClick={() => { setCreateLeadSource(""); setFormOpen(true); }}>
             + Add lead
           </Button>
         )}
@@ -2336,7 +2440,7 @@ function MarketingLeadRegister({
         <OperationsDialog
           title="Create lead"
           busy={busy}
-          className="lead-workflow-dialog"
+          className="lead-workflow-dialog lead-create-dialog"
           onClose={() => setFormOpen(false)}
         >
           <p className="lead-dialog-intro">
@@ -2346,7 +2450,7 @@ function MarketingLeadRegister({
           <form className="lead-workflow-form" onSubmit={createLead}>
             <div className="form-grid">
               <label>
-                Reference code
+                Lead reference code
                 <input
                   name="reference_code"
                   required
@@ -2355,29 +2459,40 @@ function MarketingLeadRegister({
                 />
               </label>
               <label>
-                Source
-                <input
+                Work source
+                <SortedSelect
                   name="source"
                   required
-                  maxLength={40}
-                  placeholder="FIELD"
-                />
+                  value={createLeadSource}
+                  onChange={(event) => setCreateLeadSource(event.target.value)}
+                >
+                  <option value="">Choose source</option>
+                  {WORK_SOURCE_OPTIONS.map((source) => (
+                    <option key={source.value} value={source.value}>
+                      {source.label}
+                    </option>
+                  ))}
+                </SortedSelect>
               </label>
               <label>
-                Prospect name
+                Requester name
                 <input name="prospect_name" required maxLength={200} />
               </label>
               <label>
-                Opportunity title
+                Work title
                 <input name="title" required maxLength={200} />
               </label>
               <label>
-                Primary contact reference
-                <input name="primary_contact_reference" maxLength={320} />
+                Contact reference
+                <input
+                  name="primary_contact_reference"
+                  maxLength={320}
+                  placeholder="Phone or email"
+                />
               </label>
               <label>
                 Existing customer/prospect (optional)
-                <select name="customer_relationship_id">
+                <SortedSelect name="customer_relationship_id">
                   <option value="">Create a new prospect relationship</option>
                   {relationships?.data.map((relationship) => (
                     <option key={relationship.id} value={relationship.id}>
@@ -2393,7 +2508,18 @@ function MarketingLeadRegister({
                       )}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
+              </label>
+              <label className="lead-form-span">
+                {createLeadSource === "REFERRAL"
+                  ? "Referral notes (optional)"
+                  : "Source details (optional)"}
+                <textarea
+                  name="source_details"
+                  maxLength={500}
+                  rows={2}
+                  placeholder="Referrer, campaign, partner, or other source context"
+                />
               </label>
             </div>
             <div className="lead-workflow-actions">
@@ -2430,7 +2556,7 @@ function MarketingLeadRegister({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <select
+            <SortedSelect
               aria-label="Filter leads by status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
@@ -2443,8 +2569,8 @@ function MarketingLeadRegister({
                   {status}
                 </option>
               ))}
-            </select>
-            <select
+            </SortedSelect>
+            <SortedSelect
               aria-label="Filter leads by source"
               value={sourceFilter}
               onChange={(event) => setSourceFilter(event.target.value)}
@@ -2457,8 +2583,8 @@ function MarketingLeadRegister({
                   {source}
                 </option>
               ))}
-            </select>
-            <select
+            </SortedSelect>
+            <SortedSelect
               aria-label="Filter leads by priority"
               value={priorityFilter}
               onChange={(event) => setPriorityFilter(event.target.value)}
@@ -2471,7 +2597,7 @@ function MarketingLeadRegister({
                   {priority}
                 </option>
               ))}
-            </select>
+            </SortedSelect>
           </div>
           {filteredLeads.length === 0 ? (
             <p className="notice">
@@ -2537,7 +2663,7 @@ function MarketingLeadRegister({
                       </td>
                       <td data-label="Reference / source">
                         {lead.attributes.reference_code}
-                        <small>{leadEventLabel(lead.attributes.source)}</small>
+                        <small>{workSourceLabel(lead.attributes.source)}</small>
                       </td>
                       <td data-label="Priority">
                         <Priority>{lead.attributes.priority}</Priority>
@@ -2661,8 +2787,10 @@ function MarketingLeadRegister({
                 hidden={selectedLeadTab !== "Overview"}
               >
                 <dl>
-                  <dt>Prospect</dt>
+                  <dt>Requester name</dt>
                   <dd>{selected.attributes.prospect_name}</dd>
+                  <dt>Linked customer</dt>
+                  <dd>{String(selected.attributes.customer_relationship_name || "Not linked")}</dd>
                   <dt>Status</dt>
                   <dd>{leadStatusLabel(selected.attributes.status)}</dd>
                   <dt>Priority</dt>
@@ -2753,7 +2881,7 @@ function MarketingLeadRegister({
                   readOnly={!canEditLead}
                   onSaved={async () => {
                     setMessage(
-                      "Requirement revision saved. A new timeline event was recorded.",
+                      "Survey requirements saved. A timeline event was recorded.",
                     );
                     setSelectedRequirements(
                       (
@@ -2847,11 +2975,11 @@ function MarketingLeadRegister({
             <fieldset>
               <legend>Lead identity</legend>
               <label>
-                Reference code
+                Lead reference code
                 <input value={selected.attributes.reference_code} readOnly />
               </label>
               <label>
-                Prospect
+                Requester name
                 <input
                   name="prospect_name"
                   required
@@ -2860,7 +2988,7 @@ function MarketingLeadRegister({
                 />
               </label>
               <label>
-                Opportunity title
+                Work title
                 <input
                   name="title"
                   required
@@ -2869,13 +2997,26 @@ function MarketingLeadRegister({
                 />
               </label>
               <label>
-                Primary contact reference
+                Contact reference
                 <input
                   name="primary_contact_reference"
                   maxLength={320}
+                  placeholder="Phone or email"
                   defaultValue={
                     selected.attributes.primary_contact_reference || ""
                   }
+                />
+              </label>
+              <label className="lead-form-span">
+                {selected.attributes.source === "REFERRAL"
+                  ? "Referral notes (optional)"
+                  : "Source details (optional)"}
+                <textarea
+                  name="source_details"
+                  maxLength={500}
+                  rows={2}
+                  placeholder="Referrer, campaign, partner, or other source context"
+                  defaultValue={selected.attributes.source_details || ""}
                 />
               </label>
             </fieldset>
@@ -2883,14 +3024,14 @@ function MarketingLeadRegister({
               <legend>Sales management</legend>
               <label>
                 Priority
-                <select
+                <SortedSelect
                   name="priority"
                   defaultValue={selected.attributes.priority}
                 >
                   <option value="LOW">Low</option>
                   <option value="NORMAL">Normal</option>
                   <option value="HIGH">High</option>
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Lead stage
@@ -3009,13 +3150,13 @@ function MarketingLeadRegister({
                 </label>
                 <label>
                   Activity type
-                  <select name="activity_type" defaultValue="CALL">
+                  <SortedSelect name="activity_type" defaultValue="CALL">
                     <option value="CALL">Call</option>
                     <option value="EMAIL">Email</option>
                     <option value="MEETING">Meeting</option>
                     <option value="SITE_VISIT">Site visit</option>
                     <option value="OTHER">Other</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Activity date

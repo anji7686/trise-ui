@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
   DEFAULT_PAGE_SIZE,
@@ -114,7 +114,7 @@ export function ProjectsWorkspace({ providerId, route }: { providerId: string; r
           <div className="feature-summary-grid project-summary-grid"><div><span>Active projects</span><strong>{projects.data.filter((project) => !['DRAFT', 'CLOSED', 'CANCELLED'].includes(String(project.attributes.status).toUpperCase())).length}</strong><small>Provider-scoped execution</small></div><div><span>Draft projects</span><strong>{projects.data.filter((project) => String(project.attributes.status).toUpperCase() === 'DRAFT').length}</strong><small>Awaiting governed approval</small></div><div><span>Payment schedules</span><strong>{projects.data.filter((project) => Number(project.attributes.payment_schedule_total || 0) > 0).length}</strong><small>Accepted commercial baseline</small></div><div><span>QA / handover</span><strong>{projects.data.filter((project) => ['QA', 'HANDOVER', 'COMPLETED'].includes(String(project.attributes.status).toUpperCase())).length}</strong><small>Stage-gated completion</small></div></div>
           <FilterToolbar resultLabel={`Showing ${visibleProjects.length} of ${projects.data.length} authorized projects`}>
             <label>Search projects<input aria-label="Search projects" placeholder="Search project name or type…" value={queryText} onChange={(event) => setQueryText(event.target.value)} /></label>
-            <label>Status<select aria-label="Filter projects by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option>{['DRAFT', 'OPEN', 'APPROVED', 'ACTIVE', 'IN_PROGRESS', 'INSTALLATION', 'QA', 'HANDOVER', 'COMPLETED', 'CANCELLED', 'CLOSED'].map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+            <label>Status<SortedSelect aria-label="Filter projects by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option>{['DRAFT', 'OPEN', 'APPROVED', 'ACTIVE', 'IN_PROGRESS', 'INSTALLATION', 'QA', 'HANDOVER', 'COMPLETED', 'CANCELLED', 'CLOSED'].map((status) => <option key={status} value={status}>{status}</option>)}</SortedSelect></label>
           </FilterToolbar>
           {visibleProjects.length ? (
             <div className="project-register-scroll" role="region" aria-label="Projects register" tabIndex={0}>
@@ -188,7 +188,7 @@ function ProjectEditForm({ providerId, project, onSaved }: { providerId: string;
     : form.project_classification_key
       ? [[form.project_classification_key, projectClassificationLabel(form.project_classification_key)] as const, ...PROJECT_CLASSIFICATION_OPTIONS]
       : PROJECT_CLASSIFICATION_OPTIONS;
-  return <section className="detail-card" aria-label="Edit project draft"><div className="section-heading"><div><h3>Edit project draft</h3><p>Capture the customer service site and link the provider-authorized elevator units before activation.</p></div><Status>{displayLabel(project.attributes.status, 'Not available')}</Status></div>{error && <ActionNotification kind="error" title="Project action needs attention" onClose={() => setError('')}>{error}</ActionNotification>}{message && <ActionNotification title="Project update completed" onClose={() => setMessage('')}>{message}</ActionNotification>}<form className="provider-form project-edit-form" onSubmit={(event) => void submit(event)}><label>Project name *<input required maxLength={200} disabled={!editable} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label><label>Project type<select disabled={!editable} value={form.project_classification_key} onChange={(event) => setForm({ ...form, project_classification_key: event.target.value })}><option value="">Select project type</option>{classificationOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Project service location *<select required disabled={!editable || !project.attributes.customer_relationship_id} value={form.service_location_id} onChange={(event) => setForm({ ...form, service_location_id: event.target.value })}><option value="">Select an authorized customer site</option>{locations.data.map((location) => <option key={location.id} value={location.id}>{String(location.attributes.name || location.attributes.display_name || 'Authorized site')}</option>)}</select><small className="form-help">Required before project activation and installation-job creation.</small></label><fieldset className="project-asset-selection"><legend>Elevator units / assets</legend><p>{assetSelectionEditable ? 'Choose the installed or registered units from the customer asset catalogue. The selected units become the project scope.' : 'Elevator units are locked after the project draft is activated.'}</p>{assets.data.length ? <div className="project-asset-options" role="group" aria-label="Project elevator units">{assets.data.map((asset) => { const label = String(asset.attributes.display_name || asset.attributes.name || asset.attributes.equipment_code || asset.attributes.identifier || 'Elevator asset'); const checked = form.asset_ids.includes(asset.id); return <label className="project-asset-option" key={asset.id}><input type="checkbox" disabled={!assetSelectionEditable} checked={checked} onChange={(event) => setForm({ ...form, asset_ids: event.target.checked ? [...form.asset_ids, asset.id] : form.asset_ids.filter((id) => id !== asset.id) })} /><span><strong>{label}</strong><small>{String(asset.attributes.asset_type_name || asset.attributes.category || 'Provider-authorized asset')}</small></span></label>; })}</div> : <p className="notice">No provider-authorized assets are available for this customer yet. Register the elevator unit first, then return to this project draft.</p>}</fieldset><Button type="submit" busy={busy} disabled={!editable || !form.service_location_id}>{editable ? 'Save project draft' : 'Project editing locked by lifecycle'}</Button></form></section>;
+  return <section className="detail-card" aria-label="Edit project draft"><div className="section-heading"><div><h3>Edit project draft</h3><p>Capture the customer service site and link the provider-authorized elevator units before activation.</p></div><Status>{displayLabel(project.attributes.status, 'Not available')}</Status></div>{error && <ActionNotification kind="error" title="Project action needs attention" onClose={() => setError('')}>{error}</ActionNotification>}{message && <ActionNotification title="Project update completed" onClose={() => setMessage('')}>{message}</ActionNotification>}<form className="provider-form project-edit-form" onSubmit={(event) => void submit(event)}><label>Project name *<input required maxLength={200} disabled={!editable} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label><label>Project type<SortedSelect disabled={!editable} value={form.project_classification_key} onChange={(event) => setForm({ ...form, project_classification_key: event.target.value })}><option value="">Select project type</option>{classificationOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SortedSelect></label><label>Project service location *<SortedSelect required disabled={!editable || !project.attributes.customer_relationship_id} value={form.service_location_id} onChange={(event) => setForm({ ...form, service_location_id: event.target.value })}><option value="">Select an authorized customer site</option>{locations.data.map((location) => <option key={location.id} value={location.id}>{String(location.attributes.name || location.attributes.display_name || 'Authorized site')}</option>)}</SortedSelect><small className="form-help">Required before project activation and installation-job creation.</small></label><fieldset className="project-asset-selection"><legend>Elevator units / assets</legend><p>{assetSelectionEditable ? 'Choose the installed or registered units from the customer asset catalogue. The selected units become the project scope.' : 'Elevator units are locked after the project draft is activated.'}</p>{assets.data.length ? <div className="project-asset-options" role="group" aria-label="Project elevator units">{assets.data.map((asset) => { const label = String(asset.attributes.display_name || asset.attributes.name || asset.attributes.equipment_code || asset.attributes.identifier || 'Elevator asset'); const checked = form.asset_ids.includes(asset.id); return <label className="project-asset-option" key={asset.id}><input type="checkbox" disabled={!assetSelectionEditable} checked={checked} onChange={(event) => setForm({ ...form, asset_ids: event.target.checked ? [...form.asset_ids, asset.id] : form.asset_ids.filter((id) => id !== asset.id) })} /><span><strong>{label}</strong><small>{String(asset.attributes.asset_type_name || asset.attributes.category || 'Provider-authorized asset')}</small></span></label>; })}</div> : <p className="notice">No provider-authorized assets are available for this customer yet. Register the elevator unit first, then return to this project draft.</p>}</fieldset><Button type="submit" busy={busy} disabled={!editable || !form.service_location_id}>{editable ? 'Save project draft' : 'Project editing locked by lifecycle'}</Button></form></section>;
 }
 
 function ProjectDetail({
@@ -660,7 +660,7 @@ function BlockerDialog({ providerId, caseId, close, saved }: { providerId: strin
   const [form, setForm] = useState({ category: "SITE_READINESS", severity: "WARNING", stakeholder_type: "BUILDER", stakeholder_name: "", stakeholder_reference: "", title: "", description: "", due_on: "", impact_days: "0", blocking: true });
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); try { await operationsData.createBlocker(providerId, caseId, { ...form, impact_days: Number(form.impact_days) }, uuid()); saved(); } catch (cause) { setError(fail(cause)); } finally { setBusy(false); } }
-  return <OperationsDialog title="Add project blocker" busy={busy} onClose={close}><form className="provider-form project-action-form" onSubmit={(event) => void submit(event)}>{error && <p className="feature-error" role="alert">{error}</p>}<div className="form-grid-two"><label>Category *<select required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="SITE_READINESS">Site readiness</option><option value="STRUCTURAL">Structural</option><option value="ELECTRICAL">Electrical</option><option value="MATERIAL">Material</option><option value="PAYMENT">Payment</option><option value="DEPENDENCY">Dependency</option><option value="QA">QA</option></select></label><label>Severity *<select required value={form.severity} onChange={(event) => setForm({ ...form, severity: event.target.value })}><option>INFO</option><option>WARNING</option><option>CRITICAL</option></select></label></div><label>Title *<input required maxLength={200} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Electrical supply not ready" /></label><label>Description *<textarea required maxLength={4000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Describe what is missing and what must happen next." /></label><div className="form-grid-two"><label>Stakeholder *<select value={form.stakeholder_type} onChange={(event) => setForm({ ...form, stakeholder_type: event.target.value })}><option>CUSTOMER</option><option>BUILDER</option><option>CONTRACTOR</option><option>INTERNAL</option><option>OTHER</option></select></label><label>Target contact/name<input value={form.stakeholder_name} onChange={(event) => setForm({ ...form, stakeholder_name: event.target.value })} /></label></div><label>Contact reference<input value={form.stakeholder_reference} onChange={(event) => setForm({ ...form, stakeholder_reference: event.target.value })} placeholder="Phone or email" /></label><div className="form-grid-two"><label>Due date<input type="date" value={form.due_on} onChange={(event) => setForm({ ...form, due_on: event.target.value })} /></label><label>Expected impact (days)<input type="number" min="0" step="1" value={form.impact_days} onChange={(event) => setForm({ ...form, impact_days: event.target.value })} /></label></div><label><input type="checkbox" checked={form.blocking} onChange={(event) => setForm({ ...form, blocking: event.target.checked })} /> Blocks dependent project progress</label><Button type="submit" busy={busy}>Save blocker</Button></form></OperationsDialog>;
+  return <OperationsDialog title="Add project blocker" busy={busy} onClose={close}><form className="provider-form project-action-form" onSubmit={(event) => void submit(event)}>{error && <p className="feature-error" role="alert">{error}</p>}<div className="form-grid-two"><label>Category *<SortedSelect required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="SITE_READINESS">Site readiness</option><option value="STRUCTURAL">Structural</option><option value="ELECTRICAL">Electrical</option><option value="MATERIAL">Material</option><option value="PAYMENT">Payment</option><option value="DEPENDENCY">Dependency</option><option value="QA">QA</option></SortedSelect></label><label>Severity *<SortedSelect required value={form.severity} onChange={(event) => setForm({ ...form, severity: event.target.value })}><option>INFO</option><option>WARNING</option><option>CRITICAL</option></SortedSelect></label></div><label>Title *<input required maxLength={200} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Electrical supply not ready" /></label><label>Description *<textarea required maxLength={4000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Describe what is missing and what must happen next." /></label><div className="form-grid-two"><label>Stakeholder *<SortedSelect value={form.stakeholder_type} onChange={(event) => setForm({ ...form, stakeholder_type: event.target.value })}><option>CUSTOMER</option><option>BUILDER</option><option>CONTRACTOR</option><option>INTERNAL</option><option>OTHER</option></SortedSelect></label><label>Target contact/name<input value={form.stakeholder_name} onChange={(event) => setForm({ ...form, stakeholder_name: event.target.value })} /></label></div><label>Contact reference<input value={form.stakeholder_reference} onChange={(event) => setForm({ ...form, stakeholder_reference: event.target.value })} placeholder="Phone or email" /></label><div className="form-grid-two"><label>Due date<input type="date" value={form.due_on} onChange={(event) => setForm({ ...form, due_on: event.target.value })} /></label><label>Expected impact (days)<input type="number" min="0" step="1" value={form.impact_days} onChange={(event) => setForm({ ...form, impact_days: event.target.value })} /></label></div><label><input type="checkbox" checked={form.blocking} onChange={(event) => setForm({ ...form, blocking: event.target.checked })} /> Blocks dependent project progress</label><Button type="submit" busy={busy}>Save blocker</Button></form></OperationsDialog>;
 }
 
 function ProjectLifecycleActions({ providerId, project, permissions, onSaved }: { providerId: string; project: Resource<ServiceCaseAttributes>; permissions: string[]; onSaved: (project: Resource<ServiceCaseAttributes>) => void }) {
@@ -1159,7 +1159,7 @@ function QualityFindingPanel({
       {showForm && canEditFindings && <OperationsDialog title="Report commissioning defect" busy={busy} onClose={() => setShowForm(false)}><form className="provider-form quality-finding-form" onSubmit={(event) => void create(event)}>
         <label>
           Elevator unit{units.length > 1 ? " *" : ""}
-          <select
+          <SortedSelect
             aria-label="Quality finding elevator unit"
             required={units.length > 1}
             value={form.asset_id}
@@ -1173,11 +1173,11 @@ function QualityFindingPanel({
                 {unit.display_name || "Elevator unit"}
               </option>
             ))}
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Severity
-          <select
+          <SortedSelect
             aria-label="Quality finding severity"
             value={form.severity}
             onChange={(event) =>
@@ -1188,7 +1188,7 @@ function QualityFindingPanel({
             <option>MEDIUM</option>
             <option>MAJOR</option>
             <option>CRITICAL</option>
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Finding title
@@ -1447,14 +1447,14 @@ function HandoverPanel({
           <p>Start warranty or AMC separately for each accepted elevator unit using an approved source scoped to that asset.</p>
         </div>
         <div className="amc-coverage-placeholder-state">
-          {units.length > 1 && <label>Elevator unit<select aria-label="Coverage elevator unit" value={coverageAssetId} onChange={(event) => { setCoverageAssetId(event.target.value); setSourceId(""); }}><option value="">Select elevator unit</option>{units.map((unit) => { const active = events.some((item) => String(item.attributes.event_kind) === "COMMENCED" && item.attributes.asset_id === unit.id); return <option value={unit.id} key={unit.id} disabled={active}>{unit.display_name || "Elevator unit"}{active ? " · coverage commenced" : ""}</option>; })}</select></label>}
-          {commencedEvent ? <><Status>Active</Status><span>{commencedEvent.attributes.source_warranty_id ? "Warranty active" : "AMC active"} for {units.find((unit) => unit.id === coverageAssetId)?.display_name || "this elevator"}.</span></> : !canCommenceCoverage ? <><Status>Provider operation required</Status><span>Coverage commencement is available to an authorized provider operations role.</span></> : <>{sourcesForCoverageAsset.length ? <><Status>{acceptedForCoverageAsset ? "Ready" : "Handover required"}</Status><select aria-label="Coverage source" value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Select approved coverage source</option>{sourcesForCoverageAsset.map((source) => { const plan = source.attributes.amc_plan as { name?: string; version?: number } | undefined; const kind = String(source.attributes.kind || "CONTRACT_VERSION"); return <option value={source.id} key={source.id}>{kind === "WARRANTY" ? "Warranty" : "AMC"} · {String(source.attributes.label || source.id)}{plan?.name ? ` · ${plan.name} v${plan.version || 1}` : ""}</option>; })}</select><Button variant="secondary" busy={busy} disabled={!coverageAssetId || !sourceId || !acceptedForCoverageAsset} onClick={() => void commenceCoverage()}>Commence {sourcesForCoverageAsset.find((source) => source.id === sourceId)?.attributes.kind === "WARRANTY" ? "warranty" : "AMC"} coverage</Button></> : <><Status>{acceptedForCoverageAsset ? "Source required" : "Handover required"}</Status><span>{acceptedForCoverageAsset ? "No active scoped contract or warranty is available for this unit." : "Customer acceptance is required before coverage can start for this unit."}</span><Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>Open AMC quotations</Button></>}</>}</div>
+          {units.length > 1 && <label>Elevator unit<SortedSelect aria-label="Coverage elevator unit" value={coverageAssetId} onChange={(event) => { setCoverageAssetId(event.target.value); setSourceId(""); }}><option value="">Select elevator unit</option>{units.map((unit) => { const active = events.some((item) => String(item.attributes.event_kind) === "COMMENCED" && item.attributes.asset_id === unit.id); return <option value={unit.id} key={unit.id} disabled={active}>{unit.display_name || "Elevator unit"}{active ? " · coverage commenced" : ""}</option>; })}</SortedSelect></label>}
+          {commencedEvent ? <><Status>Active</Status><span>{commencedEvent.attributes.source_warranty_id ? "Warranty active" : "AMC active"} for {units.find((unit) => unit.id === coverageAssetId)?.display_name || "this elevator"}.</span></> : !canCommenceCoverage ? <><Status>Provider operation required</Status><span>Coverage commencement is available to an authorized provider operations role.</span></> : <>{sourcesForCoverageAsset.length ? <><Status>{acceptedForCoverageAsset ? "Ready" : "Handover required"}</Status><SortedSelect aria-label="Coverage source" value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Select approved coverage source</option>{sourcesForCoverageAsset.map((source) => { const plan = source.attributes.amc_plan as { name?: string; version?: number } | undefined; const kind = String(source.attributes.kind || "CONTRACT_VERSION"); return <option value={source.id} key={source.id}>{kind === "WARRANTY" ? "Warranty" : "AMC"} · {String(source.attributes.label || source.id)}{plan?.name ? ` · ${plan.name} v${plan.version || 1}` : ""}</option>; })}</SortedSelect><Button variant="secondary" busy={busy} disabled={!coverageAssetId || !sourceId || !acceptedForCoverageAsset} onClick={() => void commenceCoverage()}>Commence {sourcesForCoverageAsset.find((source) => source.id === sourceId)?.attributes.kind === "WARRANTY" ? "warranty" : "AMC"} coverage</Button></> : <><Status>{acceptedForCoverageAsset ? "Source required" : "Handover required"}</Status><span>{acceptedForCoverageAsset ? "No active scoped contract or warranty is available for this unit." : "Customer acceptance is required before coverage can start for this unit."}</span><Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>Open AMC quotations</Button></>}</>}</div>
       </section>
       {events.length === 0 && <p className="notice">No per-unit handover requests recorded.</p>}
       {showRequestDialog && canRequestHandover && <OperationsDialog title="Request per-unit handover" busy={busy} onClose={() => setShowRequestDialog(false)}><form className="provider-form handover-request-form" onSubmit={(event) => void request(event)}>
         <label>
           Elevator unit{units.length > 1 ? " *" : ""}
-          <select
+          <SortedSelect
             aria-label="Handover elevator unit"
             required
             value={assetId}
@@ -1466,7 +1466,7 @@ function HandoverPanel({
                 {unit.display_name || "Elevator unit"}
               </option>
             ))}
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Handover evidence reference *
@@ -1608,7 +1608,7 @@ function ProjectJobDialog({
         )}
         <label>
           Service type *
-          <select
+          <SortedSelect
             required
             value={form.service_type_id}
             onChange={(event) =>
@@ -1623,7 +1623,7 @@ function ProjectJobDialog({
                 )}
               </option>
             ))}
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Summary *
@@ -1638,7 +1638,7 @@ function ProjectJobDialog({
         {(project.attributes.project_assets || []).length > 0 && (
           <label>
             Elevator unit
-            <select
+            <SortedSelect
               aria-label="Elevator unit"
               value={form.asset_id}
               onChange={(event) =>
@@ -1651,7 +1651,7 @@ function ProjectJobDialog({
                   {asset.display_name || "Elevator unit"}
                 </option>
               ))}
-            </select>
+            </SortedSelect>
           </label>
         )}
         <Button type="submit" busy={busy} disabled={!form.service_type_id}>
@@ -1857,7 +1857,7 @@ function StageDialog({
         {projectAssets.length > 0 && (
           <label>
             Elevator unit
-            <select
+            <SortedSelect
               aria-label="Elevator unit"
               value={form.asset_id}
               onChange={(event) =>
@@ -1870,7 +1870,7 @@ function StageDialog({
                   {asset.display_name || "Elevator unit"}
                 </option>
               ))}
-            </select>
+            </SortedSelect>
           </label>
         )}
         <label>
@@ -1895,7 +1895,7 @@ function StageDialog({
         </label>
         <label>
           Prerequisite
-          <select
+          <SortedSelect
             multiple
             value={form.prerequisite_stage_ids}
             onChange={(event) =>
@@ -1914,7 +1914,7 @@ function StageDialog({
                 {String(stage.attributes.title || "")}
               </option>
             ))}
-          </select>
+          </SortedSelect>
         </label>
         <Button type="submit" busy={busy}>
           Save milestone
@@ -2176,15 +2176,15 @@ function PaymentScheduleDialog({
         {initialStages.length > 0 && <p className="notice">Stages were prefilled from the accepted quotation. Review the allocation and save; the project keeps that commercial snapshot.</p>}
         <p className="notice payment-stage-guidance">Calculated stage amounts use the payable basis. Configure any number of stages; allocation must total exactly 100.00%. The accepted schedule remains immutable after acceptance.</p>
         <div className="payment-stage-basis"><label>Payment basis *<input aria-label="Payment basis" required type="number" min="0.01" step="0.01" value={basis} onChange={(event) => setBasis(event.target.value)} /></label>
-        <label>Currency *<select aria-label="Payment currency" required value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="INR">INR · Indian rupee</option>{currency !== "INR" && <option value={currency}>{currency}</option>}</select></label></div>
+        <label>Currency *<SortedSelect aria-label="Payment currency" required value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="INR">INR · Indian rupee</option>{currency !== "INR" && <option value={currency}>{currency}</option>}</SortedSelect></label></div>
         {stages.map((stage, index) => {
           return <fieldset className="record-card payment-stage-card" key={`${stage.milestone_code}-${index}`}><legend>Stage {index + 1}</legend>
             <label>Identifier *<input required value={stage.milestone_code} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, milestone_code: event.target.value } : item))} /></label>
             <label>Name *<input required value={stage.description} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></label>
             <label>Percentage *<input required type="number" min="0" max="100" step="0.01" value={stage.percentage} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, percentage: event.target.value } : item))} /></label>
             <label>Calculated amount<input readOnly value={`${(stageAmounts[index] / 100).toFixed(2)} ${currency.toUpperCase()}`} /></label>
-            <label>Trigger<select value={stage.trigger_kind} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}><option value="MANUAL">Manual</option><option value="CUSTOMER_ACCEPTANCE">Customer acceptance</option><option value="STAGE_COMPLETION">Stage completion</option><option value="DELIVERY">Delivery</option><option value="HANDOVER">Handover</option></select></label>
-            <label>Material release condition<select value={stage.material_release_condition} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, material_release_condition: event.target.value } : item))}>{PAYMENT_RELEASE_CONDITIONS.map(([value, label]) => <option value={value} key={value || "NONE"}>{label}</option>)}{stage.material_release_condition && !PAYMENT_RELEASE_CONDITIONS.some(([value]) => value === stage.material_release_condition) && <option value={stage.material_release_condition}>{stage.material_release_condition}</option>}</select></label>
+            <label>Trigger<SortedSelect value={stage.trigger_kind} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}><option value="MANUAL">Manual</option><option value="CUSTOMER_ACCEPTANCE">Customer acceptance</option><option value="STAGE_COMPLETION">Stage completion</option><option value="DELIVERY">Delivery</option><option value="HANDOVER">Handover</option></SortedSelect></label>
+            <label>Material release condition<SortedSelect value={stage.material_release_condition} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, material_release_condition: event.target.value } : item))}>{PAYMENT_RELEASE_CONDITIONS.map(([value, label]) => <option value={value} key={value || "NONE"}>{label}</option>)}{stage.material_release_condition && !PAYMENT_RELEASE_CONDITIONS.some(([value]) => value === stage.material_release_condition) && <option value={stage.material_release_condition}>{stage.material_release_condition}</option>}</SortedSelect></label>
             <label><input type="checkbox" checked={stage.customer_acceptance_required} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, customer_acceptance_required: event.target.checked } : item))} /> Customer acceptance required</label>
             <Button type="button" variant="secondary" disabled={stages.length <= 1} onClick={() => setStages(stages.filter((_, itemIndex) => itemIndex !== index))}>Remove stage</Button>
           </fieldset>;
@@ -2242,7 +2242,7 @@ function StageReleaseDialog({
       <p className="notice">Choose whether this stage is released by settled receipts or by an explicitly approved customer credit arrangement. The accepted quotation revision is checked by the server.</p>
       <label>Accepted quotation revision *<input required type="number" min="1" value={quotationRevision} onChange={(event) => setQuotationRevision(event.target.value)} /></label>
       <label>Release rule version *<input required maxLength={80} value={ruleVersion} onChange={(event) => setRuleVersion(event.target.value)} /></label>
-      <label>Release basis *<select value={releaseBasis} onChange={(event) => setReleaseBasis(event.target.value as "SETTLED_PAYMENT" | "APPROVED_CREDIT")}><option value="SETTLED_PAYMENT">Settled payment</option><option value="APPROVED_CREDIT">Approved customer credit</option></select></label>
+      <label>Release basis *<SortedSelect value={releaseBasis} onChange={(event) => setReleaseBasis(event.target.value as "SETTLED_PAYMENT" | "APPROVED_CREDIT")}><option value="SETTLED_PAYMENT">Settled payment</option><option value="APPROVED_CREDIT">Approved customer credit</option></SortedSelect></label>
       {releaseBasis === "APPROVED_CREDIT" && <><label>Approved credit amount *<input required type="number" min={schedule.attributes.outstanding_amount} step="0.01" value={creditAmount} onChange={(event) => setCreditAmount(event.target.value)} /></label><label>Credit due date *<input required type="date" value={creditDueOn} onChange={(event) => setCreditDueOn(event.target.value)} /></label><label>Credit reference<input value={creditReference} onChange={(event) => setCreditReference(event.target.value)} placeholder="Builder commitment / approval reference" /></label></>}
       <label>Decision reason *<textarea required maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <Button type="submit" busy={busy}>Authorize material/execution release</Button>
@@ -2319,7 +2319,7 @@ function PaymentDialog({
         </label>
         <label>
           Method *
-          <select
+          <SortedSelect
             required
             value={form.method}
             onChange={(event) =>
@@ -2330,7 +2330,7 @@ function PaymentDialog({
             <option value="CHEQUE">Cheque received</option>
             <option value="ONLINE">Online pending verification</option>
             <option value="BANK_TRANSFER">Bank transfer</option>
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Amount *
@@ -2621,7 +2621,7 @@ function ChangeOrderDialog({
         )}
         <label>
           Change type *
-          <select
+          <SortedSelect
             value={form.change_type}
             onChange={(event) =>
               setForm({ ...form, change_type: event.target.value })
@@ -2633,7 +2633,7 @@ function ChangeOrderDialog({
             <option value="SCHEDULE">Schedule</option>
             <option value="TECHNICAL">Technical</option>
             <option value="OTHER">Other</option>
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Description *

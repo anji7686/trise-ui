@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@trise/ui';
+import { Button, SortedSelect } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { ActionNotification } from './operations-shared';
 import { operationsData, type ChecklistAttributes, type Collection, type GenericAttributes, type Resource, type ServiceReportAttributes, type ServiceProofAttributes, type WorkSessionAttributes } from './data';
@@ -63,7 +63,7 @@ export function ExecutionPanel({ providerId, jobId, visitId, agentId }: { provid
     const value = checklistValue(checklist, item);
     const disabled = busy || ['COMPLETED', 'CANCELLED'].includes(checklist.attributes.status);
     if (type === 'BOOLEAN') return <input aria-label={label} type="checkbox" checked={value === true} disabled={disabled} onChange={(event) => void updateChecklist(checklist, key, event.target.checked)} />;
-    if (type === 'OPTION') return <select aria-label={label} value={value == null ? '' : String(value)} disabled={disabled} onChange={(event) => void updateChecklist(checklist, key, event.target.value)}><option value="">Select an option</option>{(Array.isArray(item.options) ? item.options : []).map((option) => <option value={String(option)} key={String(option)}>{String(option)}</option>)}</select>;
+    if (type === 'OPTION') return <SortedSelect aria-label={label} value={value == null ? '' : String(value)} disabled={disabled} onChange={(event) => void updateChecklist(checklist, key, event.target.value)}><option value="">Select an option</option>{(Array.isArray(item.options) ? item.options : []).map((option) => <option value={String(option)} key={String(option)}>{String(option)}</option>)}</SortedSelect>;
     const inputType = type === 'NUMBER' ? 'number' : type === 'DATE' ? 'date' : type === 'TIME' ? 'time' : 'text';
     return <input aria-label={label} type={inputType} value={value == null ? '' : String(value)} disabled={disabled} onChange={(event) => void updateChecklist(checklist, key, inputType === 'number' ? (event.target.value === '' ? null : Number(event.target.value)) : event.target.value)} />;
   }
@@ -74,7 +74,7 @@ export function ExecutionPanel({ providerId, jobId, visitId, agentId }: { provid
     {visitId && <div className="execution-grid">
       <section className="execution-card execution-checklist">
         <div className="execution-card-heading"><div><h4>Service checklist</h4><p>Use an authorized checklist template for this provider.</p></div><Status>{checklists?.data.length ? `${checklists.data.length} active` : 'Ready'}</Status></div>
-        <div className="inline-actions"><select aria-label="Checklist template" value={templateId} onChange={(event) => setTemplateId(event.target.value)}><option value="">Select an authorized checklist template</option>{templates?.data.map((template) => <option value={template.id} key={template.id}>{String(template.attributes.name || template.attributes.code || template.id)}</option>)}</select><Button disabled={busy || !templateId} onClick={() => void createChecklist()}>Create checklist</Button></div>
+        <div className="inline-actions"><SortedSelect aria-label="Checklist template" value={templateId} onChange={(event) => setTemplateId(event.target.value)}><option value="">Select an authorized checklist template</option>{templates?.data.map((template) => <option value={template.id} key={template.id}>{String(template.attributes.name || template.attributes.code || template.id)}</option>)}</SortedSelect><Button disabled={busy || !templateId} onClick={() => void createChecklist()}>Create checklist</Button></div>
         {checklists && checklists.data.length === 0 && <p className="execution-empty">No checklist has been created for this visit.</p>}
         {checklists?.data.map((checklist) => <article className="execution-record" key={checklist.id}><div className="execution-card-heading"><strong>{checklist.attributes.template_name || 'Checklist'}</strong><Status>{checklist.attributes.status}</Status></div>{(checklist.attributes.items || []).map((item) => <label className="execution-check-item" key={String(item.key)}><span>{String(item.label || item.key)}</span>{checklistEditor(checklist, item)}</label>)}{checklist.attributes.status !== 'COMPLETED' && <Button disabled={busy} onClick={() => void completeChecklist(checklist)}>Complete checklist</Button>}</article>)}
       </section>

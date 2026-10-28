@@ -24,8 +24,13 @@ export class ApiClient {
   private readCache = new Map<string, { value: unknown; expiresAt: number }>();
   private readInFlight = new Map<string, Promise<unknown>>();
   private forcedReadId = 0;
+  private webClientApp: 'customer' | 'operations' | 'web' = 'web';
 
   constructor(private readonly baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000/api/v1') {}
+
+  setWebClientApp(app: 'customer' | 'operations' | 'web') {
+    this.webClientApp = app;
+  }
 
   setAccessToken(token: string | null) {
     if (this.accessToken === token) return;
@@ -139,7 +144,7 @@ export class ApiClient {
       this.refreshPromise = withRefreshLock(() => fetch(`${this.baseUrl}/session/refresh`, {
           method: 'POST',
           credentials: 'include',
-          headers: { 'Accept': 'application/json', 'X-CSRF-Token': readCookie('trise_csrf') || '' }
+          headers: { 'Accept': 'application/json', 'X-CSRF-Token': readCookie(this.webClientApp === 'web' ? 'trise_csrf' : `trise_csrf_${this.webClientApp}`) || '' }
         }).then(async (response) => {
           if (!response.ok) return null;
           const body = await response.json();

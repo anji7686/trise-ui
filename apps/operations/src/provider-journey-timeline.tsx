@@ -287,6 +287,19 @@ const label = (value: string) =>
     .toLowerCase()
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const eventTitle = (event: ProviderAuditAttributes) => {
+  if (event.action === "WORK_JOURNEY_RESOURCE_LINKED") {
+    const resourceKind = String(
+      event.after?.resource_kind || event.metadata?.resource_kind || "record",
+    );
+    return `${label(resourceKind)} Linked to Journey`;
+  }
+  return label(event.action);
+};
+const isMajorActivity = (event: ProviderAuditAttributes) =>
+  /(?:^|_)(?:CREATED|SUBMITTED|QUALIFIED|APPROVED|ACCEPTED|REJECTED|ISSUED|REVISED|REPLACED|CONVERTED|COMPLETED|ACTIVATED|CLOSED|CANCELLED|ABANDONED)(?:_|$)/.test(
+    String(event.action || "").toUpperCase(),
+  );
 const time = (value?: string) =>
   value
     ? new Intl.DateTimeFormat("en-IN", {
@@ -364,7 +377,7 @@ const details = (event: ProviderAuditAttributes): Array<[string, string]> => {
   if (after.resource_kind || metadata.resource_kind)
     add(
       "Linked record",
-      `${label(String(after.resource_kind || metadata.resource_kind))} · ${String(after.resource_id || metadata.resource_id || "").slice(0, 8)}`,
+      `${label(String(after.resource_kind || metadata.resource_kind))} · ${String(after.resource_id || metadata.resource_id || "").slice(-8)}`,
     );
   return rows;
 };
@@ -605,7 +618,7 @@ export function JourneyTimelineAccordion({
               const open = openMilestone === group.id;
               return (
                 <section
-                  className={`journey-milestone ${open ? "is-open" : ""}`}
+                  className={`journey-milestone journey-milestone--${group.id.toLowerCase()} ${open ? "is-open" : ""}`}
                   key={group.id}
                 >
                   <button
@@ -631,23 +644,30 @@ export function JourneyTimelineAccordion({
                     <ol className="provider-work-intake-timeline journey-milestone-events">
                       {group.events.map((event) => {
                         const eventDetails = details(event.attributes);
+                        const major = isMajorActivity(event.attributes);
+                        const eventScope = milestoneFor(event);
                         return (
-                          <li key={event.id}>
+                          <li
+                            key={event.id}
+                            className={`journey-activity-event journey-activity-event--${eventScope.toLowerCase()}${major ? " is-major" : ""}`}
+                          >
                             <span
-                              className="provider-work-intake-timeline-icon"
+                              className="provider-work-intake-timeline-icon journey-event-icon"
                               aria-hidden="true"
                             >
                               <SvgIcon name="activity" size={15} />
                             </span>
-                            <div className="provider-work-intake-timeline-card">
+                            <div className="provider-work-intake-timeline-card journey-event-card">
                               <div className="provider-work-intake-timeline-header">
                                 <div>
-                                  <strong>{label(event.attributes.action)}</strong>
+                                  <strong>{eventTitle(event.attributes)}</strong>
                                   <small>{time(event.attributes.occurred_at)}</small>
                                 </div>
-                                <Status>
-                                  {label(event.attributes.actor_kind || "SYSTEM")}
-                                </Status>
+                                <div className="journey-event-badges">
+                                  <span className="journey-event-scope">{JOURNEY_MILESTONE_LABELS[eventScope]}</span>
+                                  {major && <span className="journey-event-milestone">Milestone</span>}
+                                  <Status>{label(event.attributes.actor_kind || "SYSTEM")}</Status>
+                                </div>
                               </div>
                               <div className="provider-work-intake-actor">
                                 <span>Actor</span>
@@ -662,7 +682,7 @@ export function JourneyTimelineAccordion({
                               </div>
                               {!eventDetails.length && (
                                 <div className="provider-work-intake-event-context">
-                                  <span>
+                                  <span className="journey-event-detail">
                                     <small>Record source</small>
                                     <strong>
                                       {label(
@@ -671,7 +691,7 @@ export function JourneyTimelineAccordion({
                                       )}
                                     </strong>
                                   </span>
-                                  <span>
+                                  <span className="journey-event-detail">
                                     <small>Readable details</small>
                                     <strong>No additional fields recorded</strong>
                                   </span>
@@ -680,7 +700,7 @@ export function JourneyTimelineAccordion({
                               {eventDetails.length > 0 && (
                                 <div className="provider-work-intake-readable-details">
                                   {eventDetails.map(([name, text]) => (
-                                    <span key={name}>
+                                  <span className="journey-event-detail" key={name}>
                                       <small>{name}</small>
                                       <strong>{text}</strong>
                                     </span>

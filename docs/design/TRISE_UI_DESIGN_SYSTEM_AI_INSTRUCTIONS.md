@@ -18,6 +18,16 @@ Before changing a screen:
 4. Keep a single source of truth for a record. Do not duplicate the same
    requirement, survey, timeline, notification, or activity in multiple panels.
 
+For multi-stage provider work, use `ProviderWorkJourney` as the shared
+navigation and audit spine, not as a second master-data record. Read and link
+the owning records: Party/customer relationship, ServiceLocation, Asset,
+confirmed `RequirementRevision`, immutable Quotation revision, ServiceCase
+and project assets, handover evidence, and MaintenanceContract scopes. Treat
+journey context as a read projection. A draft capture may remain as provenance;
+after confirmation, downstream forms should reuse the canonical record or its
+identifier and request a change only through the owning revisioned workflow.
+Keep snapshots only where a commercial or legal decision must remain frozen.
+
 Use these implementation sources first:
 
 - Theme tokens: `packages/design-tokens/src/theme.css`.

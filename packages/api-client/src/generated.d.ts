@@ -5305,6 +5305,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/quotations/{quotationId}/customer-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Quotation Customer
+         * @description Creates a replacement draft revision for a different active customer relationship before customer acceptance. The previous revision remains in history and is cancelled or superseded. Provider commercial edit permission is required; linked source records must belong to the selected customer.
+         */
+        post: operations["ChangeQuotationCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/quotations/{quotationId}/pdf": {
         parameters: {
             query?: never;
@@ -10816,6 +10838,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/quotations/{quotationId}/communications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List Quotation Conversation
+         * @description Lists authenticated messages across the quotation version family; each message retains its exact quotation revision.
+         */
+        get: operations["ListQuotationCommunications"];
+        put?: never;
+        /**
+         * Add Quotation Conversation Message
+         * @description Customer may ask a question or request a change; an authorized provider negotiator may reply. The message is immutable and cannot accept or reject a quotation.
+         */
+        post: operations["CreateQuotationCommunication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quotations/{quotationId}/provider-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get Approved Quotation Provider Logo
+         * @description Returns a short-lived transfer for the exact provider logo snapshot assigned to the quotation, if that document version remains clean and available.
+         */
+        get: operations["GetQuotationProviderLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -11648,6 +11718,8 @@ export interface components {
         /** @description Recorded quotation values with an optional immutable central tax-rule calculation snapshot. */
         QuotationLine: {
             description: string;
+            /** @description Lift unit codes this line applies to; omitted or empty means all quoted lifts. */
+            unit_codes?: string[];
             /** @description Decimal serialized without binary floating-point loss. */
             quantity: string;
             /** @description Decimal serialized without binary floating-point loss. */
@@ -13760,6 +13832,8 @@ export interface components {
             decided_at: string;
             quotation_revision: components["schemas"]["Revision"];
             reason: string;
+            approver_name?: string;
+            approver_role?: string;
         };
         /** @description Authorized canonical QuotationApproval representation; fields and linked resources require independent authorization. */
         QuotationApproval: {
@@ -14766,6 +14840,8 @@ export interface components {
             category?: "MECHANICAL" | "DOOR_SYSTEM" | "ELECTRICAL" | "SAFETY" | "CONSUMABLE" | "OTHER";
             quantity: number;
             unit_code?: string;
+            /** @description Lift unit codes this material applies to; omitted or empty means all quoted lifts. */
+            unit_codes?: string[];
             /** @enum {string} */
             customer_visibility?: "INCLUDED" | "EXCLUDED";
             /** @description Optional editable INR planning price preserved in draft and quotation revisions. */
@@ -14999,6 +15075,11 @@ export interface components {
             expected_revision: components["schemas"]["Revision"];
             terms?: components["schemas"]["QuotationTerms"];
         };
+        QuotationCustomerChange: {
+            customer_relationship_id: components["schemas"]["Id"];
+            expected_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
         QuotationNegotiationCreate: {
             /** @enum {string} */
             event_type: "CUSTOMER_FEEDBACK" | "DISCOUNT_REQUESTED" | "SCOPE_CHANGE" | "TERMS_CHANGE" | "COUNTER_OFFER" | "OTHER";
@@ -15029,10 +15110,44 @@ export interface components {
                 recorded_by?: components["schemas"]["ResourceLink"];
             };
         };
-        /** @description Customer acceptance or rejection of the exact revision; acceptance requires an APPROVED Provider review for the same revision. */
+        /** @description Customer acceptance or rejection of the exact revision; acceptance requires an APPROVED Provider review for the same revision. approver_name, approver_role and authority_attested must be submitted together for acceptance evidence. */
         QuotationDecision: {
             expected_revision: components["schemas"]["Revision"];
             reason?: string;
+            approver_name?: string;
+            approver_role?: string;
+            authority_attested?: boolean;
+        };
+        /** @description A customer submits QUESTION or CHANGE_REQUEST; an authorized provider negotiator submits REPLY. */
+        QuotationCommunicationCreate: {
+            expected_revision: components["schemas"]["Revision"];
+            /** @enum {string} */
+            message_type: "QUESTION" | "CHANGE_REQUEST" | "REPLY";
+            body: string;
+        };
+        QuotationCommunicationAttributes: {
+            quotation_revision: components["schemas"]["Revision"];
+            /** @enum {string} */
+            author_side: "customer" | "provider";
+            /** @enum {string} */
+            message_type: "question" | "change_request" | "reply";
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            author_name: string;
+        };
+        QuotationCommunication: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "quotation-communications";
+            attributes: components["schemas"]["QuotationCommunicationAttributes"];
+            relationships: {
+                quotation: components["schemas"]["ResourceLink"];
+                author: components["schemas"]["ResourceLink"];
+            };
+        };
+        QuotationCommunicationCollection: {
+            data: components["schemas"]["QuotationCommunication"][];
         };
         /** @description Provider internal review only. REJECTED requires a reason. Does not record customer acceptance. */
         ProviderQuotationReviewDecision: {
@@ -28583,6 +28698,42 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    ChangeQuotationCustomer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description Required to prevent duplicate replacement revisions on retries. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotationCustomerChange"];
+            };
+        };
+        responses: {
+            /** @description Replacement draft quotation revision created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quotation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     GetQuotationPdf: {
         parameters: {
             query?: never;
@@ -39252,6 +39403,114 @@ export interface operations {
                 content?: never;
             };
             403: components["responses"]["Forbidden"];
+        };
+    };
+    ListQuotationCommunications: {
+        parameters: {
+            query?: {
+                "page[limit]"?: components["parameters"]["PageLimit"];
+            };
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized quotation conversation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationCommunicationCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    CreateQuotationCommunication: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description ADR-010: unique per authenticated principal, provider context, operation and bounded retention window. Same key + same request replays accepted outcome without duplicate event; changed payload yields 409. Reauthorize before disclosing replay. Retention window remains OPEN. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuotationCommunicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Message recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotationCommunication"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    GetQuotationProviderLogo: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                quotationId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized quotation logo transfer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            quotation_id: components["schemas"]["Id"];
+                            quotation_revision: components["schemas"]["Revision"];
+                            media_type: string;
+                            filename: string;
+                        };
+                        transfer: {
+                            /** Format: uri */
+                            url: string;
+                            /** Format: date-time */
+                            expires_at: string;
+                            expires_in: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }

@@ -1,5 +1,5 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader } from "@trise/ui";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Button, PageHeader, SortedSelect } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import QRCode from "qrcode";
 import {
@@ -51,6 +51,10 @@ type QuotationMaterialLine = {
   specifications: string;
   notes: string;
   warranty_months: string;
+  /** Explicit quoted lift assignments; shared lines store every quoted code. */
+  unit_codes: string[];
+  /** Template/manual lines on multi-lift quotes require an explicit assignment. */
+  unit_scope_confirmed?: boolean;
 };
 
 type QuotationDeliveryChannel = "EMAIL" | "SMS" | "WHATSAPP";
@@ -477,6 +481,7 @@ const emptyQuotationMaterial = (): QuotationMaterialLine => ({
   specifications: "",
   notes: "",
   warranty_months: "",
+  unit_codes: [],
 });
 
 const specificationPairsFromText = (value: string, strict = false) =>
@@ -553,6 +558,25 @@ const specificationTextFromPairs = (value: unknown) => {
     .join("\n");
 };
 
+const quotationSpecificationOrder = [
+  "equipment type", "application", "industry", "technology", "drive type", "control system",
+  "capacity", "stops", "speed", "door configuration", "door type", "finish", "machine room",
+  "shaft width", "shaft depth", "pit depth", "headroom", "accessibility", "safety", "emergency",
+  "standard", "authority reference", "notes",
+];
+
+function orderedQuotationSpecifications(text: string) {
+  return specificationPairsFromText(text)
+    .map((pair, index) => ({ ...pair, index }))
+    .sort((left, right) => {
+      const position = (name: string) => quotationSpecificationOrder.findIndex((item) => name.toLowerCase().includes(item));
+      const leftPosition = position(left.name);
+      const rightPosition = position(right.name);
+      return (leftPosition < 0 ? quotationSpecificationOrder.length : leftPosition) -
+        (rightPosition < 0 ? quotationSpecificationOrder.length : rightPosition) || left.index - right.index;
+    });
+}
+
 const quotationMaterialsFromTerms = (terms: unknown): QuotationMaterialLine[] => {
   if (!terms || typeof terms !== "object") return [];
   const materials = (terms as Record<string, unknown>).materials;
@@ -581,6 +605,11 @@ const quotationMaterialsFromTerms = (terms: unknown): QuotationMaterialLine[] =>
         specifications: specificationTextFromPairs(row.specifications),
         notes: String(row.notes || ""),
         warranty_months: String(row.warranty_months ?? ""),
+        unit_codes: Array.isArray(row.unit_codes) ? row.unit_codes.map(String) : [],
+        // The editor serializes this confirmation into its hidden form field.
+        // Keep it through form parsing so client validation does not reject a
+        // lift assignment the user already confirmed.
+        unit_scope_confirmed: row.unit_scope_confirmed === true,
       } satisfies QuotationMaterialLine,
     ];
   });
@@ -634,14 +663,34 @@ const quotationMaterialsFromForm = (
 };
 
 export const quotationMaterialsForApi = (materials: QuotationMaterialLine[]) =>
-  materials.map(({ specifications, tax_rule_id, tax_pricing_mode, warranty_months, ...material }) => ({
-    ...material,
-    ...(tax_rule_id ? { tax_rule_id, tax_pricing_mode } : {}),
-    ...(warranty_months.trim() ? { warranty_months: Number(warranty_months) } : {}),
-    ...(specifications.trim()
-      ? { specifications: specificationPairsFromText(specifications, true) }
-      : {}),
-  }));
+  materials.map((material) => {
+    const { specifications, tax_rule_id, tax_pricing_mode, warranty_months } = material;
+    const apiMaterial = { ...material };
+    delete apiMaterial.unit_scope_confirmed;
+    return {
+      ...apiMaterial,
+      ...(tax_rule_id ? { tax_rule_id, tax_pricing_mode } : {}),
+      ...(warranty_months.trim() ? { warranty_months: Number(warranty_months) } : {}),
+      ...(specifications.trim()
+        ? { specifications: specificationPairsFromText(specifications, true) }
+        : {}),
+    };
+  });
+
+function validateQuotationMaterialLiftAssignments(
+  materials: QuotationMaterialLine[],
+  quotedUnitCodes: string[],
+) {
+  if (quotedUnitCodes.length < 2) return;
+  const unassigned = materials.some(
+    (material) => !material.unit_scope_confirmed || material.unit_codes.length === 0,
+  );
+  if (unassigned) {
+    throw new Error(
+      "Some material lines still need lift assignments. Review the highlighted lines and choose one or more lifts, or apply all quoted lifts to every line if the full scope is shared.",
+    );
+  }
+}
 
 const taxTreatmentLabel = (value: string) =>
   value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -696,24 +745,39 @@ const quotationCommercialLinesAndAmount = (form: FormData) => {
 
 function MaterialScopeEditor({
   initialMaterials,
+  unitCodes = [],
   templates = [],
   taxRules = [],
   onCreateTemplate,
   name = "materials_json",
 }: {
   initialMaterials?: QuotationMaterialLine[];
+  unitCodes?: string[];
   templates?: Resource<MaterialScopeTemplateAttributes>[];
   taxRules?: QuotationTaxRule[];
   onCreateTemplate?: (
     name: string,
     lines: QuotationMaterialLine[],
-  ) => Promise<void>;
+  ) => Promise<Resource<MaterialScopeTemplateAttributes> | void>;
   name?: string;
 }) {
   const [materials, setMaterials] = useState<QuotationMaterialLine[]>(
-    () => initialMaterials?.map((material) => ({ ...material })) || [],
+    () => initialMaterials?.map((material) => {
+      const assignedUnits = material.unit_codes.filter((code) => unitCodes.includes(code));
+      const hadExplicitAssignment = material.unit_codes.length > 0;
+      return {
+        ...material,
+        // Preserve legacy unscoped lines as shared. If an old explicit unit
+        // no longer exists in the latest survey, require a fresh assignment.
+        unit_codes: hadExplicitAssignment ? assignedUnits : [...unitCodes],
+        unit_scope_confirmed: hadExplicitAssignment ? assignedUnits.length > 0 : true,
+      };
+    }) || [],
   );
+  const [templateResources, setTemplateResources] = useState(templates);
+  const [templateScope, setTemplateScope] = useState<"PROVIDER" | "PLATFORM_MASTER">("PROVIDER");
   const [templateId, setTemplateId] = useState("");
+  const [appliedTemplateId, setAppliedTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [templateBusy, setTemplateBusy] = useState(false);
   const [templateMessage, setTemplateMessage] = useState("");
@@ -726,6 +790,10 @@ function MaterialScopeEditor({
   );
 
   useEffect(() => {
+    setTemplateResources(templates);
+  }, [templates]);
+
+  useEffect(() => {
     materials.forEach((material, index) => {
       specificationRefs.current[index]?.setCustomValidity(
         specificationIssueFromText(material.specifications),
@@ -736,7 +804,7 @@ function MaterialScopeEditor({
   const updateMaterial = (
     index: number,
     field: keyof QuotationMaterialLine,
-    value: string,
+    value: string | string[] | boolean,
   ) => {
     setMaterials((current) =>
       current.map((material, rowIndex) =>
@@ -744,7 +812,11 @@ function MaterialScopeEditor({
           ? {
               ...material,
               [field]:
-                field === "customer_visibility"
+                  field === "unit_codes"
+                    ? Array.isArray(value) ? value : []
+                    : field === "unit_scope_confirmed"
+                      ? value === true
+                    : field === "customer_visibility"
                   ? value === "EXCLUDED"
                     ? "EXCLUDED"
                     : "INCLUDED"
@@ -755,11 +827,17 @@ function MaterialScopeEditor({
     );
   };
 
-  const applyTemplate = () => {
-    const template = templates.find((item) => item.id === templateId);
+  const providerTemplates = templateResources.filter((template) => template.attributes.scope === "PROVIDER" && template.attributes.status === "ACTIVE");
+  const platformTemplates = templateResources.filter((template) => template.attributes.scope === "PLATFORM_MASTER" && template.attributes.status === "ACTIVE");
+  const selectableTemplates = templateScope === "PROVIDER" ? providerTemplates : platformTemplates;
+  const selectedTemplate = selectableTemplates.find((template) => template.id === templateId);
+
+  const applyTemplate = (selectedTemplateId = templateId) => {
+    const template = selectableTemplates.find((item) => item.id === selectedTemplateId);
     if (!template) return;
-    setMaterials(
-      template.attributes.lines.map((line) => ({
+    setTemplateId(template.id);
+    setAppliedTemplateId(template.id);
+    const templateMaterials: QuotationMaterialLine[] = template.attributes.lines.map((line) => ({
         description: line.description,
         category: line.category,
         quantity: String(line.quantity),
@@ -771,11 +849,30 @@ function MaterialScopeEditor({
         specifications: specificationTextFromPairs(line.specifications),
         notes: String(line.notes || ""),
         warranty_months: String(line.warranty_months ?? ""),
-      })),
-    );
-    setOpenMaterialIndex(0);
+        unit_codes: unitCodes.length === 1 ? [...unitCodes] : [],
+        unit_scope_confirmed: unitCodes.length === 1,
+      }));
+    const materialKey = (material: QuotationMaterialLine) => JSON.stringify({
+      description: material.description.trim().toLocaleLowerCase(),
+      category: material.category,
+      quantity: material.quantity,
+      unit_code: material.unit_code,
+      customer_visibility: material.customer_visibility,
+      unit_price: material.unit_price,
+      specifications: specificationPairsFromText(material.specifications),
+      notes: material.notes.trim(),
+      warranty_months: material.warranty_months,
+      unit_codes: [...material.unit_codes].sort(),
+      unit_scope_confirmed: material.unit_scope_confirmed === true,
+    });
+    const existingKeys = new Set(materials.map(materialKey));
+    const additions = templateMaterials.filter((material) => !existingKeys.has(materialKey(material)));
+    setMaterials([...materials, ...additions]);
+    setOpenMaterialIndex(additions.length ? materials.length : Math.max(0, materials.length - 1));
     setTemplateMessage(
-      `Applied ${template.attributes.name}. Review quantity and prices before saving.`,
+      additions.length
+        ? `Added ${additions.length} line${additions.length === 1 ? "" : "s"} from ${template.attributes.name}. Select lifts for each line below, or choose “Apply all quoted lifts to every line” if the full template is shared. Existing lines and tax choices were kept.`
+        : `All lines from ${template.attributes.name} are already in this draft. Existing material lines and tax choices were kept.`,
     );
   };
 
@@ -784,7 +881,12 @@ function MaterialScopeEditor({
     setTemplateBusy(true);
     setTemplateMessage("");
     try {
-      await onCreateTemplate(templateName.trim(), materials);
+      const createdTemplate = await onCreateTemplate(templateName.trim(), materials);
+      if (createdTemplate) {
+        setTemplateResources((current) => [createdTemplate, ...current.filter((item) => item.id !== createdTemplate.id)]);
+        setTemplateScope("PROVIDER");
+        setTemplateId(createdTemplate.id);
+      }
       setTemplateName("");
       setTemplateMessage("Material template saved for this provider.");
     } catch (cause) {
@@ -797,7 +899,7 @@ function MaterialScopeEditor({
   };
 
   const pricedLines = materials
-    .filter((material) => material.unit_price.trim() !== "")
+    .filter((material) => material.unit_price.trim() !== "" && material.unit_scope_confirmed !== false)
     .map((material) => {
       const quantity = Number(material.quantity);
       const unitPrice = Number(material.unit_price);
@@ -806,6 +908,7 @@ function MaterialScopeEditor({
         quantity: material.quantity,
         unit_price: material.unit_price,
         amount: String(quantity * unitPrice),
+        unit_codes: material.unit_codes.length ? material.unit_codes : unitCodes,
         ...(material.tax_rule_id
           ? {
               tax_rule_id: material.tax_rule_id,
@@ -841,6 +944,18 @@ function MaterialScopeEditor({
         }) || left.index - right.index
       );
     });
+  const unassignedMaterialIndexes = unitCodes.length > 1
+    ? materials.flatMap((material, index) =>
+        !material.unit_scope_confirmed || material.unit_codes.length === 0 ? [index] : [],
+      )
+    : [];
+  const applyAllUnitsToEveryMaterial = () => {
+    setMaterials((current) => current.map((material) => ({
+      ...material,
+      unit_codes: [...unitCodes],
+      unit_scope_confirmed: true,
+    })));
+  };
 
   return (
     <fieldset className="quotation-material-editor">
@@ -852,35 +967,43 @@ function MaterialScopeEditor({
         reserve stock, maintain SKUs, or record certification. Template prices
         are editable planning defaults in INR.
       </p>
-      {templates.length > 0 && (
-        <div className="quotation-material-template-tools">
+      <section className="quotation-material-template-picker" aria-label="Material scope templates">
+        <div className="quotation-material-template-picker-heading">
+          <div><strong>Material scope templates</strong><small>Choose a source, then select an active template. These fill material lines, quantities, specifications and planning prices; quotation terms are set separately.</small></div>
+        </div>
+        <div className="quotation-material-template-picker-controls">
           <label>
-            Start from a master template
-            <select
-              value={templateId}
-              onChange={(event) => setTemplateId(event.target.value)}
+            Template source
+            <SortedSelect
+              dir="ltr"
+              value={templateScope}
+              onChange={(event) => {
+                setTemplateScope(event.target.value as typeof templateScope);
+                setTemplateId("");
+                setTemplateMessage("");
+              }}
             >
-              <option value="">Select a saved template</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.attributes.name}
-                  {template.attributes.scope === "PLATFORM_MASTER"
-                    ? " · Platform master"
-                    : " · Provider"}
-                </option>
-              ))}
-            </select>
+              <option value="PROVIDER">This provider</option>
+              <option value="PLATFORM_MASTER">Platform master</option>
+            </SortedSelect>
           </label>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!templateId}
-            onClick={() => applyTemplate()}
-          >
-            Prefill list
+          <label>
+            Material scope template
+            <SortedSelect value={templateId} onChange={(event) => { setTemplateId(event.target.value); setTemplateMessage(""); }}>
+              <option value="">{selectableTemplates.length ? "Select an active template" : "No active templates available"}</option>
+              {selectableTemplates.map((template) => (
+                <option key={template.id} value={template.id}>{template.attributes.name}</option>
+              ))}
+            </SortedSelect>
+          </label>
+          <Button type="button" variant="secondary" disabled={!selectedTemplate} onClick={() => applyTemplate()}>
+            {selectedTemplate && appliedTemplateId === selectedTemplate.id ? "Add template lines again" : "Add selected template lines"}
           </Button>
         </div>
-      )}
+        <p className="quotation-material-template-picker-status" aria-live="polite">
+          {templateMessage || `${selectableTemplates.length} active ${templateScope === "PROVIDER" ? "provider" : "platform"} material scope template${selectableTemplates.length === 1 ? "" : "s"}.`}
+        </p>
+      </section>
       <input type="hidden" name={name} value={JSON.stringify(serializedMaterials)} />
       <input
         type="hidden"
@@ -889,11 +1012,23 @@ function MaterialScopeEditor({
       />
       {materials.length ? (
         <>
+          {unitCodes.length > 1 && (
+            <div className={`quotation-material-assignment-review${unassignedMaterialIndexes.length ? " has-missing" : ""}`} role="status">
+              <div>
+                <strong>{unassignedMaterialIndexes.length ? `${unassignedMaterialIndexes.length} material line${unassignedMaterialIndexes.length === 1 ? "" : "s"} need lift assignment` : "Lift assignments complete"}</strong>
+                <small>{unassignedMaterialIndexes.length ? "Expand each highlighted line and choose its lift(s), or use the all-lines action when every item applies to every lift." : "Each material line is assigned to one or more quoted lifts."}</small>
+              </div>
+              <div>
+                {unassignedMaterialIndexes.length > 0 && <Button type="button" variant="secondary" onClick={() => setOpenMaterialIndex(unassignedMaterialIndexes[0])}>Review next line</Button>}
+                <Button type="button" variant="quiet" onClick={applyAllUnitsToEveryMaterial}>Apply all {unitCodes.length} lifts to every line</Button>
+              </div>
+            </div>
+          )}
           {materials.length > 1 && (
             <div className="quotation-material-order-tools">
               <label>
                 Display order
-                <select
+                <SortedSelect
                   value={lineOrder}
                   onChange={(event) =>
                     setLineOrder(event.target.value as MaterialLineOrder)
@@ -902,7 +1037,7 @@ function MaterialScopeEditor({
                   <option value="TEMPLATE">Template / added order</option>
                   <option value="CATEGORY">Category (A–Z)</option>
                   <option value="DESCRIPTION">Description (A–Z)</option>
-                </select>
+                </SortedSelect>
               </label>
               <small>Arrange lines for review without changing their values.</small>
             </div>
@@ -910,7 +1045,7 @@ function MaterialScopeEditor({
           <div className="quotation-material-editor-list" aria-label="Material scope items">
           {orderedMaterials.map(({ material, index }) => (
             <details
-              className="quotation-material-editor-row"
+              className={`quotation-material-editor-row${unassignedMaterialIndexes.includes(index) ? " is-assignment-missing" : ""}`}
               key={`${index}-${material.description}`}
               open={openMaterialIndex === index}
               onToggle={(event) => {
@@ -926,6 +1061,7 @@ function MaterialScopeEditor({
                 </span>
                 <span className="quotation-material-editor-summary-values">
                   <span className={`quotation-material-editor-summary-visibility${material.customer_visibility === "EXCLUDED" ? " is-internal" : ""}`}>{material.customer_visibility === "EXCLUDED" ? "Internal" : "Included"}</span>
+                  {unitCodes.length > 0 && <span className={!material.unit_scope_confirmed || !material.unit_codes.length ? "is-assignment-needed" : ""} title={material.unit_scope_confirmed && material.unit_codes.length ? material.unit_codes.join(", ") : "Lift assignment required"}>{!material.unit_scope_confirmed || !material.unit_codes.length ? "Assignment needed" : material.unit_codes.length === unitCodes.length ? `All ${unitCodes.length} lifts` : `${material.unit_codes.length} of ${unitCodes.length} lifts`}</span>}
                   {material.unit_price.trim() && <span>₹{Number(material.unit_price).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>}
                   {material.specifications.trim() && <span>{specificationPairsFromText(material.specifications).length} specs</span>}
                 </span>
@@ -946,7 +1082,7 @@ function MaterialScopeEditor({
               </label>
               <label>
                 Category
-                <select
+                <SortedSelect
                   value={material.category}
                   onChange={(event) =>
                     updateMaterial(index, "category", event.target.value)
@@ -957,7 +1093,7 @@ function MaterialScopeEditor({
                       {label}
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Quantity
@@ -983,6 +1119,38 @@ function MaterialScopeEditor({
                   }
                 />
               </label>
+              {unitCodes.length > 0 && (
+                <fieldset className="quotation-material-unit-scope">
+                  <legend>Applies to lifts</legend>
+                  <small>{!material.unit_scope_confirmed ? `Choose lift(s) for this item (${unitCodes.length} quoted), or intentionally apply it to all.` : !material.unit_codes.length ? "No lifts selected. Choose at least one or apply to all." : material.unit_codes.length === unitCodes.length ? `All ${unitCodes.length} quoted lifts selected.` : `${material.unit_codes.length} of ${unitCodes.length} quoted lifts selected.`}</small>
+                  <div>
+                    {unitCodes.map((unitCode) => {
+                      const checked = material.unit_scope_confirmed && material.unit_codes.includes(unitCode);
+                      return <label key={unitCode}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          aria-label={`Apply ${material.description || "material"} to ${unitCode}`}
+                          onChange={(event) => {
+                            const next = new Set(material.unit_scope_confirmed ? material.unit_codes : []);
+                            if (event.target.checked) next.add(unitCode);
+                            else next.delete(unitCode);
+                            updateMaterial(index, "unit_codes", Array.from(next));
+                            updateMaterial(index, "unit_scope_confirmed", true);
+                          }}
+                        />
+                        <span>{unitCode}</span>
+                      </label>;
+                    })}
+                  </div>
+                  <Button type="button" variant="quiet" onClick={() => {
+                    updateMaterial(index, "unit_codes", [...unitCodes]);
+                    updateMaterial(index, "unit_scope_confirmed", true);
+                  }}>
+                    Apply to all {unitCodes.length} lifts
+                  </Button>
+                </fieldset>
+              )}
               <label>
                 Unit price (INR)
                 <input
@@ -998,7 +1166,7 @@ function MaterialScopeEditor({
               </label>
               <label>
                 Customer visibility
-                <select
+                <SortedSelect
                   value={material.customer_visibility}
                   onChange={(event) =>
                     updateMaterial(index, "customer_visibility", event.target.value)
@@ -1006,11 +1174,11 @@ function MaterialScopeEditor({
                 >
                   <option value="INCLUDED">Included</option>
                   <option value="EXCLUDED">Internal / excluded</option>
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Tax rule
-                <select
+                <SortedSelect
                   value={material.tax_rule_id}
                   onChange={(event) =>
                     updateMaterial(index, "tax_rule_id", event.target.value)
@@ -1022,14 +1190,14 @@ function MaterialScopeEditor({
                       {rule.attributes.rule_code} · {taxTreatmentLabel(rule.attributes.tax_treatment)} · {rule.attributes.total_rate_percent}%
                     </option>
                   ))}
-                </select>
+                </SortedSelect>
                 <small>
                   Rates and components come from the published platform tax catalogue.
                 </small>
               </label>
               <label>
                 Price mode
-                <select
+                <SortedSelect
                   value={material.tax_pricing_mode}
                   disabled={!material.tax_rule_id}
                   onChange={(event) =>
@@ -1038,7 +1206,7 @@ function MaterialScopeEditor({
                 >
                   <option value="EXCLUSIVE">Tax extra</option>
                   <option value="INCLUSIVE">Tax included</option>
-                </select>
+                </SortedSelect>
               </label>
               <label
                 className={`quotation-material-editor-specifications${
@@ -1140,7 +1308,14 @@ function MaterialScopeEditor({
         type="button"
         variant="quiet"
         disabled={materials.length >= phaseOneMaterialMax}
-        onClick={() => setMaterials((current) => [...current, emptyQuotationMaterial()])}
+        onClick={() => {
+          setMaterials((current) => [...current, {
+            ...emptyQuotationMaterial(),
+            unit_codes: unitCodes.length === 1 ? [...unitCodes] : [],
+            unit_scope_confirmed: unitCodes.length === 1,
+          }]);
+          setOpenMaterialIndex(materials.length);
+        }}
       >
         {materials.length >= phaseOneMaterialMax
           ? `Maximum ${phaseOneMaterialMax} material lines`
@@ -1154,7 +1329,7 @@ function MaterialScopeEditor({
       {onCreateTemplate && (
         <div className="quotation-material-template-save">
           <label>
-            Save this list as a provider template
+            Save these lines as a provider material scope template
             <input
               value={templateName}
               maxLength={120}
@@ -1220,25 +1395,56 @@ export function QuotationTermsEditor({
   templates = [],
   initialTemplateId,
   stagePaymentsEnabled = true,
+  amcMode = false,
   showTermsAndConditions = true,
 }: {
   initialTerms?: Record<string, unknown>;
   templates?: Resource<QuotationTermsTemplateAttributes>[];
   initialTemplateId?: string;
   stagePaymentsEnabled?: boolean;
+  amcMode?: boolean;
   showTermsAndConditions?: boolean;
 }) {
-  const [selection, setSelection] = useState(() =>
-    quotationTermSelectionFromTerms(initialTerms),
-  );
+  const selectionForMode = (source: unknown) => {
+    const configured = quotationTermSelectionFromTerms(source);
+    return amcMode ? { ...configured, freeAmc: false, freeAmcMonths: "0" } : configured;
+  };
+  const [selection, setSelection] = useState(() => selectionForMode(initialTerms));
   const initialSavedTemplate = initialTerms?.quotation_terms_template;
   const initialSavedTemplateId = initialSavedTemplate && typeof initialSavedTemplate === "object"
     ? String((initialSavedTemplate as Record<string, unknown>).id || "")
     : "";
   const [templateId, setTemplateId] = useState(initialTemplateId || initialSavedTemplateId);
   const [templateMessage, setTemplateMessage] = useState("");
-  const selectedTemplate = templates.find((template) => template.id === templateId);
+  const selectableTemplates = useMemo(
+    () => {
+      const latestByScopeAndName = new Map<string, Resource<QuotationTermsTemplateAttributes>>();
+      templates.forEach((template) => {
+        const { status, scope, name, revision, updated_at, created_at } = template.attributes;
+        if (status !== "ACTIVE" || !["PLATFORM_MASTER", "PROVIDER"].includes(scope)) return;
+        const key = `${scope}:${name.trim().toLocaleLowerCase()}`;
+        const current = latestByScopeAndName.get(key);
+        const currentRevision = Number(current?.attributes.revision || 0);
+        const nextRevision = Number(revision || 0);
+        const currentDate = Date.parse(String(current?.attributes.updated_at || current?.attributes.created_at || "")) || 0;
+        const nextDate = Date.parse(String(updated_at || created_at || "")) || 0;
+        if (!current || nextRevision > currentRevision ||
+          (nextRevision === currentRevision && (nextDate > currentDate || (nextDate === currentDate && template.id > current.id)))) {
+          latestByScopeAndName.set(key, template);
+        }
+      });
+      return Array.from(latestByScopeAndName.values()).sort((left, right) =>
+        left.attributes.name.localeCompare(right.attributes.name, undefined, { sensitivity: "base" }),
+      );
+    },
+    [templates],
+  );
+  const selectedTemplate = selectableTemplates.find((template) => template.id === templateId);
   const autoAppliedTemplate = useRef("");
+  const selectionForTemplate = (template: Resource<QuotationTermsTemplateAttributes>) => {
+    const configured = quotationTermSelectionFromTemplate(template);
+    return amcMode ? { ...configured, freeAmc: false, freeAmcMonths: "0" } : configured;
+  };
   const updateSelection = <K extends keyof QuotationTermSelection>(
     key: K,
     value: QuotationTermSelection[K],
@@ -1256,53 +1462,55 @@ export function QuotationTermsEditor({
   };
   const applyTemplate = (template = selectedTemplate) => {
     if (!template) return;
-    setSelection(quotationTermSelectionFromTemplate(template));
+    setSelection(selectionForTemplate(template));
     setTemplateMessage(
       `Applied ${template.attributes.name}. Its default commercial configuration is loaded; save the quotation draft to persist this snapshot.`,
     );
   };
   useEffect(() => {
     if (!initialTemplateId || !templates.length || autoAppliedTemplate.current === initialTemplateId) return;
-    const template = templates.find((item) => item.id === initialTemplateId);
+    const template = selectableTemplates.find((item) => item.id === initialTemplateId);
     if (!template) return;
     setTemplateId(initialTemplateId);
-    setSelection(quotationTermSelectionFromTemplate(template));
+    setSelection(selectionForTemplate(template));
     setTemplateMessage(`Applied ${template.attributes.name}. Its default commercial configuration is loaded; save the quotation draft to persist this snapshot.`);
     autoAppliedTemplate.current = initialTemplateId;
-  }, [initialTemplateId, templates]);
+  }, [initialTemplateId, selectableTemplates]);
   return (
     <fieldset className="quotation-terms-editor">
-      <legend>Commercial terms</legend>
+      <legend>Quotation terms</legend>
       <input type="hidden" name="quotation_terms_template_id" value={templateId} readOnly />
       <p className="quotation-terms-editor-help">
         Choose the conditions that belong in this quotation revision. Disabled
         terms are omitted from the saved snapshot. Item-level warranty is
-        declared on each material line above.
+        declared on each material line above. Provider terms templates are
+        shared with quotation creators working in this provider account. Only
+        active templates appear; when names repeat, the latest revision is used.
       </p>
-      {templates.length > 0 && (
+      {selectableTemplates.length > 0 && (
         <div className="quotation-terms-template-tools">
           <label>
-            Start from a terms template
-            <select
+            Quotation terms template
+            <SortedSelect
               value={templateId}
               onChange={(event) => {
                 const nextTemplateId = event.target.value;
                 setTemplateId(nextTemplateId);
-                const nextTemplate = templates.find((template) => template.id === nextTemplateId);
+                const nextTemplate = selectableTemplates.find((template) => template.id === nextTemplateId);
                 if (nextTemplate) applyTemplate(nextTemplate);
                 else setTemplateMessage("");
               }}
             >
-              <option value="">Select a terms template</option>
-              {templates.map((template) => (
+              <option value="">Select active quotation terms</option>
+              {selectableTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.attributes.name}
                   {template.attributes.scope === "PLATFORM_MASTER"
                     ? " · Platform master"
-                    : " · Provider"}
+                    : " · This provider"}
                 </option>
               ))}
-            </select>
+            </SortedSelect>
           </label>
           <Button
             type="button"
@@ -1345,7 +1553,7 @@ export function QuotationTermsEditor({
           ["freeAmc", "Included free AMC", "Declare included maintenance coverage."],
           ["paymentMethodsEnabled", "Payment mode & details", "Add one or more approved ways for the customer to pay: bank transfer, online, cash, cheque or UPI QR."],
           ["exclusions", "Exclusions", "List work or supply items outside this quotation."],
-        ].filter(([key]) => key !== "payment" || stagePaymentsEnabled).map(([key, label, help]) => {
+        ].filter(([key]) => (key !== "payment" || stagePaymentsEnabled) && (key !== "freeAmc" || !amcMode)).map(([key, label, help]) => {
           const selected = Boolean(selection[key as keyof QuotationTermSelection]);
           return (
             <label
@@ -1397,13 +1605,13 @@ export function QuotationTermsEditor({
               </label>
               <label>
                 Trigger
-                <select value={stage.trigger_kind} onChange={(event) => updateSelection("paymentStages", selection.paymentStages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}>
+                <SortedSelect value={stage.trigger_kind} onChange={(event) => updateSelection("paymentStages", selection.paymentStages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}>
                   <option value="MANUAL">Manual</option>
                   <option value="CUSTOMER_ACCEPTANCE">Customer acceptance</option>
                   <option value="STAGE_COMPLETION">Stage completion</option>
                   <option value="DELIVERY">Delivery</option>
                   <option value="HANDOVER">Handover</option>
-                </select>
+                </SortedSelect>
               </label>
               <label className="quotation-payment-stage-acceptance">
                 <input type="checkbox" checked={stage.customer_acceptance_required} onChange={(event) => updateSelection("paymentStages", selection.paymentStages.map((item, itemIndex) => itemIndex === index ? { ...item, customer_acceptance_required: event.target.checked } : item))} />
@@ -1452,13 +1660,13 @@ export function QuotationTermsEditor({
                 <div className="quotation-bank-account-grid">
                   <label className="quotation-payment-mode-field">
                     Payment mode *
-                    <select value={method.method} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, method: event.target.value as QuotationPaymentMethodCode } : item))}>
+                    <SortedSelect value={method.method} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, method: event.target.value as QuotationPaymentMethodCode } : item))}>
                       <option value="BANK_TRANSFER">Bank transfer</option>
                       <option value="ONLINE">Online payment</option>
                       <option value="CASH">Cash</option>
                       <option value="CHEQUE">Cheque</option>
                       <option value="UPI_QR">UPI QR</option>
-                    </select>
+                    </SortedSelect>
                   </label>
                   <label className="quotation-payment-label-field">
                     Display label
@@ -1469,7 +1677,7 @@ export function QuotationTermsEditor({
                       <label className="quotation-bank-beneficiary-field">Beneficiary name *<input required value={method.bankAccount.beneficiary_name} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, beneficiary_name: event.target.value } } : item))} /></label>
                       <label>Bank name *<input required value={method.bankAccount.bank_name} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, bank_name: event.target.value } } : item))} /></label>
                       <label>Account number *<input required inputMode="numeric" value={method.bankAccount.account_number} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, account_number: event.target.value } } : item))} /></label>
-                      <label>Account type *<select value={method.bankAccount.account_type} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, account_type: event.target.value as QuotationBankAccountSelection["account_type"] } } : item))}><option value="CURRENT">Current</option><option value="SAVINGS">Savings</option><option value="OTHER">Other</option></select></label>
+                      <label>Account type *<SortedSelect value={method.bankAccount.account_type} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, account_type: event.target.value as QuotationBankAccountSelection["account_type"] } } : item))}><option value="CURRENT">Current</option><option value="SAVINGS">Savings</option><option value="OTHER">Other</option></SortedSelect></label>
                       <label>IFSC code *<input required maxLength={11} autoCapitalize="characters" placeholder="e.g. HDFC0001234" value={method.bankAccount.ifsc_code} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, ifsc_code: event.target.value.toUpperCase() } } : item))} /></label>
                       <label>Branch name<input value={method.bankAccount.branch_name} onChange={(event) => updateSelection("paymentMethods", selection.paymentMethods.map((item, itemIndex) => itemIndex === index ? { ...item, bankAccount: { ...item.bankAccount, branch_name: event.target.value } } : item))} /></label>
                     </>
@@ -1506,7 +1714,7 @@ export function QuotationTermsEditor({
             </label>
             <label>
               AMC frequency
-              <select
+              <SortedSelect
                 value={selection.freeAmcFrequency}
                 onChange={(event) => updateSelection("freeAmcFrequency", event.target.value)}
               >
@@ -1514,7 +1722,7 @@ export function QuotationTermsEditor({
                 <option value="QUARTERLY">Quarterly</option>
                 <option value="BIANNUALLY">Biannually</option>
                 <option value="ANNUALLY">Annually</option>
-              </select>
+              </SortedSelect>
             </label>
           </>
         )}
@@ -1742,11 +1950,34 @@ export function QuotationTaxVisibilitySummary({ value }: { value: unknown }) {
   return <span className={`quotation-tax-visibility-summary${visible ? " is-visible" : " is-hidden"}`}><strong>{visible ? "Tax details included" : "Tax breakdown hidden"}</strong><span>{visible ? "Tax columns, rates and components appear in customer web/PDF views." : "Tax calculation remains active; customer views show only the total payable."}</span></span>;
 }
 
-function QuotationPaymentStagesCustomerSummary({ value }: { value: unknown }) {
+function QuotationPaymentStagesCustomerSummary({ value, total, currency = "INR", moneyFor }: {
+  value: unknown;
+  total?: unknown;
+  currency?: string;
+  moneyFor?: (value: unknown, currency?: string) => string;
+}) {
   const configuration = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const stages = Array.isArray(configuration.stages) ? configuration.stages : [];
   if (!stages.length) return <span>Payment schedule not specified</span>;
-  return <span className="quotation-payment-stages-summary">{stages.map((item, index) => { const stage = item && typeof item === "object" ? item as Record<string, unknown> : {}; const sequence = Number(stage.sequence || index + 1); return <span className="quotation-payment-stage" key={`${String(stage.code || sequence)}-${sequence}`}><span className="quotation-payment-stage-label"><strong>{sequence}. {quotationTitleCase(String(stage.code || "Stage"))}</strong><small>{stage.percentage !== undefined ? `${String(stage.percentage)}%` : "Percentage not supplied"}</small></span><span className="quotation-payment-stage-details"><span>{String(stage.description || "Payment milestone")}</span><small>{quotationTitleCase(String(stage.trigger_kind || "MANUAL"))}{stage.customer_acceptance_required ? " · Customer acceptance required" : ""}</small></span></span>; })}</span>;
+  const quotedTotal = Number(total);
+  return <span className="quotation-payment-stages-summary">{stages.map((item, index) => {
+    const stage = item && typeof item === "object" ? item as Record<string, unknown> : {};
+    const sequence = Number(stage.sequence || index + 1);
+    const percentage = Number(stage.percentage);
+    const amount = Number.isFinite(quotedTotal) && Number.isFinite(percentage)
+      ? Number((quotedTotal * percentage / 100).toFixed(2))
+      : undefined;
+    return <span className="quotation-payment-stage" key={`${String(stage.code || sequence)}-${sequence}`}>
+      <span className="quotation-payment-stage-label">
+        <strong>{sequence}. {quotationTitleCase(String(stage.code || "Stage"))}</strong>
+        <span className="quotation-payment-stage-share">
+          <small>{Number.isFinite(percentage) ? `${percentage.toFixed(1)}%` : "Percentage not supplied"}</small>
+          {amount !== undefined && moneyFor && <strong>{moneyFor(amount, currency)}</strong>}
+        </span>
+      </span>
+      <span className="quotation-payment-stage-details"><span>{String(stage.description || "Payment milestone")}</span><small>{quotationTitleCase(String(stage.trigger_kind || "MANUAL"))}{stage.customer_acceptance_required ? " · Customer acceptance required" : ""}</small></span>
+    </span>;
+  })}</span>;
 }
 
 export function QuotationAgreementSignatureSection({
@@ -1795,6 +2026,7 @@ type CustomerQuotationPreviewLine = {
   tax_amount?: string | number;
   pricing_mode?: string;
   tax?: { rule_code?: string; tax_treatment?: string } | null;
+  unit_codes?: string[];
 };
 
 type CustomerQuotationPreviewMaterial = {
@@ -1805,7 +2037,22 @@ type CustomerQuotationPreviewMaterial = {
   customer_visibility: "INCLUDED" | "EXCLUDED";
   specifications: string;
   warranty_months: string;
+  unit_codes?: string[];
 };
+
+function QuotationLiftAssignmentValue({ unitCodes, allUnitCodes }: { unitCodes?: string[]; allUnitCodes: string[] }) {
+  const assigned = unitCodes?.length ? unitCodes : allUnitCodes;
+  const assignedSet = new Set(assigned);
+  const ordered = allUnitCodes.filter((code) => assignedSet.has(code));
+  const resolved = ordered.length ? ordered : assigned;
+  const isAll = allUnitCodes.length > 0 && resolved.length === allUnitCodes.length;
+  if (!resolved.length) return <>All quoted lifts</>;
+  if (isAll) return <>All {allUnitCodes.length} lifts</>;
+  return <details className="quotation-lift-assignment-value">
+    <summary>{resolved.length} of {allUnitCodes.length || "quoted"} lifts <span>View lifts</span></summary>
+    <ul>{resolved.map((code) => <li key={code}>{code}</li>)}</ul>
+  </details>;
+}
 
 export function quotationTermsTextIncludesStructuredDetail(value: string, key: "payment_stages") {
   const text = value
@@ -1836,9 +2083,33 @@ function CustomerQuotationPreview({
   moneyFor: (value: unknown, currency?: string) => string;
   logoUrl?: string;
 }) {
+  const [platformBranding, setPlatformBranding] = useState<{ brand_name: string; platform_scope_text: string; support_email?: string | null } | null>(null);
+  useEffect(() => {
+    let current = true;
+    operationsData.quotationPlatformBranding().then(({ data }) => { if (current) setPlatformBranding(data.attributes); }).catch(() => { if (current) setPlatformBranding(null); });
+    return () => { current = false; };
+  }, []);
+  const platformBrandName = platformBranding?.brand_name || "TRISE INDIA";
+  const platformScopeText = platformBranding?.platform_scope_text || "TRISE India provides the digital platform used to prepare and review this quotation. The service provider named above is responsible for the quoted scope, pricing, delivery and contractual terms.";
   const currency = String(quotation.attributes.currency || "INR");
   const showTaxDetails = terms.show_tax_details !== false;
   const visibleMaterials = materials.filter((material) => material.customer_visibility !== "EXCLUDED");
+  const requirementScope = quotation.attributes.requirement_scope && typeof quotation.attributes.requirement_scope === "object"
+    ? quotation.attributes.requirement_scope as Record<string, unknown>
+    : {};
+  const quotationRequirements = quotation.attributes.requirements && typeof quotation.attributes.requirements === "object"
+    ? quotation.attributes.requirements as Record<string, unknown>
+    : {};
+  const customerRequirementOverview = {
+    ...quotationRequirements,
+    units: Array.isArray(requirementScope.units) ? requirementScope.units : quotationRequirements.units,
+  };
+  const customerLiftUnitCodes = Array.isArray(customerRequirementOverview.units)
+    ? customerRequirementOverview.units.map((unit, index) => {
+      const record = unit && typeof unit === "object" ? unit as Record<string, unknown> : {};
+      return String(record.unit_code || record.label || record.name || `Lift ${index + 1}`);
+    })
+    : [];
   const termsAndConditions = String(terms.terms_and_conditions || terms.description || "").trim();
   const paymentStages = quotationPaymentScheduleForView(terms);
   const showPaymentStages = Boolean(paymentStages && !quotationTermsTextIncludesStructuredDetail(termsAndConditions, "payment_stages"));
@@ -1899,7 +2170,7 @@ function CustomerQuotationPreview({
           </header>
         )}
         <div className="quotation-template-web-meta quotation-customer-preview-meta">
-          <div><span>Quotation preview</span><strong>{String(quotation.attributes.provider_name || "Commercial proposal")}</strong></div>
+          <div><span>Quotation</span><strong>{String(quotation.attributes.provider_name || "Commercial proposal")}</strong></div>
           <div><span>Quotation no.</span><strong>{String(quotation.attributes.quotation_number || "Quotation")}</strong></div>
           <div><span>Issue date</span><strong>{issueDate}</strong></div>
           <div><span>Valid until</span><strong>{validUntil}</strong></div>
@@ -1914,20 +2185,21 @@ function CustomerQuotationPreview({
         <section className="quotation-template-sample-lines" aria-label="Actual quotation items">
           <div className="quotation-template-sample-lines-heading"><div><strong>Quotation items</strong><small>Original line items and prices from the saved quotation revision.</small></div><Status>{lines.length} {lines.length === 1 ? "item" : "items"}</Status></div>
           {lines.length ? (
-            <div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Unit price</th>{showTaxDetails && <th>Tax</th>}<th>Amount</th></tr></thead><tbody>{lines.map((line, index) => <tr key={`${line.description || "line"}-${index}`}><td>{line.description || "—"}</td><td>{String(line.quantity ?? "—")}</td><td>{String(line.unit || line.unit_code || "—")}</td><td>{moneyFor(line.unit_price || 0, currency)}</td>{showTaxDetails && <td>{line.tax ? `${String(line.tax.rule_code || line.tax.tax_treatment || "Configured")} · ${moneyFor(line.tax_amount || 0, currency)}` : "Not configured"}</td>}<td>{moneyFor(line.amount || 0, currency)}</td></tr>)}</tbody></table></div>
+            <div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description</th><th>Applies to lifts</th><th>Qty</th><th>Unit</th><th>Unit price</th>{showTaxDetails && <th>Tax</th>}<th>Amount</th></tr></thead><tbody>{lines.map((line, index) => <tr key={`${line.description || "line"}-${index}`}><td>{line.description || "—"}</td><td><QuotationLiftAssignmentValue unitCodes={line.unit_codes} allUnitCodes={customerLiftUnitCodes} /></td><td>{String(line.quantity ?? "—")}</td><td>{String(line.unit || line.unit_code || "—")}</td><td>{moneyFor(line.unit_price || 0, currency)}</td>{showTaxDetails && <td>{line.tax ? `${String(line.tax.rule_code || line.tax.tax_treatment || "Configured")} · ${moneyFor(line.tax_amount || 0, currency)}` : "Not configured"}</td>}<td>{moneyFor(line.amount || 0, currency)}</td></tr>)}</tbody></table></div>
           ) : <p className="quotation-empty-state">No priced line items are attached to this revision.</p>}
           <div className="quotation-template-tax-summary quotation-customer-preview-totals">
           <div className="quotation-template-tax-context"><div><span>Tax treatment</span><strong>{showTaxDetails ? "Included" : "Hidden"}</strong><small>{showTaxDetails ? "Breakdown appears in this customer view." : "Calculation remains included in the total payable."}</small></div><div><span>Tax rule</span><strong>{taxSummary?.components?.map((component) => displayLabel(component.code, "Tax")).join(" + ") || "Not configured"}</strong><small>Published central tax rules</small></div><div><span>Currency</span><strong>{currency}</strong><small>Quotation currency</small></div></div>
             <dl className="quotation-template-totals"><div><dt>Subtotal</dt><dd>{moneyFor(quotation.attributes.subtotal || quotation.attributes.total || 0, currency)}</dd></div><div><dt>Discount</dt><dd>{moneyFor(quotation.attributes.discount_total || 0, currency)}</dd></div>{showTaxDetails && <><div><dt>Tax</dt><dd>{moneyFor(quotation.attributes.tax_total || 0, currency)}</dd></div>{taxSummary?.components?.map((component) => <div key={String(component.code)}><dt>{displayLabel(component.code, "Tax")}</dt><dd>{moneyFor(component.amount || 0, currency)}</dd></div>)}</>}<div className="is-grand-total"><dt>Quoted total</dt><dd><span>{moneyFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</span>{currency.toUpperCase() === "INR" && <small className="quotation-amount-words">{amountInWordsFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</small>}</dd></div></dl>
           </div>
         </section>
-        {visibleMaterials.length > 0 && <section className="quotation-template-sample-lines" aria-label="Actual material scope"><div className="quotation-template-sample-lines-heading"><div><strong>Materials included in scope</strong><small>Customer-visible planned material scope from this quotation revision.</small></div><Status>{visibleMaterials.length} {visibleMaterials.length === 1 ? "material" : "materials"}</Status></div><div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description</th><th>Category</th><th>Qty</th><th>Unit</th><th>Warranty</th></tr></thead><tbody>{visibleMaterials.map((material, index) => <tr key={`${material.description}-${index}`}><td>{material.description || "—"}{material.specifications && <small className="quotation-preview-cell-note">{material.specifications}</small>}</td><td>{displayLabel(material.category, "Other")}</td><td>{material.quantity}</td><td>{material.unit_code}</td><td>{material.warranty_months ? `${material.warranty_months} months` : "As agreed"}</td></tr>)}</tbody></table></div></section>}
+        {Object.keys(customerRequirementOverview).length > 0 && <section className="quotation-template-sample-lines quotation-customer-lift-specifications"><QuotationOverviewSpecifications requirements={customerRequirementOverview} customerFacing /></section>}
+        {visibleMaterials.length > 0 && <section className="quotation-template-sample-lines" aria-label="Actual material scope"><div className="quotation-template-sample-lines-heading"><div><strong>Materials included in scope</strong><small>Customer-visible planned material scope from this quotation revision.</small></div><Status>{visibleMaterials.length} {visibleMaterials.length === 1 ? "material" : "materials"}</Status></div><div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description &amp; specifications</th><th>Applies to lifts</th><th>Category</th><th>Qty</th><th>Unit</th><th>Warranty</th></tr></thead><tbody>{visibleMaterials.map((material, index) => <tr key={`${material.description}-${index}`}><td><strong>{material.description || "—"}</strong>{material.specifications && <dl className="quotation-customer-material-specs">{orderedQuotationSpecifications(material.specifications).map((specification, specificationIndex) => <div key={`${specification.name}-${specificationIndex}`}><dt>{specification.name}</dt><dd><QuotationOverviewValue value={specification.value} requirementKey={specification.name} /></dd></div>)}</dl>}</td><td><QuotationLiftAssignmentValue unitCodes={material.unit_codes} allUnitCodes={customerLiftUnitCodes} /></td><td>{displayLabel(material.category, "Other")}</td><td>{material.quantity}</td><td>{material.unit_code}</td><td>{material.warranty_months ? `${material.warranty_months} months` : "As agreed"}</td></tr>)}</tbody></table></div></section>}
         <section className="quotation-template-selected-terms" aria-label="Actual quotation terms">
           <div className="quotation-template-preview-section-heading"><h4>Commercial Terms &amp; Payment Details</h4><small>Original customer-ready values attached to this quotation revision.</small></div>
           <div className="quotation-template-approval-mode"><span>Customer approval</span><QuotationCustomerApprovalSummary value={terms.online_customer_approval !== false} /></div>
-          {termsAndConditions && <div className="quotation-template-terms-conditions"><div className="quotation-template-terms-conditions-heading"><h5>Terms and conditions</h5><small>Applied to this revision</small></div><RichTextViewer value={termsAndConditions} /></div>}
+          {termsAndConditions && <div className="quotation-template-terms-conditions"><div className="quotation-template-terms-conditions-heading"><h5>Terms &amp; Conditions</h5><small>Applied to this revision</small></div><RichTextViewer value={termsAndConditions} /></div>}
           <dl>
-            {showPaymentStages && paymentStages && <div><dt>Payment stages</dt><dd><QuotationPaymentStagesCustomerSummary value={paymentStages} /></dd></div>}
+            {showPaymentStages && paymentStages && <div><dt>Payment stages</dt><dd><QuotationPaymentStagesCustomerSummary value={paymentStages} total={quotation.attributes.grand_total || quotation.attributes.total || 0} currency={currency} moneyFor={moneyFor} /></dd></div>}
             {hasPaymentMethods && <div><dt>Payment Mode &amp; Details</dt><dd><QuotationPaymentMethodsSummary value={paymentMethods} maskAccounts={false} /></dd></div>}
             {Boolean(terms.bank_account) && !terms.payment_methods && <div><dt>Payment account</dt><dd><QuotationBankAccountSummary value={terms.bank_account} maskAccount={false} /></dd></div>}
             {Array.isArray(exclusions) ? exclusions.length > 0 && <div><dt>Exclusions</dt><dd><QuotationExclusionsSummary value={exclusions} /></dd></div> : Boolean(exclusions) && <div><dt>Exclusions</dt><dd><QuotationExclusionsSummary value={exclusions} /></dd></div>}
@@ -1941,7 +2213,10 @@ function CustomerQuotationPreview({
           </div>}
           {Boolean(letterhead.footer_text) && <p>{String(letterhead.footer_text)}</p>}
         </footer>}
-        <footer className="quotation-customer-preview-footer">This customer preview reflects the saved quotation revision. Provider approval and customer acceptance remain controlled by the quotation workflow.</footer>
+        <footer className="quotation-customer-platform-footer">
+          <div className="quotation-customer-platform-mark" aria-hidden="true"><strong>{platformBrandName}</strong><span>PLATFORM</span></div>
+          <div><strong>Platform services</strong><p>{platformScopeText}</p><small>{platformBranding?.support_email ? <>Platform support: <a href={`mailto:${platformBranding.support_email}`}>{platformBranding.support_email}</a></> : "For quotation scope and commercial terms, contact the service provider named above."}</small></div>
+        </footer>
       </article>
     </section>
   );
@@ -1951,6 +2226,10 @@ function quotationRequirementLabel(key: string) {
   const labels: Record<string, string> = {
     equipment_type_code: "Equipment type",
     industry_segment: "Industry",
+    shaft_width_mm: "Shaft width (mm)",
+    shaft_depth_mm: "Shaft depth (mm)",
+    pit_depth_mm: "Pit depth (mm)",
+    headroom_mm: "Headroom (mm)",
     application: "Application",
     technology: "Technology",
     drive_type: "Drive type",
@@ -1980,6 +2259,88 @@ function quotationRequirementValue(value: unknown, key: string) {
   return text;
 }
 
+const quotationRequirementOrder = [
+  "equipment_type_code", "application", "industry_segment", "technology", "drive_type", "control_system",
+  "capacity_kg", "stops", "speed_band", "door_configuration", "door_type", "finish", "machine_room",
+  "shaft_width_mm", "shaft_depth_mm", "pit_depth_mm", "headroom_mm", "accessibility_features",
+  "safety_features", "standards_references", "notes",
+];
+const quotationRequirementOrderIndex = (key: string) => {
+  const index = quotationRequirementOrder.indexOf(key);
+  return index < 0 ? quotationRequirementOrder.length : index;
+};
+
+function QuotationOverviewValue({ value, requirementKey }: { value: unknown; requirementKey: string }) {
+  const formatted = quotationRequirementValue(value, requirementKey);
+  const isStandards = /standard|reference|authority/i.test(requirementKey);
+  const items = Array.isArray(value)
+    ? value.map((item) => String(item).replaceAll("_", " ").trim()).filter(Boolean)
+    : isStandards && formatted.includes(",")
+      ? formatted.split(",").map((item) => item.trim()).filter(Boolean)
+      : [];
+  const longValue = formatted.length > 110 || items.length > 3;
+  if (!longValue) return <>{formatted}</>;
+  const preview = items.length > 3
+    ? `${items.slice(0, 3).join(", ")} · +${items.length - 3} more`
+    : `${formatted.slice(0, 108).trimEnd()}…`;
+  return <span className="quotation-overview-long-value">
+    <span>{preview}</span>
+    <details>
+      <summary>View full value</summary>
+      {items.length > 3
+        ? <ul>{items.map((item, index) => <li key={`${requirementKey}-${index}`}>{item}</li>)}</ul>
+        : <p>{formatted}</p>}
+    </details>
+  </span>;
+}
+
+function QuotationOverviewSpecifications({ requirements, customerFacing = false }: { requirements: Record<string, unknown>; customerFacing?: boolean }) {
+  const rawUnits = Array.isArray(requirements.units) ? requirements.units : [];
+  const units = rawUnits.map((unit) => unit && typeof unit === "object" && !Array.isArray(unit) ? unit as Record<string, unknown> : {});
+  const identityKeys = new Set(["equipment_type_code", "type", "label", "stops", "capacity_kg", "unit_key", "unit_code", "code", "name", "id"]);
+  const metadataKeys = new Set(["units", "quantity", "profile_mode", "unit_requirement_mode", "business_operation_code"]);
+  const baseRequirements = Object.fromEntries(Object.entries(requirements).filter(([key]) => !metadataKeys.has(key) && (!units.length || !identityKeys.has(key))));
+  const profiles = units.map((unit) => {
+    const unitRequirements = unit.requirements && typeof unit.requirements === "object" && !Array.isArray(unit.requirements)
+      ? unit.requirements as Record<string, unknown>
+      : {};
+    return { ...baseRequirements, ...unitRequirements };
+  });
+  const profileKeys = [...new Set([...Object.keys(baseRequirements), ...profiles.flatMap((profile) => Object.keys(profile))])]
+    .filter((key) => !metadataKeys.has(key) && !identityKeys.has(key))
+    .sort((left, right) => quotationRequirementOrderIndex(left) - quotationRequirementOrderIndex(right) || left.localeCompare(right));
+  const hasPerUnitProfiles = String(requirements.unit_requirement_mode || "").toUpperCase() === "PER_UNIT" || units.some((unit) => Boolean(unit.requirements));
+  const differentKeys = new Set(profileKeys.filter((key) => new Set(profiles.map((profile) => JSON.stringify(profile[key] ?? null))).size > 1));
+  const sharedRequirements = hasPerUnitProfiles && profiles.length > 1
+    ? Object.fromEntries(profileKeys.filter((key) => !differentKeys.has(key) && profiles.some((profile) => profile[key] !== null && profile[key] !== undefined && profile[key] !== "" && (!Array.isArray(profile[key]) || (profile[key] as unknown[]).length > 0))).map((key) => [key, profiles[0][key]]))
+    : baseRequirements;
+  const sharedEntries = Object.entries(sharedRequirements).filter(([key, value]) => !metadataKeys.has(key) && !identityKeys.has(key) && value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0))
+    .sort(([left], [right]) => quotationRequirementOrderIndex(left) - quotationRequirementOrderIndex(right) || left.localeCompare(right));
+  const unitIdentity: Array<Record<string, unknown>> = units.map((unit) => ({
+    type: unit.equipment_type_code || unit.type,
+    stops: unit.stops,
+    capacity_kg: unit.capacity_kg,
+  }));
+  const differentIdentityKeys = new Set(["type", "stops", "capacity_kg"].filter((key) => new Set(unitIdentity.map((identity) => JSON.stringify(identity[key] ?? null))).size > 1));
+
+  return <section className={`quotation-overview-specifications${customerFacing ? " is-customer-facing" : ""}`} aria-label={customerFacing ? "Lift specifications" : "Latest lift specifications"}>
+    <div className="quotation-overview-specifications-heading"><div><span className="eyebrow">{customerFacing ? "Lift specifications" : "Latest Lead & survey specifications"}</span><p>{hasPerUnitProfiles ? "Shared values appear once; highlighted lift values differ." : "Latest submitted values carried into this quotation."}</p></div>{!customerFacing && <Status>Survey snapshot</Status>}</div>
+    {sharedEntries.length > 0 && <section className="quotation-overview-shared-specifications"><h5>{hasPerUnitProfiles ? "Requirements shared across lifts" : "Shared requirements"}</h5><dl className="quotation-requirement-grid quotation-overview-specification-grid">{sharedEntries.map(([key, value]) => <div key={key}><dt>{quotationRequirementLabel(key)}</dt><dd><QuotationOverviewValue value={value} requirementKey={key} /></dd></div>)}</dl></section>}
+    {units.length > 0 && <section className="quotation-overview-lift-comparison"><h5>Lift specifications</h5><div>{units.map((unit, index) => {
+      const profile = profiles[index] || {};
+      const differences = [...differentKeys].map((key) => [key, profile[key] ?? "Not recorded"] as [string, unknown]);
+      const identity = { ...unitIdentity[index], type: unitIdentity[index]?.type || "Not recorded", stops: unitIdentity[index]?.stops ?? "Not recorded", capacity_kg: unitIdentity[index]?.capacity_kg ?? "Not recorded" };
+      return <article key={`quotation-overview-lift-${index}`}>
+        <strong>{String(unit.label || `Unit ${index + 1}`)}</strong>
+        <dl className="quotation-overview-lift-identity">{Object.entries(identity).map(([key, value]) => <div className={differentIdentityKeys.has(key) ? "quotation-overview-difference" : undefined} key={key}><dt>{quotationRequirementLabel(key)}</dt><dd><QuotationOverviewValue value={value} requirementKey={key} /></dd></div>)}</dl>
+        {differences.length > 0 ? <dl className="quotation-overview-lift-differences">{differences.map(([key, value]) => <div className="quotation-overview-difference" key={key}><dt>{quotationRequirementLabel(key)}</dt><dd><QuotationOverviewValue value={value} requirementKey={key} /></dd></div>)}</dl> : <small>{hasPerUnitProfiles ? "No lift-specific differences." : "Uses the shared requirement profile."}</small>}
+      </article>;
+    })}</div></section>}
+    {sharedEntries.length === 0 && units.length === 0 && <p className="notice">No submitted requirement specifications are attached to this quotation.</p>}
+    {typeof requirements.notes === "string" && requirements.notes.trim() && !sharedEntries.some(([key]) => key === "notes") && <p className="quotation-overview-specification-notes"><strong>Survey notes:</strong> {requirements.notes}</p>}
+  </section>;
+}
+
 function QuotationRequirementSnapshot({
   requirement,
   loading,
@@ -1994,11 +2355,20 @@ function QuotationRequirementSnapshot({
   if (!requirement) return <p className="notice">Select a Lead to carry its latest survey and requirement revision into this quotation.</p>;
   const scope = requirement.attributes.requirement_scope || {};
   const values = scope.requirements || requirement.attributes.requirements || {};
-  const entries = Object.entries(values).filter(([key, value]) => key !== "notes" && key !== "units" && value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0));
+  const entries = Object.entries(values).filter(([key, value]) => !["notes", "units", "profile_mode", "unit_requirement_mode", "business_operation_code"].includes(key) && value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0))
+    .sort(([left], [right]) => quotationRequirementOrderIndex(left) - quotationRequirementOrderIndex(right) || left.localeCompare(right));
+  const requirementUnits = scope.units || (Array.isArray(values.units) ? values.units as Array<Record<string, unknown>> : []);
+  const unitOverrides = requirementUnits.map((unit, index) => {
+    const base = unit.requirements && typeof unit.requirements === "object" ? unit.requirements as Record<string, unknown> : {};
+    const changed = Object.entries(base).filter(([key, value]) => key !== "notes" && value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0) && JSON.stringify(value) !== JSON.stringify(values[key]))
+      .sort(([left], [right]) => quotationRequirementOrderIndex(left) - quotationRequirementOrderIndex(right) || left.localeCompare(right));
+    return { unit, index, changed };
+  });
   const completion = requirement.attributes.requirements_completion;
   return <section className="quotation-requirement-snapshot" aria-label="Selected Lead requirements">
     <div className="quotation-requirement-snapshot-heading"><div><span className="eyebrow">Requirement source</span><strong>Latest Lead &amp; survey requirements</strong><small>These values remain linked to the selected Lead; they are not re-entered in the quotation form.</small></div><Status>{completion?.complete ? `Revision ${requirement.attributes.revision_number} · Complete` : `Revision ${requirement.attributes.revision_number} · Review required`}</Status></div>
     {entries.length ? <dl>{entries.map(([key, value]) => <div key={key}><dt>{quotationRequirementLabel(key)}</dt><dd>{quotationRequirementValue(value, key)}</dd></div>)}</dl> : <p className="notice">The selected Lead has no submitted requirement values yet.</p>}
+    {values.unit_requirement_mode === "PER_UNIT" && unitOverrides.length > 0 && <section className="quotation-unit-requirements"><h4>Per-lift differences</h4><div>{unitOverrides.map(({ unit, index, changed }) => <article key={`quotation-unit-requirements-${index}`}><strong>{String(unit.label || `Unit ${index + 1}`)} · {String(unit.equipment_type_code || unit.type || "Type not recorded")} · {String(unit.stops || "—")} stops · {String(unit.capacity_kg || "—")} kg</strong>{changed.length ? <dl>{changed.map(([key, value]) => <div key={key}><dt>{quotationRequirementLabel(key)}</dt><dd>{quotationRequirementValue(value, key)}</dd></div>)}</dl> : <small>Matches the default technical profile.</small>}</article>)}</div></section>}
     {!completion?.complete && completion?.missing_fields?.length ? <small className="quotation-requirement-missing">Missing before quotation issue: {completion.missing_fields.map(quotationRequirementLabel).join(", ")}</small> : null}
   </section>;
 }
@@ -2011,6 +2381,7 @@ function QuotationFormPage({
   leads = [],
   initialDescription,
   initialLiftUnitCodes,
+  initialRequirementUnitCodes = [],
   initialPurpose = "INSTALLATION",
   initialAmount,
   initialMaterials,
@@ -2034,6 +2405,7 @@ function QuotationFormPage({
   leads?: Resource<GenericAttributes>[];
   initialDescription: string;
   initialLiftUnitCodes?: string;
+  initialRequirementUnitCodes?: string[];
   initialPurpose?: string;
   initialAmount?: string;
   initialMaterials?: QuotationMaterialLine[];
@@ -2049,7 +2421,7 @@ function QuotationFormPage({
   onCreateTemplate?: (
     name: string,
     lines: QuotationMaterialLine[],
-  ) => Promise<void>;
+  ) => Promise<Resource<MaterialScopeTemplateAttributes> | void>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
 }) {
@@ -2061,7 +2433,11 @@ function QuotationFormPage({
   const [leadId, setLeadId] = useState("");
   const [leadSearch, setLeadSearch] = useState("");
   const [purpose, setPurpose] = useState(initialPurpose);
-  const [liftUnitCodes, setLiftUnitCodes] = useState(initialLiftUnitCodes || "Lift 1");
+  const [liftUnitCodes, setLiftUnitCodes] = useState(() => initialLiftUnitCodes || (
+    Array.isArray(initialTerms?.elevator_units)
+      ? initialTerms.elevator_units.map((unit) => String((unit as Record<string, unknown>).unit_code || "")).filter(Boolean).join(", ")
+      : "Lift 1"
+  ));
   const [leadRequirement, setLeadRequirement] = useState<Resource<RequirementRevisionAttributes> | null>(null);
   const [leadRequirementLoading, setLeadRequirementLoading] = useState(false);
   const [leadRequirementError, setLeadRequirementError] = useState("");
@@ -2093,7 +2469,8 @@ function QuotationFormPage({
   const requirementUnitOptions = Array.from(
     new Set(
       (leadRequirement?.attributes.requirement_scope?.units || [])
-        .map((unit) => String(unit.unit_code || unit.code || "").trim())
+        .map((unit, index) => String(unit.unit_code || unit.code || unit.label || unit.name || `Lift ${index + 1}`).trim())
+        .concat(initialRequirementUnitCodes)
         .filter(Boolean),
     ),
   );
@@ -2103,6 +2480,7 @@ function QuotationFormPage({
       .map((code) => code.trim())
       .filter(Boolean),
   );
+  const quoteUnitCodes = Array.from(selectedLiftUnitCodes);
   const toggleRequirementUnit = (unitCode: string, checked: boolean) => {
     const next = new Set(selectedLiftUnitCodes);
     if (checked) next.add(unitCode);
@@ -2232,13 +2610,13 @@ function QuotationFormPage({
                 </div>
                 <label>
                   Quotation type
-                  <select name="purpose" value={purpose} onChange={(event) => setPurpose(event.target.value)}>
+                  <SortedSelect name="purpose" value={purpose} onChange={(event) => setPurpose(event.target.value)}>
                     <option value="INSTALLATION">New installation</option>
                     <option value="MODIFICATION">Modification</option>
                     <option value="TAKEOVER">Takeover</option>
                     <option value="SERVICE">Service / repair</option>
                     <option value="CONTRACT_RENEWAL">AMC / contract renewal</option>
-                  </select>
+                  </SortedSelect>
                   <small>Stage payment percentages are available only for New Installation, Modification and Takeover. AMC and service quotations use their commercial total or contract schedule.</small>
                 </label>
               </>
@@ -2247,7 +2625,7 @@ function QuotationFormPage({
               Description
               <input name="description" required defaultValue={initialDescription} />
             </label>
-            {isCreate && (
+            {(isCreate || mode === "edit") && (
               <div className="quotation-unit-selection">
                 <label>
                   Lift unit codes (comma separated)
@@ -2268,7 +2646,8 @@ function QuotationFormPage({
                 </label>
                 {requirementUnitOptions.length > 0 && (
                   <fieldset className="quotation-requirement-unit-options">
-                    <legend>Units from latest submitted requirements</legend>
+                    <legend>Units from latest submitted requirements ({requirementUnitOptions.length})</legend>
+                    <small>{selectedLiftUnitCodes.size} of {requirementUnitOptions.length} selected for this quotation</small>
                     <div>
                       {requirementUnitOptions.map((unitCode) => (
                         <label key={unitCode}>
@@ -2287,6 +2666,7 @@ function QuotationFormPage({
             )}
             <MaterialScopeEditor
               initialMaterials={initialMaterials}
+              unitCodes={quoteUnitCodes}
               templates={templates}
               taxRules={taxRules}
               onCreateTemplate={onCreateTemplate}
@@ -2397,6 +2777,8 @@ export function QuotationsWorkspace({
   );
   const [selectedJourney, setSelectedJourney] =
     useState<ProviderWorkJourney | null>(null);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const moreActionsRef = useRef<HTMLDetailsElement>(null);
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [journeyLoading, setJourneyLoading] = useState(false);
   const [journeyError, setJourneyError] = useState("");
@@ -2440,10 +2822,40 @@ export function QuotationsWorkspace({
   const [quotationSearchMode, setQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [debouncedQuotationSearchMode, setDebouncedQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [renewalOpen, setRenewalOpen] = useState(false);
+  const [renewalFormPredecessorId, setRenewalFormPredecessorId] = useState("");
   const [initialAmcOpen, setInitialAmcOpen] = useState(false);
   const [detailDialog, setDetailDialog] = useState<
-    "edit" | "revision" | "negotiation" | "customer-preview" | null
+    "edit" | "revision" | "negotiation" | "customer-preview" | "customer-change" | null
   >(null);
+  const [customerChangeRelationshipId, setCustomerChangeRelationshipId] = useState("");
+  const [customerChangeSearch, setCustomerChangeSearch] = useState("");
+  const [customerChangeReason, setCustomerChangeReason] = useState("");
+  const [quotationPdfPreviewUrl, setQuotationPdfPreviewUrl] = useState("");
+  useEffect(() => {
+    if (!moreActionsOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!moreActionsRef.current?.contains(event.target as Node)) {
+        if (moreActionsRef.current) moreActionsRef.current.open = false;
+        setMoreActionsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (moreActionsRef.current) moreActionsRef.current.open = false;
+        setMoreActionsOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreActionsOpen]);
+  useEffect(() => {
+    if (!quotationPdfPreviewUrl) return;
+    return () => URL.revokeObjectURL(quotationPdfPreviewUrl);
+  }, [quotationPdfPreviewUrl]);
   const [reviewDialog, setReviewDialog] = useState<"approve" | "reject" | null>(
     null,
   );
@@ -2472,6 +2884,21 @@ export function QuotationsWorkspace({
     "overview" | "quoted" | "commercial" | "review"
   >("overview");
   const [openMaterialDetailIndex, setOpenMaterialDetailIndex] = useState(0);
+  const renewalFormPredecessor = contracts?.data.find(
+    (item) => item.id === renewalFormPredecessorId,
+  );
+  const renewalFormCustomerRelationship =
+    renewalFormPredecessor?.relationships.customer_relationship;
+  const renewalFormAssets = amcAssets?.data.filter((item) => {
+    const relationship = item.relationships.customer_relationship;
+    return Boolean(
+      renewalFormCustomerRelationship &&
+        !Array.isArray(renewalFormCustomerRelationship) &&
+        relationship &&
+        !Array.isArray(relationship) &&
+        relationship.id === renewalFormCustomerRelationship.id,
+    );
+  }) || [];
   const automaticQuotationSelection = useRef(true);
   const quotationListRequestId = useRef(0);
   const quotationListInFlight = useRef<{
@@ -2599,7 +3026,7 @@ export function QuotationsWorkspace({
   async function saveMaterialScopeTemplate(
     name: string,
     lines: QuotationMaterialLine[],
-  ) {
+  ): Promise<Resource<MaterialScopeTemplateAttributes>> {
     const created = await operationsData.createMaterialScopeTemplate(
       providerId,
       {
@@ -2623,6 +3050,7 @@ export function QuotationsWorkspace({
       crypto.randomUUID(),
     );
     setMaterialScopeTemplates((current) => [created, ...current]);
+    return created;
   }
 
   useEffect(() => {
@@ -2732,14 +3160,14 @@ export function QuotationsWorkspace({
     return () => { active = false; };
   }, [providerId, needsMaintenanceContracts]);
 
-  const needsQuotationConfiguration = initialCreate || detailDialog === "edit" || detailDialog === "revision" || detailDialog === "customer-preview";
+  const needsQuotationConfiguration = initialCreate || initialAmcOpen || renewalOpen || detailDialog === "edit" || detailDialog === "revision" || detailDialog === "customer-preview";
   useEffect(() => {
     if (!needsQuotationConfiguration) return;
     if (quotationConfigurationRequest.current?.providerId !== providerId) {
       const promise = Promise.all([
-        operationsData.materialScopeTemplates(providerId).then((response) => response.data).catch(() => ({ data: [] })),
-        operationsData.quotationTermsTemplates(providerId).then((response) => response.data).catch(() => ({ data: [] })),
-        operationsData.quotationTaxRules(providerId).then((response) => response.data).catch(() => ({ data: [] })),
+        operationsData.materialScopeTemplates(providerId).catch(() => ({ data: [] })),
+        operationsData.quotationTermsTemplates(providerId).catch(() => ({ data: [] })),
+        operationsData.quotationTaxRules(providerId).catch(() => ({ data: [] })),
       ]) as Promise<[
         Collection<MaterialScopeTemplateAttributes>,
         Collection<QuotationTermsTemplateAttributes>,
@@ -2750,7 +3178,11 @@ export function QuotationsWorkspace({
     let active = true;
     void quotationConfigurationRequest.current.promise.then(([materials, terms, taxRules]) => {
       if (!active) return;
-      setMaterialScopeTemplates(materials.data);
+      setMaterialScopeTemplates((current) => {
+        const byId = new Map(materials.data.map((template) => [template.id, template]));
+        current.forEach((template) => byId.set(template.id, template));
+        return Array.from(byId.values());
+      });
       setQuotationTermsTemplates(terms.data);
       setQuotationTaxRules(taxRules.data);
     });
@@ -2955,7 +3387,7 @@ export function QuotationsWorkspace({
     setError("");
     setMessage("");
     try {
-      const materials = quotationMaterialsForApi(quotationMaterialsFromForm(form));
+      const formMaterials = quotationMaterialsFromForm(form);
       const commercial = quotationCommercialLinesAndAmount(form);
       const termSelection = quotationTermSelectionFromForm(form);
       const purpose = String(form.get("purpose") || "INSTALLATION");
@@ -2974,6 +3406,8 @@ export function QuotationsWorkspace({
           "Enter 1–100 unique lift unit codes, each no longer than 80 characters.",
         );
       }
+      validateQuotationMaterialLiftAssignments(formMaterials, unitCodes);
+      const materials = quotationMaterialsForApi(formMaterials);
       const effectiveFrom = new Date();
       const effectiveTo = new Date(effectiveFrom);
       effectiveTo.setDate(
@@ -3050,12 +3484,17 @@ export function QuotationsWorkspace({
     setError("");
     setMessage("");
     try {
-      const materials = quotationMaterialsForApi(quotationMaterialsFromForm(form));
+      const formMaterials = quotationMaterialsFromForm(form);
       const commercial = quotationCommercialLinesAndAmount(form);
       const termSelection = quotationTermSelectionFromForm(form);
       const purpose = String(selected.attributes.purpose || "INSTALLATION");
       const existingTerms =
         (selected.attributes.terms as Record<string, unknown> | undefined) || {};
+      const unitCodes = Array.from(new Set(String(form.get("lift_unit_codes") || "")
+        .split(",").map((code) => code.trim()).filter(Boolean)));
+      if (!unitCodes.length) throw new Error("Add at least one quoted lift unit before saving this quotation.");
+      validateQuotationMaterialLiftAssignments(formMaterials, unitCodes);
+      const materials = quotationMaterialsForApi(formMaterials);
       const updated = await operationsData.updateQuotation(
         providerId,
         selected.id,
@@ -3065,6 +3504,7 @@ export function QuotationsWorkspace({
           quotation_terms_template_id: form.get("quotation_terms_template_id") || undefined,
           terms: quotationTermsForApi({
             ...existingTerms,
+            elevator_units: unitCodes.map((unit_code) => ({ unit_code })),
             materials,
           }, termSelection, supportsStagePayments(purpose)),
         },
@@ -3126,6 +3566,49 @@ export function QuotationsWorkspace({
     }
   }
 
+  async function changeQuotationCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const form = new FormData(event.currentTarget);
+    const customerRelationshipId = String(form.get("customer_relationship_id") || "").trim();
+    const reason = String(form.get("reason") || "").trim();
+    if (!customerRelationshipId) {
+      setError("Select the customer relationship for the replacement quotation.");
+      return;
+    }
+    if (!reason || reason.length > 1000) {
+      setError("Enter a reason for the customer change (up to 1,000 characters).");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const replacement = await operationsData.changeQuotationCustomer(
+        providerId,
+        selected.id,
+        {
+          customer_relationship_id: customerRelationshipId,
+          expected_revision: Number(selected.attributes.revision),
+          reason,
+        },
+        crypto.randomUUID(),
+      );
+      automaticQuotationSelection.current = false;
+      setSelected(replacement);
+      setDetailDialog(null);
+      setCustomerChangeRelationshipId("");
+      setCustomerChangeReason("");
+      setMessage("Replacement quotation draft created for the new customer. The previous revision and its delivery history remain in the timeline.");
+      window.location.hash = `quotations/${replacement.id}`;
+      reload(true);
+    } catch (cause) {
+      setError((cause as Error).message || "The customer could not be changed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createRenewalQuotation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -3144,6 +3627,17 @@ export function QuotationsWorkspace({
     const plan = amcPlans?.data.find((item) => item.id === planId);
     const version = plan?.attributes.current_version as Record<string, unknown> | undefined;
     const assetId = String(form.get("asset_id") || "");
+    const asset = amcAssets?.data.find((item) => item.id === assetId);
+    const assetRelationship = asset?.relationships.customer_relationship;
+    if (
+      !asset ||
+      !assetRelationship ||
+      Array.isArray(assetRelationship) ||
+      assetRelationship.id !== relationship.id
+    ) {
+      setError("Select an elevator asset linked to the predecessor contract's customer.");
+      return;
+    }
     if (!plan || !version || String(version.status).toUpperCase() !== "PUBLISHED") {
       setError("Select an active published AMC plan before creating the renewal quotation.");
       return;
@@ -3156,6 +3650,15 @@ export function QuotationsWorkspace({
       const value = Number(form.get(name));
       return Number.isFinite(value) && value > 0 ? value : undefined;
     };
+    const termSelection = quotationTermSelectionFromForm(form);
+    const quotationTerms = quotationTermsForApi({
+      effective_from: `${String(form.get("effective_from"))}T00:00:00Z`,
+      effective_to: `${String(form.get("effective_to"))}T00:00:00Z`,
+      predecessor_contract_id: contract.id,
+      paid_renewal: true,
+      included_free_amc: { months: 0 },
+    }, termSelection, false);
+    quotationTerms.included_free_amc = { months: 0 };
     setBusy(true);
     setError("");
     setMessage("");
@@ -3165,14 +3668,8 @@ export function QuotationsWorkspace({
         {
           customer_relationship_id: relationship.id,
           purpose: "CONTRACT_RENEWAL",
-          terms: {
-            effective_from: `${String(form.get("effective_from"))}T00:00:00Z`,
-            effective_to: `${String(form.get("effective_to"))}T00:00:00Z`,
-            predecessor_contract_id: contract.id,
-            paid_renewal: true,
-            included_free_amc: { months: 0 },
-            validity_days: 30,
-          },
+          quotation_terms_template_id: form.get("quotation_terms_template_id") || undefined,
+          terms: quotationTerms,
           currency: "INR",
           lines: [
             {
@@ -3235,6 +3732,14 @@ export function QuotationsWorkspace({
       const value = Number(form.get(name));
       return Number.isFinite(value) && value > 0 ? value : undefined;
     };
+    const termSelection = quotationTermSelectionFromForm(form);
+    const quotationTerms = quotationTermsForApi({
+      effective_from: `${effectiveFrom}T00:00:00Z`,
+      effective_to: `${effectiveTo}T00:00:00Z`,
+      paid_renewal: false,
+      included_free_amc: { months: 0 },
+    }, termSelection, false);
+    quotationTerms.included_free_amc = { months: 0 };
     setBusy(true);
     setError("");
     setMessage("");
@@ -3244,13 +3749,8 @@ export function QuotationsWorkspace({
         {
           customer_relationship_id: relationship.id,
           purpose: "MAINTENANCE_CONTRACT",
-          terms: {
-            effective_from: `${effectiveFrom}T00:00:00Z`,
-            effective_to: `${effectiveTo}T00:00:00Z`,
-            paid_renewal: false,
-            included_free_amc: { months: 0 },
-            validity_days: 30,
-          },
+          quotation_terms_template_id: form.get("quotation_terms_template_id") || undefined,
+          terms: quotationTerms,
           currency: "INR",
           lines: [
             {
@@ -3462,6 +3962,29 @@ export function QuotationsWorkspace({
     }
   }
 
+  async function reviewQuotationPdf() {
+    if (!selected) return;
+    if (quotationPdfPreviewUrl) {
+      setQuotationPdfPreviewUrl("");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const blob = await operationsData.quotationPdf(providerId, selected.id);
+      setQuotationPdfPreviewUrl(URL.createObjectURL(blob));
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function closeCustomerQuotationPreview() {
+    setQuotationPdfPreviewUrl("");
+    setDetailDialog(null);
+  }
+
   async function openQuotationDelivery() {
     if (!selected) return;
     setBusy(true);
@@ -3564,6 +4087,18 @@ export function QuotationsWorkspace({
     (item, index, values) =>
       values.findIndex((candidate) => candidate.id === item.id) === index,
   );
+  const customerChangeRelationshipOptions = relationshipOptions
+    .filter((item) => String(item.attributes.status || "").toUpperCase() === "ACTIVE")
+    .map((item) => ({
+      id: item.id,
+      label: String(item.attributes.display_name || item.attributes.name || "Customer relationship"),
+      detail: "Active customer relationship",
+    }));
+  const eligibleCustomerChangeOptions = customerChangeRelationshipOptions.filter((item) => {
+    const current = selected?.relationships.customer_relationship;
+    const currentId = current && !Array.isArray(current) ? current.id : "";
+    return item.id !== currentId;
+  });
   const selectedTerms = selected?.attributes.terms as
     { predecessor_contract_id?: string } | undefined;
   const selectedLines =
@@ -3583,13 +4118,19 @@ export function QuotationsWorkspace({
             total_tax?: string;
             components?: Array<{ code?: string; amount?: string }>;
           } | null;
+          unit_codes?: string[];
         }>
       | undefined) || [];
   const selectedQuotationTerms = selected?.attributes.terms as
     Record<string, unknown> | undefined;
   const selectedQuotationMaterials = quotationMaterialsFromTerms(
     selectedQuotationTerms,
-  );
+  ).map((material, index) => ({
+    ...material,
+    unit_codes: material.unit_codes.length
+      ? material.unit_codes
+      : selectedLines[index]?.unit_codes || [],
+  }));
   const selectedTaxSummary = selected?.attributes.tax_summary as
     | {
         status?: string;
@@ -3689,18 +4230,6 @@ export function QuotationsWorkspace({
           year: "numeric",
         }).format(date);
   };
-  const quotationValueFor = (value: unknown): string => {
-    if (Array.isArray(value))
-      return value.map((item) => quotationValueFor(item)).join(", ");
-    if (value && typeof value === "object")
-      return Object.entries(value as Record<string, unknown>)
-        .map(
-          ([key, item]) =>
-            `${key.replaceAll("_", " ")}: ${quotationValueFor(item)}`,
-        )
-        .join(" · ");
-    return String(value ?? "—");
-  };
   const quotationLabelFor = (value: string) =>
     value === "terms_and_conditions"
       ? "Apply terms and conditions"
@@ -3709,24 +4238,49 @@ export function QuotationsWorkspace({
         : value
           .replaceAll("_", " ")
           .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  const requirementValueFor = (key: string, value: unknown) => {
-    const formatted = quotationValueFor(value);
-    if (key === "capacity_kg" && formatted !== "—") return `${formatted} kg`;
-    if (key === "stops" && formatted !== "—")
-      return `${formatted} stops`;
-    if (key === "quantity" && formatted !== "—") return `${formatted} unit${Number(value) === 1 ? "" : "s"}`;
-    return formatted.replaceAll("_", " ");
-  };
   const selectedRequirements =
     (selected?.attributes.requirements as Record<string, unknown> | undefined) ||
     {};
+  const selectedRequirementScope = selected?.attributes.requirement_scope as Record<string, unknown> | undefined;
+  const selectedRequirementUnits = Array.isArray(selectedRequirementScope?.units)
+    ? selectedRequirementScope.units
+    : Array.isArray(selectedRequirements.units)
+      ? selectedRequirements.units
+      : [];
+  const selectedRequirementUnitCodes = selectedRequirementUnits.length
+    ? (selectedRequirementUnits as Array<Record<string, unknown>>)
+        .map((unit, index) => String(unit.unit_code || unit.code || unit.label || unit.name || `Lift ${index + 1}`).trim())
+        .filter(Boolean)
+    : [];
+  const selectedQuotationUnitCodes = Array.isArray(selectedQuotationTerms?.elevator_units)
+    ? (selectedQuotationTerms.elevator_units as Array<Record<string, unknown>>)
+        .map((unit) => String(unit.unit_code || "").trim())
+        .filter(Boolean)
+    : [];
+  const editableQuotationUnitCodes = selectedRequirementUnitCodes.length
+    ? selectedRequirementUnitCodes
+    : selectedQuotationUnitCodes;
+  const uncoveredRequirementUnitCodes = selectedRequirementUnitCodes.filter((unitCode) =>
+    !selectedQuotationUnitCodes.includes(unitCode) || !selectedLines.some((line) => {
+      const lineUnitCodes = Array.isArray(line.unit_codes) ? line.unit_codes : [];
+      return lineUnitCodes.length
+        ? lineUnitCodes.includes(unitCode)
+        : selectedQuotationUnitCodes.includes(unitCode);
+    }),
+  );
+  const quotationUnitCoverageReady = uncoveredRequirementUnitCodes.length === 0;
+  const requirementsForQuotationOverview = {
+    ...selectedRequirements,
+    units: Array.isArray(selectedRequirementScope?.units) ? selectedRequirementScope.units : selectedRequirements.units,
+    unit_requirement_mode: selectedRequirementScope?.unit_requirement_mode || selectedRequirements.unit_requirement_mode,
+  };
   const selectedCommercialRoles =
     (selected?.attributes.commercial_party_roles as
       | Record<string, unknown>
       | undefined) || {};
   const visibleRequirementEntries = Object.entries(selectedRequirements).filter(
     ([key, value]) =>
-      key !== "notes" &&
+      !["notes", "units", "quantity", "profile_mode", "unit_requirement_mode", "business_operation_code"].includes(key) &&
       value !== null &&
       value !== undefined &&
       value !== "" &&
@@ -3765,6 +4319,7 @@ export function QuotationsWorkspace({
     | null
     | undefined;
   const selectedQuotationStatus = String(selected?.attributes.status || "").toLowerCase();
+  const quotationCustomerChangeAllowed = ["draft", "issued", "viewed", "under_review", "revision_requested"].includes(selectedQuotationStatus);
   const customerAccepted =
     String(selectedCustomerApproval?.status || "").toUpperCase() === "ACCEPTED" ||
     Boolean(selected?.attributes.accepted_at) ||
@@ -3911,6 +4466,18 @@ export function QuotationsWorkspace({
   const detailTabVisible = Boolean(initialQuotationId);
   const openQuotationDetail = (quotationId: string) => {
     window.location.hash = `quotations/${quotationId}`;
+  };
+  const navigateQuotationNextStep = () => {
+    if (quotationActionPhase === "project" && linkedProjectId) {
+      window.location.hash = `projects/${linkedProjectId}`;
+      return;
+    }
+    setActiveDetailTab("review");
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(".quotation-review-actions-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
   const quotationAgreementBanner = selected ? (
     <section
@@ -4142,9 +4709,9 @@ export function QuotationsWorkspace({
             <div className="quotation-proposal-card-heading">
               <div>
                 <span className="eyebrow">Elevator &amp; service scope</span>
-                <h4>Scope source</h4>
+                  <h4>Latest lift specifications</h4>
                 <p>
-                  Detailed equipment and service requirements appear once under Commercial terms.
+                  Shared requirements and per-lift differences from the latest submitted survey.
                 </p>
               </div>
               <Button
@@ -4155,6 +4722,7 @@ export function QuotationsWorkspace({
                 View full scope <span aria-hidden="true">→</span>
               </Button>
             </div>
+            <QuotationOverviewSpecifications requirements={requirementsForQuotationOverview} />
             <div className="quotation-scope-compact-summary">
               <div>
                 <strong>{visibleRequirementEntries.length}</strong>
@@ -4182,6 +4750,34 @@ export function QuotationsWorkspace({
             className="quotation-detail-section quotation-scope-section"
             aria-label="Quoted scope"
           >
+            {(selectedRequirementUnitCodes.length > 0 || visibleRequirementEntries.length > 0) && (
+              <section className="quotation-quoted-survey-scope" aria-label="Lift units and survey values">
+                <div className="quotation-quoted-survey-scope-heading">
+                  <div>
+                    <span className="eyebrow">Engineering reference</span>
+                    <h4>Lift units &amp; survey values</h4>
+                    <p>Latest submitted unit specifications are shown beside the priced items below. They remain separate when lift requirements differ.</p>
+                  </div>
+                  {selectedRequirementUnitCodes.length > 0 && (
+                    <Status>{selectedRequirementUnitCodes.length} lifts</Status>
+                  )}
+                </div>
+                <QuotationOverviewSpecifications requirements={requirementsForQuotationOverview} />
+                {!quotationUnitCoverageReady && (
+                  <div className="quotation-quoted-scope-warning" role="status">
+                    <div>
+                      <strong>Quoted items are missing lift coverage</strong>
+                      <p>Assign priced material lines to: {uncoveredRequirementUnitCodes.join(", ")}.</p>
+                    </div>
+                    {String(selected.attributes.status).toLowerCase() === "draft" && hasPermission("QUOTATION_EDIT") && (
+                      <Button type="button" variant="secondary" onClick={() => setDetailDialog("edit")}>
+                        Edit lift coverage
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
             <div className="section-heading">
               <div>
                 <h4>Quotation items</h4>
@@ -4193,17 +4789,6 @@ export function QuotationsWorkspace({
                 <span className="quotation-section-count">
                   {selectedLines.length} {selectedLines.length === 1 ? "line" : "lines"}
                 </span>
-                {String(selected.attributes.status).toLowerCase() === "draft" &&
-                  hasPermission("QUOTATION_EDIT") && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="quotation-scope-action quotation-scope-action--edit"
-                      onClick={() => setDetailDialog("edit")}
-                    >
-                      Edit material scope
-                    </Button>
-                  )}
               </div>
             </div>
             {selectedLines.length ? (
@@ -4213,6 +4798,7 @@ export function QuotationsWorkspace({
                     <tr>
                       <th>#</th>
                       <th>Description</th>
+                      <th>Applies to lifts</th>
                       <th>Qty</th>
                       <th>Rate</th>
                       <th>Tax</th>
@@ -4243,6 +4829,7 @@ export function QuotationsWorkspace({
                             )}
                           </div>
                         </td>
+                        <td><QuotationLiftAssignmentValue unitCodes={Array.isArray(line.unit_codes) ? line.unit_codes : undefined} allUnitCodes={selectedQuotationUnitCodes} /></td>
                         <td>{String(line.quantity ?? "—")}</td>
                         <td>
                           {moneyFor(
@@ -4408,14 +4995,7 @@ export function QuotationsWorkspace({
                   <span className="quotation-source-badge">Latest submitted revision</span>
                 )}
               </div>
-              <dl className="quotation-requirement-grid quotation-requirement-grid--detail">
-                {visibleRequirementEntries.map(([key, value]) => (
-                  <div key={key}>
-                    <dt>{quotationLabelFor(key)}</dt>
-                    <dd>{requirementValueFor(key, value)}</dd>
-                  </div>
-                ))}
-              </dl>
+              <QuotationOverviewSpecifications requirements={requirementsForQuotationOverview} />
               {Boolean(selectedRequirements.notes) && (
                 <div className="quotation-requirement-notes">
                   <span>Survey / requirement notes</span>
@@ -4443,14 +5023,14 @@ export function QuotationsWorkspace({
               {Boolean(selectedQuotationTermsForView.terms_and_conditions) && (
                 <div className="quotation-template-terms-conditions">
                   <div className="quotation-template-terms-conditions-heading">
-                    <h5>Terms and conditions</h5>
+                    <h5>Terms &amp; Conditions</h5>
                     <small>Applied to this quotation revision</small>
                   </div>
                   <RichTextViewer value={String(selectedQuotationTermsForView.terms_and_conditions)} />
                 </div>
               )}
               <dl className="quotation-terms-list quotation-template-terms-grid">
-                {selectedPaymentStagesForView && <div className="quotation-template-term-card quotation-template-term-card--payment_stages"><dt>Payment stages</dt><dd><QuotationPaymentStagesCustomerSummary value={selectedPaymentStagesForView} /></dd></div>}
+                {selectedPaymentStagesForView && <div className="quotation-template-term-card quotation-template-term-card--payment_stages"><dt>Payment stages</dt><dd><QuotationPaymentStagesCustomerSummary value={selectedPaymentStagesForView} total={selected.attributes.grand_total || selected.attributes.total || 0} currency={String(selected.attributes.currency || "INR")} moneyFor={moneyFor} /></dd></div>}
                 {Boolean(selectedQuotationTermsForView.payment_methods) && <div className="quotation-template-term-card quotation-template-term-card--payment_methods"><dt>Payment Mode &amp; Details</dt><dd><QuotationPaymentMethodsSummary value={selectedQuotationTermsForView.payment_methods} interactive /></dd></div>}
                 {Boolean(selectedQuotationTermsForView.bank_account) && !selectedQuotationTermsForView.payment_methods && <div className="quotation-template-term-card quotation-template-term-card--payment_methods"><dt>Payment account</dt><dd><QuotationBankAccountSummary value={selectedQuotationTermsForView.bank_account} interactive /></dd></div>}
                 {Boolean(selectedQuotationTermsForView.exclusions) && <div className="quotation-template-term-card quotation-template-term-card--exclusions"><dt>Exclusions</dt><dd><QuotationExclusionsSummary value={selectedQuotationTermsForView.exclusions} /></dd></div>}
@@ -4507,6 +5087,21 @@ export function QuotationsWorkspace({
             </div>
             <fieldset disabled={workflowConcluded}>
               <div className="quotation-detail-actions">
+                {quotationCustomerChangeAllowed &&
+                  hasPermission("QUOTATION_EDIT") && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setCustomerChangeRelationshipId("");
+                        setCustomerChangeSearch("");
+                        setCustomerChangeReason("");
+                        setDetailDialog("customer-change");
+                      }}
+                    >
+                      Change customer
+                    </Button>
+                  )}
                 {String(selected.attributes.status).toLowerCase() === "draft" &&
                   hasPermission("QUOTATION_EDIT") && (
                     <Button
@@ -4520,7 +5115,7 @@ export function QuotationsWorkspace({
                   hasPermission("QUOTATION_ISSUE") && (
                     <Button
                       onClick={() => void issueQuotation()}
-                      disabled={busy || (quotationTaxRequired && !quotationTaxReady)}
+                      disabled={busy || !quotationUnitCoverageReady || (quotationTaxRequired && !quotationTaxReady)}
                     >
                       Issue quotation
                     </Button>
@@ -4612,6 +5207,24 @@ export function QuotationsWorkspace({
                   </small>
                 </div>
               </li>
+              {selectedRequirementUnitCodes.length > 0 && (
+                <li className={quotationUnitCoverageReady ? "is-ready" : ""}>
+                  <span aria-hidden="true">{quotationUnitCoverageReady ? "✓" : "3"}</span>
+                  <div>
+                    <strong>Lift scope coverage</strong>
+                    <small>
+                      {quotationUnitCoverageReady
+                        ? "Every lift from the submitted survey has priced coverage."
+                        : `Add priced coverage for ${uncoveredRequirementUnitCodes.join(", ")} before issuing.`}
+                    </small>
+                    {!quotationUnitCoverageReady && (
+                      <Button type="button" variant="quiet" onClick={() => setDetailDialog("edit")}>
+                        Edit lift coverage
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              )}
               {quotationTaxRequired && (
                 <li className={quotationTaxReady ? "is-ready" : ""}>
                   <span aria-hidden="true">{quotationTaxReady ? "✓" : "3"}</span>
@@ -4656,7 +5269,17 @@ export function QuotationsWorkspace({
               className="detail-card quotation-provider-review"
               aria-label="Provider quotation review"
             >
-              <h4>Provider review</h4>
+              <header className="quotation-provider-review-header">
+                <div>
+                  <span className="eyebrow">Internal approval</span>
+                  <h4>Provider review</h4>
+                </div>
+                <Status>
+                  {selectedProviderReview?.decision
+                    ? quotationLabelFor(selectedProviderReview.decision).toUpperCase()
+                    : "PENDING"}
+                </Status>
+              </header>
               {(
                 selected.attributes.provider_review as {
                   decision?: string;
@@ -4665,51 +5288,28 @@ export function QuotationsWorkspace({
                   reviewer?: { name?: string; email?: string } | null;
                 } | null
               )?.decision ? (
-                <>
-                  <Status>
-                    {String(
-                      (
-                        selected.attributes.provider_review as {
-                          decision: string;
-                        }
-                      ).decision,
-                    )}
-                  </Status>
-                  <p>
-                    Decision recorded for revision R
-                    {String(
-                      (
-                        selected.attributes.provider_review as {
-                          quotation_revision?: number;
-                        }
-                      ).quotation_revision || selected.attributes.revision,
-                    )}
-                    . Customer acceptance remains a separate action.
-                  </p>
-                  {(
-                    selected.attributes.provider_review as {
-                      reason?: string | null;
-                    }
-                  ).reason && (
-                    <p>
-                      {String(
-                        (
-                          selected.attributes.provider_review as {
-                            reason: string;
-                          }
-                        ).reason,
-                      )}
-                    </p>
+                <div className="quotation-provider-review-record">
+                  <div className="quotation-provider-review-decision">
+                    <strong>
+                      {quotationLabelFor(selectedProviderReview?.decision || "")}
+                      {" for revision R"}
+                      {String(selectedProviderReview?.quotation_revision || selected.attributes.revision)}
+                    </strong>
+                    <small>Customer acceptance remains a separate action.</small>
+                  </div>
+                  {selectedProviderReview?.reviewer && (
+                    <div className="quotation-provider-review-reviewer">
+                      <small>Reviewed by</small>
+                      <strong>{selectedProviderReview.reviewer.name || "Provider reviewer"}</strong>
+                      {selectedProviderReview.reviewer.email && <span>{selectedProviderReview.reviewer.email}</span>}
+                    </div>
                   )}
-                  {selectedProviderReview?.reviewer?.name && (
-                    <p className="quotation-review-attribution">
-                      Reviewed by <strong>{selectedProviderReview.reviewer.name}</strong>
-                      {selectedProviderReview.reviewer.email ? ` · ${selectedProviderReview.reviewer.email}` : ""}
-                    </p>
+                  {selectedProviderReview?.reason && (
+                    <p className="quotation-provider-review-reason">{selectedProviderReview.reason}</p>
                   )}
-                </>
+                </div>
               ) : (
-                <>
+                <div className="quotation-provider-review-pending">
                   <p>
                     Internal approval is required before the customer can accept
                     this issued revision.
@@ -4731,7 +5331,7 @@ export function QuotationsWorkspace({
                       </Button>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </section>
           )}
@@ -4780,10 +5380,32 @@ export function QuotationsWorkspace({
               </p>
             </section>
           )}
+          <QuotationConversationPanel
+            providerId={providerId}
+            quotationId={selected.id}
+            revision={Number(selected.attributes.revision || 1)}
+            quotationStatus={String(selected.attributes.status || "")}
+          />
         </>
       )}
     </aside>
   ) : null;
+
+function QuotationConversationPanel({ providerId, quotationId, revision, quotationStatus }: { providerId: string; quotationId: string; revision: number; quotationStatus: string }) {
+  const [thread, setThread] = useState<Collection<GenericAttributes> | null>(null);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  useEffect(() => { let active = true; setThread(null); operationsData.quotationCommunications(providerId, quotationId).then((value) => { if (active) setThread(value); }).catch(() => { if (active) setThread({ data: [] }); }); return () => { active = false; }; }, [providerId, quotationId]);
+  const canReply = ["issued", "viewed", "under_review", "revision_requested"].includes(quotationStatus.toLowerCase());
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!body.trim()) return; setBusy(true); setNotice("");
+    try { await operationsData.createQuotationCommunication(providerId, quotationId, { expected_revision: revision, message_type: "REPLY", body: body.trim() }, crypto.randomUUID()); setThread(await operationsData.quotationCommunications(providerId, quotationId)); setBody(""); setNotice("Reply sent. The customer will see it in their secure quotation review."); }
+    catch (cause) { setNotice((cause as Error)?.message || "Reply could not be sent."); }
+    finally { setBusy(false); }
+  }
+  return <section className="detail-card quotation-communication-panel" aria-label="Customer quotation conversation"><h4>Customer conversation</h4><p>Replies are visible to the linked customer after sign-in and are recorded against this quotation version.</p><div className="quotation-communication-thread" aria-live="polite">{thread === null ? <p role="status">Loading conversation…</p> : thread.data.length ? thread.data.map((item) => <article key={item.id}><header><strong>{String(item.attributes.author_name || "Quotation participant")}</strong><span>{String(item.attributes.message_type || "message").replaceAll("_", " ")} · R{String(item.attributes.quotation_revision || "—")}</span></header><p>{String(item.attributes.body || "")}</p></article>) : <p>No customer messages yet.</p>}</div>{canReply ? <form onSubmit={(event) => void submit(event)}><label>Reply to customer<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4} required /></label><Button type="submit" disabled={busy || !body.trim()}>{busy ? "Sending…" : "Send reply"}</Button>{notice && <p role="status">{notice}</p>}</form> : <p>This quotation is closed for new messages. Existing conversation remains available.</p>}</section>;
+}
 
   if (initialCreate && !hasPermission("QUOTATION_CREATE")) {
     return (
@@ -4854,6 +5476,8 @@ export function QuotationsWorkspace({
               ? String(selectedLines[0]?.description || "Elevator installation")
               : "Revised elevator installation"
           }
+          initialLiftUnitCodes={editableQuotationUnitCodes.join(", ") || "Lift 1"}
+          initialRequirementUnitCodes={selectedRequirementUnitCodes}
           initialPurpose={String(selected.attributes.purpose || "INSTALLATION")}
           initialAmount={String(selectedLines[0]?.amount || "")}
           initialMaterials={selectedQuotationMaterials}
@@ -4904,7 +5528,10 @@ export function QuotationsWorkspace({
                         String(item.attributes.status || "").toLowerCase(),
                       ),
                     )}
-                  onClick={() => setRenewalOpen(true)}
+                  onClick={() => {
+                    setRenewalFormPredecessorId("");
+                    setRenewalOpen(true);
+                  }}
                   title={contractsError ? "Active contracts could not be loaded." : contractsLoading ? "Loading active contracts…" : undefined}
                 >
                   {contractsLoading ? "Loading AMC contracts…" : "Create paid AMC renewal"}
@@ -4961,7 +5588,7 @@ export function QuotationsWorkspace({
             <form className="quotation-modal-form" onSubmit={(event) => void createInitialAmcQuotation(event)}>
               <label>
                 Elevator asset
-                <select name="asset_id" required defaultValue="">
+                <SortedSelect name="asset_id" required defaultValue="">
                   <option value="">Select customer elevator</option>
                   {amcAssets?.data.map((item) => {
                     const relationship = item.relationships.customer_relationship;
@@ -4971,11 +5598,11 @@ export function QuotationsWorkspace({
                       </option>
                     );
                   })}
-                </select>
+                </SortedSelect>
               </label>
               <label>
                 Paid AMC plan
-                <select name="provider_service_plan_id" required defaultValue="">
+                <SortedSelect name="provider_service_plan_id" required defaultValue="">
                   <option value="">Select published plan</option>
                   {amcPlans?.data.filter((item) => {
                     const version = item.attributes.current_version as Record<string, unknown> | undefined;
@@ -4983,7 +5610,7 @@ export function QuotationsWorkspace({
                   }).map((item) => (
                     <option key={item.id} value={item.id}>{String(item.attributes.name || item.attributes.code || "AMC plan")}</option>
                   ))}
-                </select>
+                </SortedSelect>
               </label>
               <p className="field-hint">Included free AMC is granted through accepted installation and handover; it cannot be sold as a paid quotation.</p>
               <label>
@@ -5010,9 +5637,15 @@ export function QuotationsWorkspace({
               </div>
               <div className="quotation-renewal-date-grid">
                 <label>Usage class<input name="usage_class" placeholder="e.g. RESIDENTIAL" /></label>
-                <label>Audience<select name="audience" defaultValue="MIXED"><option value="MIXED">Mixed</option><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
+                <label>Audience<SortedSelect name="audience" defaultValue="MIXED"><option value="MIXED">Mixed</option><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></SortedSelect></label>
               </div>
               <label>Travel height (m)<input name="travel_height_m" type="number" min="0.1" step="0.1" /></label>
+              <QuotationTermsEditor
+                initialTerms={{ validity_days: 30, included_free_amc: { months: 0 } }}
+                templates={quotationTermsTemplates}
+                stagePaymentsEnabled={false}
+                amcMode
+              />
               <div className="provider-form-actions">
                 <Button type="button" variant="secondary" onClick={() => setInitialAmcOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={!amcPlans?.data.length || !amcAssets?.data.length}>Create draft quotation</Button>
@@ -5025,7 +5658,10 @@ export function QuotationsWorkspace({
         <OperationsDialog
           title="Create paid AMC renewal quotation"
           busy={busy}
-          onClose={() => setRenewalOpen(false)}
+          onClose={() => {
+            setRenewalOpen(false);
+            setRenewalFormPredecessorId("");
+          }}
         >
           <div className="quotation-renewal-dialog-content">
             <p className="notice">
@@ -5041,7 +5677,13 @@ export function QuotationsWorkspace({
             >
               <label>
                 Predecessor contract
-                <select name="predecessor_contract_id" required disabled={!contracts}>
+                <SortedSelect
+                  name="predecessor_contract_id"
+                  value={renewalFormPredecessorId}
+                  onChange={(event) => setRenewalFormPredecessorId(event.target.value)}
+                  required
+                  disabled={!contracts}
+                >
                   <option value="">{contractsLoading || !contracts ? "Loading active contracts…" : "Select active contract"}</option>
                   {contracts?.data
                     .filter((item) =>
@@ -5059,7 +5701,7 @@ export function QuotationsWorkspace({
                         · {displayLabel(item.attributes.status, "Not available")}
                       </option>
                     ))}
-                </select>
+                </SortedSelect>
               </label>
               {contracts && !contracts.data.some((item) =>
                 ["active", "approved"].includes(String(item.attributes.status || "").toLowerCase()),
@@ -5075,26 +5717,43 @@ export function QuotationsWorkspace({
               <div className="form-grid-two">
                 <label>
                   AMC plan
-                  <select name="provider_service_plan_id" required disabled={!amcPlans}>
+                  <SortedSelect name="provider_service_plan_id" required disabled={!amcPlans}>
                     <option value="">{amcPlans ? "Select active published plan" : "Loading plans…"}</option>
                     {amcPlans?.data.map((item) => {
                       const version = item.attributes.current_version as Record<string, unknown> | undefined;
                       if (String(version?.status || "").toUpperCase() !== "PUBLISHED" || /^FREE_AMC(?:_|$)/i.test(String(item.attributes.code || ""))) return null;
                       return <option key={item.id} value={item.id}>{String(item.attributes.name || item.attributes.code || "AMC plan")} · v{String(version?.version || "1")}</option>;
                     })}
-                  </select>
+                  </SortedSelect>
                   <small>Rates and tax treatment are evaluated by the published provider catalogue.</small>
                 </label>
                 <label>
                   Covered elevator asset
-                  <select name="asset_id" required disabled={!amcAssets}>
-                    <option value="">{amcAssets ? "Select asset" : "Loading assets…"}</option>
-                    {amcAssets?.data.map((item) => <option key={item.id} value={item.id}>{String(item.attributes.display_name || item.attributes.name || item.attributes.equipment_code || "Elevator asset")}</option>)}
-                  </select>
+                  <SortedSelect name="asset_id" required disabled={!amcAssets}>
+                    <option value="">
+                      {amcAssets
+                        ? renewalFormPredecessorId
+                          ? renewalFormAssets.length
+                            ? "Select covered elevator asset"
+                            : "No assets linked to this customer"
+                          : "Select a predecessor contract first"
+                        : "Loading assets…"}
+                    </option>
+                    {renewalFormAssets.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {String(item.attributes.display_name || item.attributes.name || item.attributes.equipment_code || "Elevator asset")}
+                      </option>
+                    ))}
+                  </SortedSelect>
+                  {renewalFormPredecessorId && renewalFormAssets.length === 0 && (
+                    <small role="status">
+                      No elevator assets are linked to the predecessor contract's customer relationship.
+                    </small>
+                  )}
                 </label>
               </div>
               <div className="form-grid-three quotation-amc-context-grid">
-                <label>Audience<select name="audience" defaultValue="MIXED"><option>RESIDENTIAL</option><option>COMMERCIAL</option><option>MIXED</option></select></label>
+                <label>Audience<SortedSelect name="audience" defaultValue="MIXED"><option>RESIDENTIAL</option><option>COMMERCIAL</option><option>MIXED</option></SortedSelect></label>
                 <label>Passenger capacity<input name="passenger_capacity" type="number" min="1" step="1" required /></label>
                 <label>Floors above ground<input name="served_floors_above_ground" type="number" min="1" step="1" required /></label>
                 <label>Lift type<input name="lift_type" placeholder="MRL" /></label>
@@ -5113,6 +5772,12 @@ export function QuotationsWorkspace({
                   <input name="effective_to" type="date" required />
                 </label>
               </div>
+              <QuotationTermsEditor
+                initialTerms={{ validity_days: 30, included_free_amc: { months: 0 } }}
+                templates={quotationTermsTemplates}
+                stagePaymentsEnabled={false}
+                amcMode
+              />
               <div className="provider-form-actions">
                 <Button
                   type="button"
@@ -5156,7 +5821,7 @@ export function QuotationsWorkspace({
         </label>
         <label>
           Search by
-          <select
+          <SortedSelect
             aria-label="Search quotations by"
             value={quotationSearchMode}
             onChange={(event) => setQuotationSearchMode(event.target.value as "quotation" | "quotation_id" | "email" | "phone")}
@@ -5165,11 +5830,11 @@ export function QuotationsWorkspace({
             <option value="quotation_id">Quotation ID / number</option>
             <option value="email">Customer email</option>
             <option value="phone">Customer phone</option>
-          </select>
+          </SortedSelect>
         </label>
         <label>
           Quote status
-          <select
+          <SortedSelect
             aria-label="Filter quotations by status"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
@@ -5184,7 +5849,7 @@ export function QuotationsWorkspace({
                 {status.toUpperCase()}
               </option>
             ))}
-          </select>
+          </SortedSelect>
         </label>
         {queryText.trim() && quotationSearchMode === "quotation_id" && queryText.trim().length < 3 && (
           <small>Enter a quotation UUID or number to search.</small>
@@ -5376,49 +6041,6 @@ export function QuotationsWorkspace({
                     >
                       <SvgIcon name="arrow-left" size={15} /> Back
                     </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="workflow-timeline-action"
-                      onClick={() => void openJourneyTimeline()}
-                      title="View timeline and audit history"
-                    >
-                      <SvgIcon name="activity" size={15} /> Timeline
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      className="workflow-preview-action"
-                      onClick={() => setDetailDialog("customer-preview")}
-                      title="Open the customer quotation preview"
-                    >
-                      <SvgIcon name="eye" size={15} /> Preview
-                    </Button>
-                    {!quotationIsDraft && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="workflow-pdf-action"
-                        busy={busy}
-                        disabled={busy}
-                        onClick={() => void downloadQuotationPdf()}
-                        title="Download the quotation PDF"
-                      >
-                        <SvgIcon name="download" size={15} /> PDF
-                      </Button>
-                    )}
-                    {quotationReadyToSend && (
-                      <Button
-                        type="button"
-                        variant="primary"
-                        className="workflow-send-action"
-                        onClick={() => void openQuotationDelivery()}
-                        disabled={busy}
-                        title="Send this approved quotation by email, SMS or WhatsApp"
-                      >
-                        <SvgIcon name="send" size={15} /> Send
-                      </Button>
-                    )}
                     <WorkflowChainAction
                       journey={selectedJourney}
                       loading={journeyLoading}
@@ -5432,17 +6054,42 @@ export function QuotationsWorkspace({
                       targetResourceId={selected?.id || ""}
                       onClick={() => setScheduledFollowUpOpen(true)}
                     />
-                    <JourneyAbandonAction
-                      providerId={providerId}
-                      journey={selectedJourney}
-                      canAbandon={canAbandon && !workflowConcluded}
-                      onAbandoned={(updated) => {
-                        setSelectedJourney(updated);
-                        setMessage(
-                          "Journey abandoned. Linked records are now read-only.",
-                        );
-                      }}
-                    />
+                    <details
+                      ref={moreActionsRef}
+                      className="quotation-more-actions"
+                      onToggle={(event) => setMoreActionsOpen(event.currentTarget.open)}
+                    >
+                      <summary aria-label="More actions">
+                        More actions <SvgIcon name="chevron-down" size={15} />
+                      </summary>
+                      <div className="quotation-more-actions-menu" aria-label="More actions">
+                        <button type="button" onClick={() => { moreActionsRef.current?.removeAttribute("open"); void openJourneyTimeline(); }}>
+                          <SvgIcon name="activity" size={15} /> Timeline
+                        </button>
+                        <button type="button" onClick={() => { moreActionsRef.current?.removeAttribute("open"); setDetailDialog("customer-preview"); }}>
+                          <SvgIcon name="eye" size={15} /> Preview
+                        </button>
+                        {!quotationIsDraft && (
+                          <button type="button" disabled={busy} onClick={() => { moreActionsRef.current?.removeAttribute("open"); void downloadQuotationPdf(); }}>
+                            <SvgIcon name="download" size={15} /> PDF
+                          </button>
+                        )}
+                        {quotationReadyToSend && (
+                          <button type="button" disabled={busy} onClick={() => { moreActionsRef.current?.removeAttribute("open"); void openQuotationDelivery(); }}>
+                            <SvgIcon name="send" size={15} /> Share / send
+                          </button>
+                        )}
+                        <JourneyAbandonAction
+                          providerId={providerId}
+                          journey={selectedJourney}
+                          canAbandon={canAbandon && !workflowConcluded}
+                          onAbandoned={(updated) => {
+                            setSelectedJourney(updated);
+                            setMessage("Journey abandoned. Linked records are now read-only.");
+                          }}
+                        />
+                      </div>
+                    </details>
                   </div>
                 }
               />
@@ -5480,11 +6127,35 @@ export function QuotationsWorkspace({
                       : "Use the focused tabs below to review scope, approvals, and handoff."}
                   </small>
                 </div>
-                <Status>
-                  {selectedJourney?.attributes.status === "CANCELLED"
-                    ? "ABANDONED"
-                    : displayLabel(selected.attributes.status, "Not available")}
-                </Status>
+                <div className="quotation-detail-record-actions">
+                  {!workflowConcluded && (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="workflow-next-step-action"
+                      onClick={navigateQuotationNextStep}
+                      title={quotationNextAction.detail}
+                    >
+                      <SvgIcon name={quotationActionPhase === "project" ? "building" : "arrow-right"} size={15} /> Next step
+                    </Button>
+                  )}
+                  {String(selected.attributes.status).toLowerCase() === "draft" &&
+                    hasPermission("QUOTATION_EDIT") && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="quotation-scope-action quotation-scope-action--edit"
+                        onClick={() => setDetailDialog("edit")}
+                      >
+                        Edit material scope
+                      </Button>
+                    )}
+                  <Status>
+                    {selectedJourney?.attributes.status === "CANCELLED"
+                      ? "ABANDONED"
+                      : displayLabel(selected.attributes.status, "Not available")}
+                  </Status>
+                </div>
                 {workflowConcluded && (
                   <div className={`workflow-concluded-inline${quotationJourneyAbandoned ? " workflow-concluded-inline--abandoned" : ""}`} role="status">
                     <span className="workflow-concluded-inline-icon" aria-hidden="true">
@@ -5540,26 +6211,86 @@ export function QuotationsWorkspace({
               {quotationDetailPanel}
             </OperationsDialog>
           )}
+      {detailDialog === "customer-change" && (
+        <OperationsDialog
+          title="Change quotation customer"
+          busy={busy}
+          onClose={() => setDetailDialog(null)}
+          className="quotation-customer-change-dialog"
+        >
+          <p className="notice">
+            This creates a new draft revision for the selected customer. The current revision stays in quotation history; if it was issued, its delivery and review history stay attached to it and the replacement must be reviewed and issued again.
+          </p>
+          <p className="notice">
+            The linked Lead, request or job, site and assets must belong to the selected customer. The API checks this before making any change. Accepted quotations cannot be reassigned.
+          </p>
+          {error && <p className="notice state-error" role="alert">{error}</p>}
+          <form className="quotation-modal-form" onSubmit={(event) => void changeQuotationCustomer(event)}>
+            <SearchableSelect
+              label="New customer relationship"
+              searchLabel="Search active customer relationships"
+              search={customerChangeSearch}
+              onSearch={setCustomerChangeSearch}
+              value={customerChangeRelationshipId}
+              onChange={setCustomerChangeRelationshipId}
+              options={eligibleCustomerChangeOptions}
+              placeholder="Select the correct customer"
+              required
+            />
+            {!eligibleCustomerChangeOptions.length && (
+              <p className="notice">No other active customer relationship is available. Add or activate the correct customer relationship before creating a replacement.</p>
+            )}
+            <label>
+              Reason for change
+              <textarea
+                name="reason"
+                required
+                rows={3}
+                maxLength={1000}
+                value={customerChangeReason}
+                onChange={(event) => setCustomerChangeReason(event.target.value)}
+              />
+            </label>
+            <div className="provider-form-actions">
+              <Button type="button" variant="quiet" onClick={() => setDetailDialog(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" busy={busy} disabled={busy || !customerChangeRelationshipId || !customerChangeReason.trim()}>
+                Create replacement draft
+              </Button>
+            </div>
+          </form>
+        </OperationsDialog>
+      )}
       {detailDialog === "customer-preview" && (
         <OperationsDialog
           title="Customer quotation preview"
-          onClose={() => setDetailDialog(null)}
+          onClose={closeCustomerQuotationPreview}
           className="quotation-customer-preview-dialog"
         >
-          <CustomerQuotationPreview
-            quotation={selected}
-            customerName={customerNameFor(selected)}
-            lines={selectedLines}
-            materials={selectedQuotationMaterials}
-            terms={selectedQuotationTermsForView}
-            taxSummary={selectedTaxSummary}
-            moneyFor={moneyFor}
-            logoUrl={quotationPreviewLogoUrl}
-          />
-          <div className="provider-form-actions">
-            <Button type="button" variant="secondary" onClick={() => setDetailDialog(null)}>Close preview</Button>
-            <Button type="button" busy={busy} disabled={busy || quotationIsDraft} title={quotationIsDraft ? "Issue the quotation before downloading the server PDF." : undefined} onClick={() => void downloadQuotationPdf()}>Download PDF</Button>
-            {quotationIsDraft && <small className="quotation-action-hint">Issue the quotation to enable the server PDF.</small>}
+          {quotationPdfPreviewUrl ? (
+            <section className="quotation-pdf-preview-panel" aria-label="Generated quotation PDF preview">
+              <iframe src={quotationPdfPreviewUrl} title="Generated quotation PDF" />
+            </section>
+          ) : (
+            <CustomerQuotationPreview
+              quotation={selected}
+              customerName={customerNameFor(selected)}
+              lines={selectedLines}
+              materials={selectedQuotationMaterials}
+              terms={selectedQuotationTermsForView}
+              taxSummary={selectedTaxSummary}
+              moneyFor={moneyFor}
+              logoUrl={quotationPreviewLogoUrl}
+            />
+          )}
+          <div className="quotation-customer-preview-actions">
+            <small className="quotation-action-hint">{quotationPdfPreviewUrl ? "Generated from the saved quotation revision. Drafts remain unissued." : "Open the generated A4 PDF here to check page breaks and print layout."}</small>
+            <div className="quotation-customer-preview-buttons">
+              {quotationPdfPreviewUrl && <Button type="button" variant="secondary" onClick={() => void reviewQuotationPdf()}>Web preview</Button>}
+              <Button type="button" variant="secondary" onClick={closeCustomerQuotationPreview}>Close preview</Button>
+              {!quotationPdfPreviewUrl && <Button type="button" busy={busy} disabled={busy} onClick={() => void reviewQuotationPdf()}>Review PDF</Button>}
+            </div>
           </div>
         </OperationsDialog>
       )}
@@ -5573,6 +6304,7 @@ export function QuotationsWorkspace({
                 className="quotation-modal-form"
                 onSubmit={(event) => void updateDraftQuotation(event)}
               >
+                <input type="hidden" name="lift_unit_codes" value={editableQuotationUnitCodes.join(", ")} readOnly />
                 <label>
                   Description
                   <input
@@ -5604,6 +6336,7 @@ export function QuotationsWorkspace({
                 </label>
                 <MaterialScopeEditor
                   initialMaterials={quotationMaterialsFromTerms(selected.attributes.terms)}
+                  unitCodes={editableQuotationUnitCodes}
                   templates={materialScopeTemplates}
                   taxRules={quotationTaxRules}
                   onCreateTemplate={saveMaterialScopeTemplate}
@@ -5642,6 +6375,7 @@ export function QuotationsWorkspace({
                 className="quotation-modal-form"
                 onSubmit={(event) => void createQuotationRevision(event)}
               >
+                <input type="hidden" name="lift_unit_codes" value={editableQuotationUnitCodes.join(", ")} readOnly />
                 <label>
                   Description
                   <input
@@ -5662,6 +6396,7 @@ export function QuotationsWorkspace({
                 </label>
                 <MaterialScopeEditor
                   initialMaterials={quotationMaterialsFromTerms(selected.attributes.terms)}
+                  unitCodes={editableQuotationUnitCodes}
                   templates={materialScopeTemplates}
                   taxRules={quotationTaxRules}
                   onCreateTemplate={saveMaterialScopeTemplate}
@@ -5698,7 +6433,7 @@ export function QuotationsWorkspace({
               >
                 <label>
                   Event
-                  <select name="event_type">
+                  <SortedSelect name="event_type">
                     <option value="CUSTOMER_FEEDBACK">Customer feedback</option>
                     <option value="DISCOUNT_REQUESTED">
                       Discount requested
@@ -5706,7 +6441,7 @@ export function QuotationsWorkspace({
                     <option value="SCOPE_CHANGE">Scope change</option>
                     <option value="TERMS_CHANGE">Terms change</option>
                     <option value="COUNTER_OFFER">Counter offer</option>
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Notes
@@ -5810,6 +6545,12 @@ export function QuotationsWorkspace({
                   <div><dt>Provider review</dt><dd>{selectedProviderReview?.decided_at ? dateTimeFor(selectedProviderReview.decided_at) : "Approved"}</dd></div>
                   <div><dt>Document</dt><dd>Quotation PDF · v{String(selected.attributes.version_number || 1)}</dd></div>
                 </dl>
+                <section className="quotation-delivery-customer-contacts" aria-label="Contacts available for this quotation">
+                  <div><strong>Contacts available for this quotation</strong><small>Saved provider contacts attached to the quotation parties.</small></div>
+                  {deliveryRecipients.length ? (
+                    <ul>{deliveryRecipients.map((contact) => <li key={contact.id}><strong>{contact.display_name}</strong><span>{contact.email || "No email"}</span><span>{contact.phone || "No mobile"}</span></li>)}</ul>
+                  ) : <p>No saved contact details are available. Enter a one-time email below to send this revision.</p>}
+                </section>
 
                 <form className="quotation-delivery-form" onSubmit={(event) => void sendQuotationRevision(event)}>
                   <div className="quotation-delivery-section-heading">
@@ -5845,14 +6586,14 @@ export function QuotationsWorkspace({
                     deliveryContactsForChannel.length ? (
                       <label className="quotation-delivery-recipient-field">
                         {deliveryChannel === "EMAIL" ? "Customer email contact" : "Customer mobile contact"}
-                        <select name="contact_point_id" required defaultValue="">
+                        <SortedSelect name="contact_point_id" required defaultValue="">
                           <option value="">Choose authorized contact</option>
                           {deliveryContactsForChannel.map((contact) => (
                             <option key={contact.id} value={contact.id}>
                               {contact.display_name} · {deliveryChannel === "EMAIL" ? contact.email : contact.phone}
                             </option>
                           ))}
-                        </select>
+                        </SortedSelect>
                       </label>
                     ) : (
                       <div className="quotation-delivery-empty" role="status">
@@ -5862,9 +6603,9 @@ export function QuotationsWorkspace({
                     )
                   ) : (
                     <label className="quotation-delivery-recipient-field">
-                      {deliveryChannel === "EMAIL" ? "Customer email address" : "Customer mobile number"}
+                      {deliveryChannel === "EMAIL" ? "One-time recipient email" : "One-time recipient mobile"}
                       {deliveryChannel === "EMAIL" ? <input name="recipient_email" type="email" required maxLength={320} placeholder="customer@example.com" autoComplete="email" /> : <input name="recipient_phone" type="tel" required maxLength={20} placeholder="+91 98765 43210" autoComplete="tel" />}
-                      <small className="quotation-delivery-field-note">The recipient is validated and recorded in delivery history for this quotation revision.</small>
+                      <small className="quotation-delivery-field-note">This one-time delivery address is recorded in delivery history. It does not change the customer linked to the quotation.</small>
                     </label>
                   )}
                   <div className="quotation-delivery-actions">
@@ -6007,13 +6748,13 @@ export function QuotationsWorkspace({
                       </label>
                       <label>
                         Activity type
-                        <select name="activity_type" defaultValue="CALL">
+                        <SortedSelect name="activity_type" defaultValue="CALL">
                           <option value="CALL">Call</option>
                           <option value="EMAIL">Email</option>
                           <option value="MEETING">Meeting</option>
                           <option value="SITE_VISIT">Site visit</option>
                           <option value="OTHER">Other</option>
-                        </select>
+                        </SortedSelect>
                       </label>
                       <label>
                         Activity date

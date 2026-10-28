@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Button, PageHeader } from "@trise/ui";
+import { Button, PageHeader, SortedSelect } from "@trise/ui";
 import {
   DEFAULT_PAGE_SIZE,
   operationsData,
@@ -130,8 +130,8 @@ function ProviderAmcBilling({ providerId, contractId, canManage }: { providerId:
       <section className="detail-card"><div className="section-heading"><div><h4>Contract billing history</h4><p>Issued and draft invoices stay linked to this AMC contract.</p></div><span>{invoices?.data.length || 0} records</span></div>{invoices?.data.length ? <div className="amc-invoice-list">{invoices.data.map((invoice) => <button type="button" key={invoice.id} className={`amc-invoice-row ${selected?.id === invoice.id ? "is-selected" : ""}`} onClick={() => void operationsData.providerCustomerInvoice(providerId, invoice.id).then(setSelected).catch((cause) => setError(fail(cause)))}><span><strong>{String(invoice.attributes.invoice_number || invoice.id.slice(0, 8))}</strong><small>{invoiceDate(invoice.attributes.billing_period_start)} → {invoiceDate(invoice.attributes.billing_period_end)}</small></span><span><Status>{String(invoice.attributes.status || "DRAFT")}</Status><strong>{money(invoice.attributes.total_amount, String(invoice.attributes.currency_code || "INR"))}</strong></span></button>)}</div> : <EmptyState title="No AMC invoices yet" description="Create a draft after the contract has been activated and its elevator plan snapshots are ready." />}</section>
       <section className="detail-card amc-invoice-detail">{selected ? <><div className="section-heading"><div><Status>{String(selectedAttributes.status || "DRAFT")}</Status><h4>{String(selectedAttributes.invoice_number || "AMC invoice")}</h4><p>Due {invoiceDate(selectedAttributes.due_at)} · {String(selectedAttributes.collection_state || "CURRENT")}</p></div><strong className="amc-invoice-total">{money(selectedAttributes.total_amount, String(selectedAttributes.currency_code || "INR"))}</strong></div><div className="amc-invoice-kpis"><span>Subtotal <strong>{money(selectedAttributes.subtotal_amount)}</strong></span><span>Tax <strong>{money(selectedAttributes.tax_amount)}</strong></span><span>Paid <strong>{money(selectedAttributes.amount_paid)}</strong></span><span>Balance <strong>{money(selectedAttributes.outstanding_amount)}</strong></span></div><div className="amc-invoice-actions">{canManage && String(selectedAttributes.status) === "DRAFT" && <Button disabled={busy} onClick={() => void issueInvoice(selected)}>Issue invoice</Button>}{canManage && ["ISSUED", "PARTIALLY_PAID", "OVERDUE"].includes(String(selectedAttributes.status)) && <Button variant="secondary" disabled={busy} onClick={() => setPaymentOpen(true)}>Record payment</Button>}</div><div className="amc-invoice-lines"><h5>Elevator plan lines</h5>{lines.length ? lines.map((line, index) => <article key={String(line.contract_asset_scope_id || index)}><div><strong>{String(line.asset_display_name || `Elevator ${index + 1}`)}</strong><span>{String(line.plan_name || line.plan_code || "AMC plan")} · v{String(line.plan_version || "—")}</span></div><strong>{money(line.line_total, String(line.currency_code || "INR"))}</strong></article>) : <p className="notice">No line snapshot was returned.</p>}</div><div className="amc-invoice-payments"><h5>Payment evidence</h5>{payments.length ? payments.map((payment) => <article key={payment.id}><div><Status>{String(payment.attributes.status || "RECEIVED")}</Status><strong>{String(payment.attributes.payment_reference || "Payment")}</strong><span>{String(payment.attributes.method || "—").replaceAll("_", " ")}</span></div><div><strong>{money(payment.attributes.amount, String(payment.attributes.currency_code || "INR"))}</strong>{canManage && ["RECEIVED", "PENDING_VERIFICATION"].includes(String(payment.attributes.status)) && <Button variant="quiet" disabled={busy} onClick={() => void transitionPayment(payment, "SETTLED")}>Verify settlement</Button>}</div></article>) : <p className="notice">No payment evidence recorded.</p>}</div></> : <EmptyState title="Select an invoice" description="The detail panel shows the frozen community elevator lines, tax snapshot and payment evidence." />}</section>
     </div>
-    {createOpen && <OperationsDialog title="Create AMC invoice draft" busy={busy} onClose={() => setCreateOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void createInvoice(event)}><p className="notice">The server reads the active contract elevator scopes and generates one line per elevator. Repeating the same period returns the existing invoice.</p><label>Billing period start *<input name="billing_period_start" type="date" required /></label><label>Billing period end *<input name="billing_period_end" type="date" required /></label><label>Due date *<input name="due_at" type="date" required /></label><label>Period months<select name="period_months" defaultValue="12"><option value="12">12 months</option><option value="6">6 months</option><option value="3">3 months</option><option value="1">1 month</option></select></label><label>Tax rate %<input name="tax_rate_percent" type="number" min="0" max="100" step="0.01" defaultValue="0" /></label><label>Tax label<input name="tax_label" defaultValue="GST" /></label><label>Notes<textarea name="notes" maxLength={2000} /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create draft</Button></div></form></OperationsDialog>}
-    {paymentOpen && selected && <OperationsDialog title={`Record payment · ${String(selectedAttributes.invoice_number || "AMC invoice")}`} busy={busy} onClose={() => setPaymentOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void recordPayment(event)}><label>Amount *<input name="amount" type="number" min="0.01" step="0.01" max={String(selectedAttributes.outstanding_amount || "")} required /></label><label>Payment reference *<input name="payment_reference" required /></label><label>Method<select name="method" defaultValue="BANK_TRANSFER"><option value="BANK_TRANSFER">Bank transfer</option><option value="UPI">UPI</option><option value="ONLINE">Online</option><option value="CHEQUE">Cheque</option><option value="CASH">Cash</option></select></label><label>Instrument reference<input name="instrument_reference" /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setPaymentOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Record evidence</Button></div></form></OperationsDialog>}
+    {createOpen && <OperationsDialog title="Create AMC invoice draft" busy={busy} onClose={() => setCreateOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void createInvoice(event)}><p className="notice">The server reads the active contract elevator scopes and generates one line per elevator. Repeating the same period returns the existing invoice.</p><label>Billing period start *<input name="billing_period_start" type="date" required /></label><label>Billing period end *<input name="billing_period_end" type="date" required /></label><label>Due date *<input name="due_at" type="date" required /></label><label>Period months<SortedSelect name="period_months" defaultValue="12"><option value="12">12 months</option><option value="6">6 months</option><option value="3">3 months</option><option value="1">1 month</option></SortedSelect></label><label>Tax rate %<input name="tax_rate_percent" type="number" min="0" max="100" step="0.01" defaultValue="0" /></label><label>Tax label<input name="tax_label" defaultValue="GST" /></label><label>Notes<textarea name="notes" maxLength={2000} /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create draft</Button></div></form></OperationsDialog>}
+    {paymentOpen && selected && <OperationsDialog title={`Record payment · ${String(selectedAttributes.invoice_number || "AMC invoice")}`} busy={busy} onClose={() => setPaymentOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void recordPayment(event)}><label>Amount *<input name="amount" type="number" min="0.01" step="0.01" max={String(selectedAttributes.outstanding_amount || "")} required /></label><label>Payment reference *<input name="payment_reference" required /></label><label>Method<SortedSelect name="method" defaultValue="BANK_TRANSFER"><option value="BANK_TRANSFER">Bank transfer</option><option value="UPI">UPI</option><option value="ONLINE">Online</option><option value="CHEQUE">Cheque</option><option value="CASH">Cash</option></SortedSelect></label><label>Instrument reference<input name="instrument_reference" /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setPaymentOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Record evidence</Button></div></form></OperationsDialog>}
   </section>;
 }
 
@@ -408,8 +408,8 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
         </div>
           <form className="amc-filter-bar" onSubmit={(event) => { event.preventDefault(); setSelected(null); setAfter(""); setBefore(""); setSearch(searchDraft.trim()); }}>
             <label>Search contracts<input aria-label="Search AMC contracts" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Contract number or customer" /></label>
-            <label>Contract status<select aria-label="Contract status" value={statusFilter} onChange={(event) => { setSelected(null); setStatusFilter(event.target.value); setAfter(""); setBefore(""); }}><option value="">All statuses</option>{["draft", "active", "approved", "suspended", "cancelled", "terminated", "expired"].map((value) => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}</select></label>
-            <label>Expiry window<select aria-label="Expiry window" value={expiryFilter} onChange={(event) => { setSelected(null); setExpiryFilter(event.target.value); setAfter(""); setBefore(""); }}><option value="">Any expiry</option><option value="90">Next 90 days</option></select></label>
+            <label>Contract status<SortedSelect aria-label="Contract status" value={statusFilter} onChange={(event) => { setSelected(null); setStatusFilter(event.target.value); setAfter(""); setBefore(""); }}><option value="">All statuses</option>{["draft", "active", "approved", "suspended", "cancelled", "terminated", "expired"].map((value) => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}</SortedSelect></label>
+            <label>Expiry window<SortedSelect aria-label="Expiry window" value={expiryFilter} onChange={(event) => { setSelected(null); setExpiryFilter(event.target.value); setAfter(""); setBefore(""); }}><option value="">Any expiry</option><option value="90">Next 90 days</option></SortedSelect></label>
             <Button type="submit" variant="secondary">Search</Button>
             <Button type="button" variant="quiet" onClick={() => { setSelected(null); setSearchDraft(""); setSearch(""); setStatusFilter(""); setExpiryFilter(""); setAfter(""); setBefore(""); }}>Clear</Button>
           </form>
@@ -528,7 +528,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
                     </label>
                     <label>
                       Add asset (optional)
-                      <select name="add_asset_id">
+                      <SortedSelect name="add_asset_id">
                         <option value="">No asset added</option>
                         {assets?.data
                           .filter((asset) => !activeAssetIds.has(asset.id))
@@ -537,11 +537,11 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
                               {label(asset.attributes)}
                             </option>
                           ))}
-                      </select>
+                      </SortedSelect>
                     </label>
                     <label>
                       Remove asset (optional)
-                      <select name="remove_asset_id">
+                      <SortedSelect name="remove_asset_id">
                         <option value="">No asset removed</option>
                         {assets?.data
                           .filter((asset) => activeAssetIds.has(asset.id))
@@ -550,7 +550,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
                               {label(asset.attributes)}
                             </option>
                           ))}
-                      </select>
+                      </SortedSelect>
                     </label>
                   </>
                 )}
@@ -558,7 +558,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
                   <>
                     <label>
                       Covered asset *
-                      <select name="asset_scope_id" required>
+                      <SortedSelect name="asset_scope_id" required>
                         <option value="">Select covered asset</option>
                         {activeScopes.map((scope) => (
                           <option key={scope.id} value={scope.id}>
@@ -569,7 +569,7 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
                             )}
                           </option>
                         ))}
-                      </select>
+                      </SortedSelect>
                     </label>
                     <label>
                       Due at *<input name="due_at" type="date" required />
@@ -632,6 +632,12 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const changeReportsTab = (next: "overview" | "builder" | "schedules" | "exports") => {
+    setTab(next);
+    setError("");
+    setMessage("");
+    if (next !== "builder") setPreview(null);
+  };
   const read = (
     row: Resource<GenericAttributes> | null,
     key: string,
@@ -843,25 +849,25 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
       <nav className="subnav" aria-label="Reports workspace">
         <Button
           variant={tab === "overview" ? "primary" : "quiet"}
-          onClick={() => setTab("overview")}
+          onClick={() => changeReportsTab("overview")}
         >
           Overview
         </Button>
         <Button
           variant={tab === "builder" ? "primary" : "quiet"}
-          onClick={() => setTab("builder")}
+          onClick={() => changeReportsTab("builder")}
         >
           Custom report builder
         </Button>
         <Button
           variant={tab === "schedules" ? "primary" : "quiet"}
-          onClick={() => setTab("schedules")}
+          onClick={() => changeReportsTab("schedules")}
         >
           Scheduled reports
         </Button>
         <Button
           variant={tab === "exports" ? "primary" : "quiet"}
-          onClick={() => setTab("exports")}
+          onClick={() => changeReportsTab("exports")}
         >
           Export history
         </Button>
@@ -928,7 +934,7 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
               <Button variant="secondary" onClick={() => { setSelected(report); setPreview(null); setReportEditorOpen(true); }}>Edit</Button>
               <Button variant="secondary" busy={busy} onClick={() => { setSelected(report); void operationsData.previewProviderReport(providerId, report.id).then((result) => { setPreview(result.data); setMessage(`Preview loaded: ${result.meta.row_count} rows available; maximum ${result.meta.limit} shown.`); }).catch((cause) => setError(fail(cause))); }}>Preview</Button>
               <Button variant="secondary" onClick={() => { setSelected(report); setExportEditorOpen(true); }}>Export</Button>
-              <Button variant="quiet" onClick={() => { setSelected(report); setScheduleEditorOpen(true); setTab("schedules"); }}>Schedule</Button>
+              <Button variant="quiet" onClick={() => { setSelected(report); setScheduleEditorOpen(true); changeReportsTab("schedules"); }}>Schedule</Button>
             </div>
           </article>)}</div> : <EmptyState title="No saved report definitions" description="Create a report definition to preview data, queue exports, or schedule delivery." />}
           {preview && <div className="reports-preview"><h4>Bounded preview</h4><pre>{JSON.stringify(preview, null, 2)}</pre></div>}
@@ -1005,24 +1011,25 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
         <form className="reports-editor-form" onSubmit={(event) => void saveReport(event)}>
           <p className="notice">Only server-allowlisted dimensions and measures are accepted.</p>
           <label>Report name *<input name="name" required defaultValue={read(selected, "name")} /></label>
-          <label>Category *<select name="category" defaultValue={read(selected, "category", "PROJECTS")}><option>LEADS</option><option>PROJECTS</option><option>PAYMENTS</option><option>MATERIALS</option><option>SERVICE_REQUESTS</option><option>JOBS</option><option>WORKFORCE</option><option>ASSETS</option><option>AMC</option></select></label>
+          <label>Category *<SortedSelect name="category" defaultValue={read(selected, "category", "PROJECTS")}><option>LEADS</option><option>PROJECTS</option><option>PAYMENTS</option><option>MATERIALS</option><option>SERVICE_REQUESTS</option><option>JOBS</option><option>WORKFORCE</option><option>ASSETS</option><option>AMC</option></SortedSelect></label>
           <fieldset className="report-allowlist-picker" aria-label="Dimensions"><legend>Dimensions</legend>{[["status", "Status"], ["provider_created_at", "Created date"], ["customer", "Customer"], ["project", "Project"], ["stage", "Stage"], ["technician", "Technician"]].map(([value, title]) => <label key={value}><input type="checkbox" name="dimensions" value={value} defaultChecked={Array.isArray(selected?.attributes.dimensions) ? (selected!.attributes.dimensions as string[]).includes(value) : value === "status" || value === "project"} />{title}</label>)}</fieldset>
           <fieldset className="report-allowlist-picker" aria-label="Measures"><legend>Measures</legend>{[["count", "Record count"], ["amount", "Amount"], ["outstanding", "Outstanding"], ["duration", "Duration"]].map(([value, title]) => <label key={value}><input type="checkbox" name="measures" value={value} defaultChecked={Array.isArray(selected?.attributes.measures) ? (selected!.attributes.measures as string[]).includes(value) : value === "count"} />{title}</label>)}</fieldset>
           <div className="reports-actions"><Button type="button" variant="quiet" onClick={() => setReportEditorOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>{selected ? "Update report" : "Save report"}</Button></div>
         </form>
       </OperationsDialog>}
-      {scheduleEditorOpen && selected && <OperationsDialog title={`Schedule · ${read(selected, "name")}`} busy={busy} onClose={() => setScheduleEditorOpen(false)}>
+      {scheduleEditorOpen && selected && <OperationsDialog title="Schedule report" busy={busy} onClose={() => setScheduleEditorOpen(false)}>
         <form className="reports-editor-form" onSubmit={(event) => void saveSchedule(event)}>
-          <label>Saved report *<select value={selected?.id || ""} required onChange={(event) => setSelected(reports.find((report) => report.id === event.target.value) || null)}><option value="">Select a saved report</option>{reports.map((report) => <option key={report.id} value={report.id}>{read(report, "name")}</option>)}</select></label>
-          <label>Frequency<select name="frequency" defaultValue="WEEKLY"><option>DAILY</option><option>WEEKLY</option><option>MONTHLY</option></select></label>
-          <label>Format<select name="format" defaultValue="CSV"><option>CSV</option><option>XLSX</option><option>PDF</option></select></label>
+          <p className="notice">Report: {read(selected, "name")}</p>
+          <label>Saved report *<SortedSelect value={selected?.id || ""} required onChange={(event) => setSelected(reports.find((report) => report.id === event.target.value) || null)}><option value="">Select a saved report</option>{reports.map((report) => <option key={report.id} value={report.id}>{read(report, "name")}</option>)}</SortedSelect></label>
+          <label>Frequency<SortedSelect name="frequency" defaultValue="WEEKLY"><option>DAILY</option><option>WEEKLY</option><option>MONTHLY</option></SortedSelect></label>
+          <label>Format<SortedSelect name="format" defaultValue="CSV"><option>CSV</option><option>XLSX</option><option>PDF</option></SortedSelect></label>
           <label>Authorized recipients *<input name="recipients" required placeholder="recipient@example.test" /></label>
           <p className="notice">Recipients must be authorized for this provider. Delivery uses an expiring private download link.</p>
           <div className="reports-actions"><Button type="button" variant="quiet" onClick={() => setScheduleEditorOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create schedule</Button></div>
         </form>
       </OperationsDialog>}
-      {exportEditorOpen && selected && <OperationsDialog title={`Export · ${read(selected, "name")}`} busy={busy} onClose={() => setExportEditorOpen(false)}>
-        <div className="reports-editor-form"><label>File format<select value={exportFormat} onChange={(event) => setExportFormat(event.target.value)}><option>CSV</option><option>XLSX</option><option>PDF</option></select></label><div className="reports-actions"><Button variant="quiet" onClick={() => setExportEditorOpen(false)}>Cancel</Button><Button busy={busy} onClick={() => void requestExport(exportFormat)}>Queue export</Button></div></div>
+      {exportEditorOpen && selected && <OperationsDialog title="Export report" busy={busy} onClose={() => setExportEditorOpen(false)}>
+        <div className="reports-editor-form"><p className="notice">Report: {read(selected, "name")}</p><label>File format<SortedSelect value={exportFormat} onChange={(event) => setExportFormat(event.target.value)}><option>CSV</option><option>XLSX</option><option>PDF</option></SortedSelect></label><div className="reports-actions"><Button variant="quiet" onClick={() => setExportEditorOpen(false)}>Cancel</Button><Button busy={busy} onClick={() => void requestExport(exportFormat)}>Queue export</Button></div></div>
       </OperationsDialog>}
     </section>
   );

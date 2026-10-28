@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Button, DetailSection, StatePanel } from '@trise/ui';
+import { Button, DetailSection, StatePanel, SortedSelect } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type BusinessOperation, type ElevatorBusinessConfiguration } from './data';
 import { AdminActionMenu, AdminDataTable, AdminEmptyState, AdminFilterBar, AdminPageHeader } from './platform-admin-ui';
@@ -251,7 +251,7 @@ export function PlatformBusinessOperationsPage({ capabilities, currentUserId = '
     <AdminPageHeader breadcrumbs={[{ label: 'Platform Overview', href: 'platform/overview' }, { label: 'Business Operation Catalogue' }]} eyebrow="Platform administration / Catalogue" title="Business Operation Catalogue" description="Maintain canonical operation types used by provider assignment, plan applicability, and business configuration. Changes are drafted, independently reviewed, and published without changing provider assignment IDs." action={canWrite ? <Button onClick={() => openEditor(null)}>Add operation</Button> : undefined} />
     <AdminFilterBar onSubmit={applyFilters}>
       <label>Search catalogue<input value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or code" maxLength={100} /></label>
-      <label>Availability<select value={activeFilter} onChange={event => setActiveFilter(event.target.value as typeof activeFilter)}><option value="active">Active only</option><option value="inactive">Inactive only</option><option value="all">All entries</option></select></label>
+      <label>Availability<SortedSelect value={activeFilter} onChange={event => setActiveFilter(event.target.value as typeof activeFilter)}><option value="active">Active only</option><option value="inactive">Inactive only</option><option value="all">All entries</option></SortedSelect></label>
       <Button type="submit">Apply filters</Button>
       <Button type="button" variant="quiet" onClick={() => { setQuery(''); setActiveFilter('all'); setAppliedQuery(''); setAppliedActive('all'); void load('', 'all'); }}>Reset</Button>
       <span>Applied: {appliedQuery || 'All names'} · {human(appliedActive)}</span>
@@ -285,14 +285,14 @@ export function PlatformBusinessOperationsPage({ capabilities, currentUserId = '
             <div className="platform-form-grid">
               <label>Code<input value={draft.code} disabled={Boolean(editing)} onChange={event => setDraft({ ...draft, code: event.target.value.toUpperCase() })} placeholder="ELEVATOR_SERVICE" maxLength={80} required /></label>
               <label>Name<input value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Elevator service" maxLength={160} required /></label>
-              <label>Industry<select value={draft.industry_key} onChange={event => setDraft({ ...draft, industry_key: event.target.value })} required>{INDUSTRIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-              <label>Catalogue icon<select value={draft.icon_key} onChange={event => setDraft({ ...draft, icon_key: event.target.value })}>{ICONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label>Industry<SortedSelect value={draft.industry_key} onChange={event => setDraft({ ...draft, industry_key: event.target.value })} required>{INDUSTRIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SortedSelect></label>
+              <label>Catalogue icon<SortedSelect value={draft.icon_key} onChange={event => setDraft({ ...draft, icon_key: event.target.value })}>{ICONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SortedSelect></label>
               <label>Display order<input type="number" min="0" step="1" value={draft.display_order} onChange={event => setDraft({ ...draft, display_order: event.target.value })} /></label>
-              <label>Business configuration<select value={draft.configuration ? 'ELEVATOR_SERVICES' : 'NONE'} onChange={event => setConfigurationProfile(event.target.value)}><option value={CONFIGURATION_PROFILES[0][0]}>{CONFIGURATION_PROFILES[0][1]}</option><option value={CONFIGURATION_PROFILES[1][0]}>{CONFIGURATION_PROFILES[1][1]}</option></select></label>
+              <label>Business configuration<SortedSelect value={draft.configuration ? 'ELEVATOR_SERVICES' : 'NONE'} onChange={event => setConfigurationProfile(event.target.value)}><option value={CONFIGURATION_PROFILES[0][0]}>{CONFIGURATION_PROFILES[0][1]}</option><option value={CONFIGURATION_PROFILES[1][0]}>{CONFIGURATION_PROFILES[1][1]}</option></SortedSelect></label>
               <label className="admin-form-field--full">Description <span className="platform-muted">(optional)</span><textarea value={draft.description} onChange={event => setDraft({ ...draft, description: event.target.value })} maxLength={500} rows={3} /></label>
               <div className="admin-form-field--full business-operation-availability-note"><strong>Platform availability</strong><span>Managed by the single Global Administrator “Enable / Disable across platform” action after this catalogue record is published. The action preserves the current configuration and provider-operation state for restoration.</span></div>
               {draft.configuration && <fieldset className="admin-form-field--full business-operation-configuration-fieldset"><legend>Elevator &amp; Lift business configuration</legend>
-                <label>Service scope<select value={draft.configuration.scope} onChange={event => setConfigurationScope(event.target.value)}>{CONFIGURATION_SCOPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label>Service scope<SortedSelect value={draft.configuration.scope} onChange={event => setConfigurationScope(event.target.value)}>{CONFIGURATION_SCOPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SortedSelect></label>
                 <div className="business-operation-choice-grid">{CONFIGURATION_MULTI_FIELDS.map(field => <fieldset className="platform-form-choice" key={field.key}><legend>{field.label}</legend>{field.options.map(([value, label]) => <label key={value}><input type="checkbox" checked={(draft.configuration?.[field.key] as string[]).includes(value)} onChange={event => toggleConfigurationValue(field.key, value, event.target.checked)} /> {label}</label>)}</fieldset>)}</div>
               </fieldset>}
             </div>

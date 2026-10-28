@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import { ActionNotification, EmptyState, ProviderActionMenu } from "./operations-shared";
 import { OperationsStatus as Status } from "./operations-status";
@@ -48,7 +48,7 @@ function termCount(template: Template) {
 }
 
 function templateScope(template: Template) {
-  return template.attributes.scope === "PLATFORM_MASTER" ? "Platform master" : "Provider-owned";
+  return template.attributes.scope === "PLATFORM_MASTER" ? "Platform master" : "This provider";
 }
 
 function readableTermLabel(key: string) {
@@ -444,6 +444,7 @@ type TemplateEditorTarget = Template | "new";
 function QuotationTermsTemplateForm({
   providerId,
   target,
+  copySource = null,
   templates,
   busy,
   onSubmit,
@@ -451,23 +452,25 @@ function QuotationTermsTemplateForm({
 }: {
   providerId: string;
   target: TemplateEditorTarget;
+  copySource?: Template | null;
   templates: Template[];
   busy: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
 }) {
+  const source = target === "new" ? copySource : target;
   const [description, setDescription] = useState(
-    target === "new" ? "" : String(target.attributes.description || ""),
+    source ? String(source.attributes.description || "") : "",
   );
-  const initialLetterhead = target === "new"
+  const initialLetterhead = !source
     ? emptyLetterhead()
-    : letterheadFromValue(target.attributes.terms.letterhead);
+    : letterheadFromValue(source.attributes.terms.letterhead);
   const [letterhead, setLetterhead] = useState<QuotationLetterhead>(initialLetterhead);
   const [businessProfile, setBusinessProfile] = useState<ProviderBusinessProfile | null>(null);
   const [activeLogo, setActiveLogo] = useState<PlatformLogo | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileMessage, setProfileMessage] = useState("");
-  const [letterheadTouched, setLetterheadTouched] = useState(target !== "new");
+  const [letterheadTouched, setLetterheadTouched] = useState(Boolean(source));
 
   useEffect(() => {
     let active = true;
@@ -519,8 +522,9 @@ function QuotationTermsTemplateForm({
     <form className="provider-terms-editor-form" onSubmit={onSubmit}>
       <div className="provider-terms-editor-intro">
         <p>
-          Save a reusable provider baseline. A quotation copies the selected values
-          into its own revision; later template edits do not rewrite existing quotations.
+          {copySource
+            ? `This provider copy starts with the platform master “${copySource.attributes.name}”. Edit and save it as a provider-owned template; the shared master stays unchanged.`
+            : "Save a reusable provider baseline. A quotation copies the selected values into its own revision; later template edits do not rewrite existing quotations."}
         </p>
       </div>
       <label>
@@ -529,7 +533,7 @@ function QuotationTermsTemplateForm({
           name="name"
           required
           maxLength={120}
-          defaultValue={target === "new" ? "" : target.attributes.name}
+          defaultValue={target === "new" ? (copySource ? `${copySource.attributes.name} — Provider copy` : "") : target.attributes.name}
           placeholder="e.g. Standard installation terms"
         />
       </label>
@@ -553,8 +557,8 @@ function QuotationTermsTemplateForm({
           <button type="button" className="provider-admin-link quotation-letterhead-manage" onClick={() => { window.location.hash = "business-profile"; }}>Manage logo and business profile →</button>
         </div>
         <div className="form-grid quotation-letterhead-grid">
-          <label>Letterhead format<select value={letterhead.format} onChange={(event) => updateLetterhead({ format: event.target.value as QuotationLetterhead["format"] })}><option value="STANDARD">Standard — logo and address</option><option value="COMPACT">Compact — reduced header</option><option value="CENTERED">Centered — formal letterhead</option></select></label>
-          <label>Logo position<select value={letterhead.logo_position} onChange={(event) => updateLetterhead({ logo_position: event.target.value as QuotationLetterhead["logo_position"] })}><option value="LEFT">Left</option><option value="CENTER">Center</option><option value="RIGHT">Right</option></select></label>
+          <label>Letterhead format<SortedSelect value={letterhead.format} onChange={(event) => updateLetterhead({ format: event.target.value as QuotationLetterhead["format"] })}><option value="STANDARD">Standard — logo and address</option><option value="COMPACT">Compact — reduced header</option><option value="CENTERED">Centered — formal letterhead</option></SortedSelect></label>
+          <label>Logo position<SortedSelect value={letterhead.logo_position} onChange={(event) => updateLetterhead({ logo_position: event.target.value as QuotationLetterhead["logo_position"] })}><option value="LEFT">Left</option><option value="CENTER">Center</option><option value="RIGHT">Right</option></SortedSelect></label>
           <label className="quotation-letterhead-checkbox"><input type="checkbox" checked={letterhead.show_address !== false} onChange={(event) => updateLetterhead({ show_address: event.target.checked })} /> Show business address</label>
           <label className="quotation-letterhead-checkbox"><input type="checkbox" checked={letterhead.show_tax_details !== false} onChange={(event) => updateLetterhead({ show_tax_details: event.target.checked })} /> Show GSTIN / PAN</label>
         </div>
@@ -623,8 +627,8 @@ function QuotationTermsTemplateForm({
         <input type="hidden" name="letterhead_json" value={JSON.stringify(letterhead)} readOnly />
       </fieldset>
       <QuotationTermsEditor
-        key={target === "new" ? "new" : target.id}
-        initialTerms={target === "new" ? undefined : target.attributes.terms}
+        key={target === "new" ? `new-${copySource?.id || "blank"}` : target.id}
+        initialTerms={source?.attributes.terms}
         templates={templates}
         showTermsAndConditions={false}
       />
@@ -633,7 +637,7 @@ function QuotationTermsTemplateForm({
           Cancel
         </Button>
         <Button type="submit" busy={busy}>
-          {target === "new" ? "Create template" : "Save changes"}
+          {target === "new" ? "Create terms template" : "Save changes"}
         </Button>
       </div>
     </form>
@@ -659,6 +663,7 @@ export function ProviderQuotationTermsTemplatesAdmin({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [editorTarget, setEditorTarget] = useState<Template | "new" | null>(null);
+  const [copySource, setCopySource] = useState<Template | null>(null);
   const [previewTarget, setPreviewTarget] = useState<Template | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("web");
   const [previewLogo, setPreviewLogo] = useState<PlatformLogo | null>(null);
@@ -674,7 +679,7 @@ export function ProviderQuotationTermsTemplatesAdmin({
       setTemplates(await operationsData.quotationTermsTemplates(providerId));
     } catch (cause) {
       setTemplates(null);
-      setError((cause as Error).message || "Quotation templates could not be loaded.");
+      setError((cause as Error).message || "Quotation terms templates could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -737,9 +742,10 @@ export function ProviderQuotationTermsTemplatesAdmin({
         if (editorTarget === "new") return { ...current, data: [result, ...current.data] };
         return { ...current, data: current.data.map((item) => item.id === result.id ? result : item) };
       });
+      setCopySource(null);
       if (initialCreate) window.location.hash = "configuration/quotation-terms-templates";
       else setEditorTarget(null);
-      setMessage(editorTarget === "new" ? "Quotation template created." : "Quotation template updated.");
+      setMessage(editorTarget === "new" ? "Provider quotation terms template created." : "Quotation terms template updated.");
     } catch (cause) {
       setError((cause as Error).message || "Quotation template could not be saved.");
     } finally {
@@ -771,26 +777,26 @@ export function ProviderQuotationTermsTemplatesAdmin({
   const rows = templates?.data || [];
   const viewTarget = templateId ? rows.find((template) => template.id === templateId) || null : null;
   if (templateId) {
-    if (loading) return <section className="content provider-terms-detail-page"><p className="notice">Loading quotation template…</p></section>;
+    if (loading) return <section className="content provider-terms-detail-page"><p className="notice">Loading quotation terms template…</p></section>;
     if (!viewTarget) return <section className="content provider-terms-detail-page">
       <PageHeader
         eyebrow="Provider administration / Commercial"
-        title={error ? "Quotation templates unavailable" : "Quotation template not found"}
+        title={error ? "Quotation terms templates unavailable" : "Quotation terms template not found"}
         description={error ? "The authorized template library could not be loaded. Retry after the API or database is available." : "The template may no longer be available in the selected provider context."}
-        action={<Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to quotation templates</Button>}
+        action={<Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to quotation terms</Button>}
       />
       {error ? <>
-        <ActionNotification kind="error" title="Quotation templates could not be loaded" onClose={() => setError("")}>{error}</ActionNotification>
+        <ActionNotification kind="error" title="Quotation terms templates could not be loaded" onClose={() => setError("")}>{error}</ActionNotification>
         <div className="provider-form-actions"><Button type="button" onClick={() => void load()}>Retry</Button></div>
-      </> : <EmptyState title="Template unavailable" description="Choose another template from the quotation template library." />}
+      </> : <EmptyState title="Terms template unavailable" description="Choose another item from the quotation terms library." />}
     </section>;
     return (
       <section className="content provider-terms-detail-page">
         <PageHeader
           eyebrow="Provider administration / Commercial / Template details"
           title={viewTarget.attributes.name}
-          description={viewTarget.attributes.scope === "PROVIDER" && canManage ? "Review the reusable quotation terms snapshot. Use Preview template for the customer-facing view or Edit template to update this provider-owned baseline." : "Review the reusable quotation terms snapshot. Use Preview template to open the customer-facing view. Platform master templates are read-only in provider administration."}
-          action={<div className="provider-terms-detail-actions"><Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to templates</Button>{canCreateQuotation && <Button onClick={() => { window.location.hash = `quotations/new/${encodeURIComponent(viewTarget.id)}`; }}>Create quotation from template</Button>}<Button variant="secondary" onClick={() => void openPreview(viewTarget)}>Preview template</Button>{viewTarget.attributes.scope === "PROVIDER" && canManage && <><Button onClick={() => setEditorTarget(viewTarget)}>Edit template</Button><Button variant="danger" onClick={() => setArchiveTarget(viewTarget)}>Archive template</Button></>}</div>}
+          description={viewTarget.attributes.scope === "PROVIDER" && canManage ? "Review the reusable quotation terms snapshot. Preview it for the customer-facing view or edit this provider-owned baseline." : "Review the reusable quotation terms snapshot. Platform master terms are read-only in provider administration."}
+          action={<div className="provider-terms-detail-actions"><Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to quotation terms</Button>{canCreateQuotation && <Button onClick={() => { window.location.hash = `quotations/new/${encodeURIComponent(viewTarget.id)}`; }}>Create quotation with these terms</Button>}<Button variant="secondary" onClick={() => void openPreview(viewTarget)}>Preview terms</Button>{viewTarget.attributes.scope === "PROVIDER" && canManage && <><Button onClick={() => { setCopySource(null); setEditorTarget(viewTarget); }}>Edit terms</Button><Button variant="danger" onClick={() => setArchiveTarget(viewTarget)}>Archive terms</Button></>}{viewTarget.attributes.scope === "PLATFORM_MASTER" && canManage && <Button onClick={() => { setCopySource(viewTarget); setEditorTarget("new"); }}>Customize as provider terms</Button>}</div>}
         />
         {error && <ActionNotification kind="error" title="Quotation terms action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
         {message && <ActionNotification title="Quotation terms update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
@@ -800,9 +806,9 @@ export function ProviderQuotationTermsTemplatesAdmin({
           {previewLogoLoading && <p className="notice">Loading the approved provider logo for preview…</p>}
           <WebQuotationPreview template={viewTarget} logo={previewLogo} />
         </section>
-        {editorTarget && <OperationsDialog title="Edit quotation template" busy={busy} className="provider-terms-editor-dialog" onClose={() => setEditorTarget(null)}><QuotationTermsTemplateForm providerId={providerId} target={editorTarget} templates={rows} busy={busy} onSubmit={(event) => void save(event)} onCancel={() => setEditorTarget(null)} /></OperationsDialog>}
-        {previewTarget && <OperationsDialog title="Quotation template preview" className="provider-terms-preview-dialog" onClose={() => setPreviewTarget(null)}><QuotationTemplatePreviewBody template={previewTarget} mode={previewMode} logo={previewLogo} logoLoading={previewLogoLoading} onModeChange={setPreviewMode} /></OperationsDialog>}
-        {archiveTarget && <OperationsDialog title="Archive quotation template" busy={busy} onClose={() => setArchiveTarget(null)}><div className="provider-terms-confirm"><p><strong>{archiveTarget.attributes.name}</strong> will be removed from future template selection. The server archives it instead of physically deleting it, so existing quotation revisions and audit history remain unchanged.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setArchiveTarget(null)}>Keep template</Button><Button type="button" variant="danger" busy={busy} onClick={() => void archive()}>Archive template</Button></div></div></OperationsDialog>}
+        {editorTarget && <OperationsDialog title={editorTarget === "new" ? (copySource ? "Customize platform terms for this provider" : "Create quotation terms template") : "Edit quotation terms template"} busy={busy} className="provider-terms-editor-dialog" onClose={() => { setEditorTarget(null); setCopySource(null); }}><QuotationTermsTemplateForm providerId={providerId} target={editorTarget} copySource={copySource} templates={rows} busy={busy} onSubmit={(event) => void save(event)} onCancel={() => { setEditorTarget(null); setCopySource(null); }} /></OperationsDialog>}
+        {previewTarget && <OperationsDialog title="Quotation terms preview" className="provider-terms-preview-dialog" onClose={() => setPreviewTarget(null)}><QuotationTemplatePreviewBody template={previewTarget} mode={previewMode} logo={previewLogo} logoLoading={previewLogoLoading} onModeChange={setPreviewMode} /></OperationsDialog>}
+        {archiveTarget && <OperationsDialog title="Archive quotation terms template" busy={busy} onClose={() => setArchiveTarget(null)}><div className="provider-terms-confirm"><p><strong>{archiveTarget.attributes.name}</strong> will be removed from future quotation terms selection. The server archives it instead of physically deleting it, so existing quotation revisions and audit history remain unchanged.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setArchiveTarget(null)}>Keep template</Button><Button type="button" variant="danger" busy={busy} onClick={() => void archive()}>Archive terms template</Button></div></div></OperationsDialog>}
       </section>
     );
   }
@@ -811,11 +817,11 @@ export function ProviderQuotationTermsTemplatesAdmin({
       <section className="content provider-terms-editor-page">
         <PageHeader
           eyebrow="Provider administration / Commercial"
-          title="New quotation template"
+          title="New quotation terms template"
           description="Create a reusable provider baseline with readable rich-text terms and conditions. Future quotations copy the saved snapshot; later template edits do not change issued quotations."
-          action={<Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to quotation templates</Button>}
+          action={<Button variant="secondary" onClick={() => { window.location.hash = "configuration/quotation-terms-templates"; }}>← Back to quotation terms</Button>}
         />
-        {!canManage ? <EmptyState title="Template management is restricted" description="Only the authorized Service Provider Admin or Provider Reviewer can create provider-owned quotation templates." /> : (
+        {!canManage ? <EmptyState title="Terms template management is restricted" description="Only the authorized Service Provider Admin or Provider Reviewer can create provider-owned quotation terms templates." /> : (
           <section className="provider-terms-editor-page-card detail-card">
             <div className="provider-terms-editor-intro">
               <strong>Build the provider baseline</strong>
@@ -841,9 +847,9 @@ export function ProviderQuotationTermsTemplatesAdmin({
     <section className="content provider-terms-admin-page">
       <PageHeader
         eyebrow="Provider administration / Commercial"
-        title="Quotation templates"
+        title="Quotation terms templates"
         description="Maintain reusable provider commercial terms for future quotation drafts. Issued, accepted and historical quotations keep their own immutable terms snapshot."
-        action={canManage ? <Button onClick={() => { window.location.hash = "configuration/quotation-terms-templates/new"; }}>Create template</Button> : undefined}
+        action={canManage ? <Button onClick={() => { window.location.hash = "configuration/quotation-terms-templates/new"; }}>Create terms template</Button> : undefined}
       />
       <div className="provider-terms-admin-note">
         <strong>Provider scope</strong>
@@ -851,7 +857,7 @@ export function ProviderQuotationTermsTemplatesAdmin({
       </div>
       {error && <ActionNotification kind="error" title="Quotation terms action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
       {message && <ActionNotification title="Quotation terms update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
-      {loading ? <p className="notice">Loading authorized quotation templates…</p> : !rows.length ? <EmptyState title="No quotation templates" description="No active platform or provider terms template is available in this provider context." action={canManage ? <Button onClick={() => { window.location.hash = "configuration/quotation-terms-templates/new"; }}>Create a template</Button> : undefined} /> : (() => {
+      {loading ? <p className="notice">Loading authorized quotation terms templates…</p> : !rows.length ? <EmptyState title="No quotation terms templates" description="No active platform or provider terms template is available in this provider context." action={canManage ? <Button onClick={() => { window.location.hash = "configuration/quotation-terms-templates/new"; }}>Create a terms template</Button> : undefined} /> : (() => {
         const normalizedQuery = query.trim().toLowerCase();
         const filteredRows = rows.filter((template) => {
           const matchesQuery = !normalizedQuery || `${template.attributes.name} ${template.attributes.description || ""}`.toLowerCase().includes(normalizedQuery);
@@ -859,17 +865,17 @@ export function ProviderQuotationTermsTemplatesAdmin({
           return matchesQuery && matchesScope;
         });
         return <>
-          <FilterToolbar resultLabel={`Showing ${filteredRows.length} of ${rows.length} templates`}>
-            <label>Search templates<input aria-label="Search quotation templates" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by template name or description" /></label>
-            <label>Scope<select aria-label="Filter quotation templates by scope" value={scopeFilter} onChange={(event) => setScopeFilter(event.target.value as typeof scopeFilter)}><option value="ALL">All scopes</option><option value="PLATFORM_MASTER">Platform master</option><option value="PROVIDER">Provider-owned</option></select></label>
+          <FilterToolbar resultLabel={`Showing ${filteredRows.length} of ${rows.length} quotation terms templates`}>
+            <label>Search templates<input aria-label="Search quotation terms templates" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by template name or description" /></label>
+            <label>Scope<SortedSelect aria-label="Filter quotation terms templates by scope" value={scopeFilter} onChange={(event) => setScopeFilter(event.target.value as typeof scopeFilter)}><option value="ALL">All scopes</option><option value="PLATFORM_MASTER">Platform master</option><option value="PROVIDER">This provider</option></SortedSelect></label>
             {(query || scopeFilter !== "ALL") && <Button type="button" variant="quiet" onClick={() => { setQuery(""); setScopeFilter("ALL"); }}>Clear filters</Button>}
           </FilterToolbar>
-          {filteredRows.length ? <div className="provider-terms-table-wrap"><table className="provider-terms-table"><caption className="sr-only">Quotation templates</caption><thead><tr><th>Template</th><th>Scope</th><th>Terms</th><th>Revision</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filteredRows.map((template) => <tr key={template.id}><td><strong>{template.attributes.name}</strong><small className="provider-terms-template-summary">{descriptionPreview(template.attributes.description)}</small></td><td><Status>{templateScope(template)}</Status></td><td>{termCount(template)} selected</td><td>v{template.attributes.revision}</td><td>{template.attributes.updated_at ? formatIndiaDateTime(template.attributes.updated_at) : "Time unavailable"}</td><td><ProviderActionMenu label={`Actions for ${template.attributes.name}`} actions={[{ id: "view", label: "View template", onSelect: () => { window.location.hash = `configuration/quotation-terms-templates/${encodeURIComponent(template.id)}`; } }, ...(template.attributes.scope === "PROVIDER" && canManage ? [{ id: "edit", label: "Edit template", onSelect: () => setEditorTarget(template) }, { id: "archive", label: "Archive template", tone: "danger" as const, onSelect: () => setArchiveTarget(template) }] : [])]} /></td></tr>)}</tbody></table></div> : <EmptyState title="No matching templates" description="Try a different name, description or scope filter." />}
+          {filteredRows.length ? <div className="provider-terms-table-wrap"><table className="provider-terms-table"><caption className="sr-only">Quotation terms templates</caption><thead><tr><th>Template</th><th>Scope</th><th>Terms</th><th>Revision</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{filteredRows.map((template) => <tr key={template.id}><td><strong>{template.attributes.name}</strong><small className="provider-terms-template-summary">{descriptionPreview(template.attributes.description)}</small></td><td><Status>{templateScope(template)}</Status></td><td>{termCount(template)} selected</td><td>v{template.attributes.revision}</td><td>{template.attributes.updated_at ? formatIndiaDateTime(template.attributes.updated_at) : "Time unavailable"}</td><td><ProviderActionMenu label={`Actions for ${template.attributes.name}`} actions={[{ id: "view", label: "View terms template", onSelect: () => { window.location.hash = `configuration/quotation-terms-templates/${encodeURIComponent(template.id)}`; } }, ...(template.attributes.scope === "PROVIDER" && canManage ? [{ id: "edit", label: "Edit terms template", onSelect: () => { setCopySource(null); setEditorTarget(template); } }, { id: "archive", label: "Archive terms template", tone: "danger" as const, onSelect: () => setArchiveTarget(template) }] : template.attributes.scope === "PLATFORM_MASTER" && canManage ? [{ id: "copy", label: "Customize as provider terms", onSelect: () => { setCopySource(template); setEditorTarget("new"); } }] : [])]} /></td></tr>)}</tbody></table></div> : <EmptyState title="No matching quotation terms templates" description="Try a different name, description or scope filter." />}
         </>;
       })()}
-      {editorTarget && <OperationsDialog title={editorTarget === "new" ? "Create quotation template" : "Edit quotation template"} busy={busy} className="provider-terms-editor-dialog" onClose={() => setEditorTarget(null)}><QuotationTermsTemplateForm providerId={providerId} target={editorTarget} templates={rows} busy={busy} onSubmit={(event) => void save(event)} onCancel={() => setEditorTarget(null)} /></OperationsDialog>}
-      {previewTarget && <OperationsDialog title="Quotation template preview" className="provider-terms-preview-dialog" onClose={() => setPreviewTarget(null)}><QuotationTemplatePreviewBody template={previewTarget} mode={previewMode} logo={previewLogo} logoLoading={previewLogoLoading} onModeChange={setPreviewMode} /></OperationsDialog>}
-      {archiveTarget && <OperationsDialog title="Archive quotation template" busy={busy} onClose={() => setArchiveTarget(null)}><div className="provider-terms-confirm"><p><strong>{archiveTarget.attributes.name}</strong> will be removed from future template selection. The server archives it instead of physically deleting it, so existing quotation revisions and audit history remain unchanged.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setArchiveTarget(null)}>Keep template</Button><Button type="button" variant="danger" busy={busy} onClick={() => void archive()}>Archive template</Button></div></div></OperationsDialog>}
+      {editorTarget && <OperationsDialog title={editorTarget === "new" ? (copySource ? "Customize platform terms for this provider" : "Create quotation terms template") : "Edit quotation terms template"} busy={busy} className="provider-terms-editor-dialog" onClose={() => { setEditorTarget(null); setCopySource(null); }}><QuotationTermsTemplateForm providerId={providerId} target={editorTarget} copySource={copySource} templates={rows} busy={busy} onSubmit={(event) => void save(event)} onCancel={() => { setEditorTarget(null); setCopySource(null); }} /></OperationsDialog>}
+      {previewTarget && <OperationsDialog title="Quotation terms preview" className="provider-terms-preview-dialog" onClose={() => setPreviewTarget(null)}><QuotationTemplatePreviewBody template={previewTarget} mode={previewMode} logo={previewLogo} logoLoading={previewLogoLoading} onModeChange={setPreviewMode} /></OperationsDialog>}
+      {archiveTarget && <OperationsDialog title="Archive quotation terms template" busy={busy} onClose={() => setArchiveTarget(null)}><div className="provider-terms-confirm"><p><strong>{archiveTarget.attributes.name}</strong> will be removed from future quotation terms selection. The server archives it instead of physically deleting it, so existing quotation revisions and audit history remain unchanged.</p><div className="provider-form-actions"><Button type="button" variant="secondary" disabled={busy} onClick={() => setArchiveTarget(null)}>Keep template</Button><Button type="button" variant="danger" busy={busy} onClick={() => void archive()}>Archive terms template</Button></div></div></OperationsDialog>}
     </section>
   );
 }

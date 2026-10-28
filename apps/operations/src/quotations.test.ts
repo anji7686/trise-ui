@@ -121,6 +121,7 @@ describe("quotation template tax visibility", () => {
       specifications: "Capacity: 630 kg\nSpeed: 1.0 m/s",
       notes: "Customer-visible planned scope",
       warranty_months: "24",
+      unit_codes: ["Lift-B"],
     }])).toEqual([{
       description: "Passenger lift package",
       category: "MECHANICAL",
@@ -132,6 +133,7 @@ describe("quotation template tax visibility", () => {
       tax_pricing_mode: "EXCLUSIVE",
       notes: "Customer-visible planned scope",
       warranty_months: 24,
+      unit_codes: ["Lift-B"],
       specifications: [
         { name: "Capacity", value: "630 kg" },
         { name: "Speed", value: "1.0 m/s" },

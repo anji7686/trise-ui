@@ -26,7 +26,18 @@ async function activePermissionCodes(page: import('@playwright/test').Page, acce
 async function navigateProvider(page: import('@playwright/test').Page, label: string) {
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
   const item = navigation.getByRole('button', { name: label, exact: true });
-  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  if (!await item.isVisible().catch(() => false)) {
+    const section = ({
+      'Projects & Installation': 'Delivery',
+      'Project shipments': 'Delivery',
+    } as Record<string, string>)[label];
+    const expand = section && navigation.getByRole('button', { name: `Expand ${section}`, exact: true });
+    if (expand && await expand.isVisible().catch(() => false)) await expand.click();
+    else {
+      const menu = page.getByRole('button', { name: 'Menu', exact: true });
+      if (await menu.isVisible().catch(() => false)) await menu.click();
+    }
+  }
   await item.click();
 }
 
@@ -124,7 +135,10 @@ test('Projects keeps per-unit milestones independent and blocks unassigned execu
   await page.getByLabel('Handover evidence document ID', { exact: true }).fill(syntheticEvidenceId());
   await page.getByRole('dialog').getByRole('button', { name: 'Request handover', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Handover request recorded by the server.');
-  await expect(page.getByText('Requested', { exact: true })).toHaveCount(2);
+  const handoverCards = page.getByRole('article').filter({ hasText: 'Awaiting customer acknowledgment in the customer portal.' });
+  await expect(handoverCards).toHaveCount(2);
+  await expect(page.getByRole('article').filter({ hasText: assets[0].attributes.name || assets[0].id })).toContainText('Awaiting customer');
+  await expect(page.getByRole('article').filter({ hasText: assets[1].attributes.name || assets[1].id })).toContainText('Awaiting customer');
   await page.getByRole('tab', { name: 'Stages & execution', exact: true }).click();
   await page.getByRole('button', { name: 'Add milestone', exact: true }).click();
   await page.getByLabel('Code *', { exact: true }).fill('INSTALL-A');

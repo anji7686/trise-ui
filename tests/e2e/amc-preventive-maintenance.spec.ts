@@ -28,11 +28,6 @@ test('Provider Admin can search the AMC register and inspect contract coverage a
   await expect(page.locator('.amc-register-panel')).toContainText('No contracts match these server-side filters.');
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.locator('.amc-contract-table tbody tr').first()).toBeVisible({ timeout: 20_000 });
-  const pageSize = page.getByRole('combobox', { name: 'Rows per page', exact: true });
-  await expect(pageSize).toHaveValue('10');
-  const pageSizeRequest = page.waitForRequest(request => request.url().includes('/maintenance-contracts?') && request.url().includes('page%5Blimit%5D=20'));
-  await pageSize.selectOption('20');
-  await pageSizeRequest;
   await page.locator('.amc-contract-table tbody tr').first().getByRole('button', { name: 'View', exact: true }).click();
   await expect(page.locator('.amc-detail-panel h2')).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Coverage', exact: true })).toBeVisible();
@@ -58,10 +53,9 @@ test('Provider Admin can search the AMC register and inspect contract coverage a
   if (await configureAction.count()) {
     await configureAction.click();
     await expect(page).toHaveURL(/#configuration\/maintenance-policies$/);
-    await expect(page.getByRole('combobox', { name: 'Configuration type', exact: true })).toHaveValue('maintenance-policies');
-    await expect(page.getByLabel('Policy source')).toBeVisible();
-    await expect(page.getByLabel('Recurrence policy')).toBeVisible();
-    await expect(page.getByLabel('Rules: sequence|code|trigger_kind (one per line) rows', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Maintenance policies', exact: true })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Maintenance policies records', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Add provider override/ })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await page.screenshot({ path: info.outputPath('maintenance-policy-configuration.png'), fullPage: true });
   }

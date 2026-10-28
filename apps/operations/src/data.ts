@@ -84,6 +84,7 @@ export type WorkIntakeAttributes = {
   requirements_completion?: RequirementCompletion;
   requester_name?: string | null;
   requester_contact_reference?: string | null;
+  customer_relationship_name?: string | null;
   site_summary?: string | null;
   referral_contact?: {
     name?: string | null;
@@ -133,6 +134,7 @@ export type MarketingLeadUser = {
 export type MarketingLeadAttributes = {
   reference_code: string;
   source: string;
+  source_details?: string | null;
   title: string;
   prospect_name: string;
   customer_relationship_name?: string | null;
@@ -1532,6 +1534,12 @@ export type PlatformSaasTaxConfiguration = Resource<{
   change_reason?: string | null;
   revision: number;
 }>;
+export type PlatformQuotationBranding = Resource<{
+  brand_name: string;
+  platform_scope_text: string;
+  support_email?: string | null;
+  revision: number;
+}>;
 export type PlatformBillingSetup = {
   issuer_profile_status: "not_started" | "draft" | "complete";
   gst_registration_status: "not_started" | "draft" | "complete";
@@ -2279,6 +2287,15 @@ const query = (path: string, providerId: string) =>
 const cachedQuery = (path: string, providerId: string, cacheTtlMs = 30_000) =>
   apiClient.request(path, {}, { providerId, cacheTtlMs });
 export const operationsData = {
+  platformQuotationBranding: () =>
+    apiClient.request<{ data: PlatformQuotationBranding }>("/platform/quotation-branding"),
+  quotationPlatformBranding: () =>
+    apiClient.request<{ data: PlatformQuotationBranding }>("/quotation/platform-branding"),
+  updatePlatformQuotationBranding: (body: Record<string, unknown>) =>
+    apiClient.request<{ data: PlatformQuotationBranding }>("/platform/quotation-branding", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   providerOperationsDashboard: (providerId: string, date?: string) =>
     apiClient
       .request<{ data: ProviderOperationsDashboard }>(
@@ -7907,6 +7924,10 @@ export const operationsData = {
     query(`/quotations/${encodeURIComponent(id)}`, providerId) as Promise<
       Resource<GenericAttributes>
     >,
+  quotationCommunications: (providerId: string, id: string) =>
+    query(`/quotations/${encodeURIComponent(id)}/communications?page[limit]=100&sort=created_at,id`, providerId) as Promise<Collection<GenericAttributes>>,
+  createQuotationCommunication: (providerId: string, id: string, body: { expected_revision: number; message_type: "REPLY"; body: string }, key: string) =>
+    apiClient.request<Resource<GenericAttributes>>(`/quotations/${encodeURIComponent(id)}/communications`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(body) }, { providerId }),
   quotationAudit: (providerId: string, id: string) =>
     query(`/quotations/${encodeURIComponent(id)}/audit`, providerId) as Promise<
       Collection<GenericAttributes>
@@ -8150,7 +8171,10 @@ export const operationsData = {
     apiClient.request<Collection<QuotationTermsTemplateAttributes>>(
       "/provider-quotation-terms-templates",
       {},
-      { providerId, cacheTtlMs: 60_000 },
+      // Provider admins can save a template in another route. Fetch the current
+      // provider catalogue when a quotation form opens so new templates are
+      // immediately available to every authorized quotation creator.
+      { providerId },
     ),
   createQuotationTermsTemplate: (
     providerId: string,
@@ -8206,6 +8230,21 @@ export const operationsData = {
       `/quotations/${encodeURIComponent(id)}`,
       {
         method: "PATCH",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify(body),
+      },
+      { providerId },
+    ),
+  changeQuotationCustomer: (
+    providerId: string,
+    id: string,
+    body: { customer_relationship_id: string; expected_revision: number; reason: string },
+    key: string,
+  ) =>
+    apiClient.request<Resource<GenericAttributes>>(
+      `/quotations/${encodeURIComponent(id)}/customer-changes`,
+      {
+        method: "POST",
         headers: { "Idempotency-Key": key },
         body: JSON.stringify(body),
       },

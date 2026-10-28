@@ -22,12 +22,50 @@ describe('customer mutation contracts', () => {
 
   it('uses stable command headers for quotation decisions and notification reads', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: { id: 'q-1' } }), { status: 200 }));
-    await customerData.approveQuotation('provider-1', 'quotation-1', 3, 'retry-key');
-  await customerData.markNotificationRead('provider-1', 'notification-1', 'read-key');
+    await customerData.approveQuotation('provider-1', 'quotation-1', 3, 'retry-key', { approver_name: 'Asha Rao', approver_role: 'Facilities Manager', authority_attested: true });
+    await customerData.markNotificationRead('provider-1', 'notification-1', 'read-key');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Idempotency-Key')).toBe('retry-key');
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ expected_revision: 3 });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ expected_revision: 3, approver_name: 'Asha Rao', approver_role: 'Facilities Manager', authority_attested: true });
     expect(fetchMock.mock.calls[1][0]).toContain('/notifications/notification-1/read');
+  });
+
+  it('loads quotation conversations and posts a revision-bound idempotent customer message', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }));
+    await customerData.quotationCommunications('provider-1', 'quotation-1');
+    await customerData.createQuotationCommunication('provider-1', 'quotation-1', {
+      expected_revision: 4,
+      message_type: 'CHANGE_REQUEST',
+      body: 'Please clarify the handover date.',
+    }, 'message-retry-key');
+    await customerData.quotationProviderLogo('provider-1', 'quotation-1');
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/quotations/quotation-1/communications');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('sort=created_at,id');
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get('Idempotency-Key')).toBe('message-retry-key');
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      expected_revision: 4,
+      message_type: 'CHANGE_REQUEST',
+      body: 'Please clarify the handover date.',
+    });
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/quotations/quotation-1/provider-logo');
+  });
+
+  it('reuses short-lived notification reads and refreshes when requested', async () => {
+    const providerId = `notification-cache-${crypto.randomUUID()}`;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }));
+
+    await Promise.all([customerData.notifications(providerId), customerData.notifications(providerId)]);
+    await customerData.notifications(providerId);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await customerData.markNotificationRead(providerId, 'notification-1', 'read-key');
+    await customerData.notifications(providerId);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await customerData.notifications(providerId, true);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
 

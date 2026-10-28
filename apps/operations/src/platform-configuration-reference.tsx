@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@trise/ui';
+import { Button, SortedSelect } from '@trise/ui';
 import { SvgIcon } from './icons';
 import { operationsData, type BusinessOperation, type Collection, type GenericAttributes, type ReferenceDataImport } from './data';
 import { PLATFORM_CONFIGURATION_TYPES } from './configuration';
@@ -147,7 +147,7 @@ export function PlatformConfigurationRegistry() {
     <div className="reference-breadcrumb"><span>Platform administration</span><SvgIcon name="chevron-right" size={14} /><strong>Configuration</strong></div>
     <div className="reference-page-heading">
       <div><span className="reference-eyebrow">Platform administration</span><h1>Configuration registry</h1><p>One read-only map of the authoritative configuration areas. Open each area to perform its approved workflow.</p></div>
-      <div className="reference-heading-actions"><label className="reference-search"><SvgIcon name="search" size={17} /><input aria-label="Search configuration areas" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search areas..." /></label><select aria-label="Filter by area" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option>All areas</option>{areas.map((area) => <option key={area.scope}>{area.scope}</option>)}</select></div>
+      <div className="reference-heading-actions"><Button variant="secondary" onClick={() => routeTo('platform/configuration/quotation-branding')}>Quotation branding</Button><label className="reference-search"><SvgIcon name="search" size={17} /><input aria-label="Search configuration areas" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search areas..." /></label><SortedSelect aria-label="Filter by area" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option>All areas</option>{areas.map((area) => <option key={area.scope}>{area.scope}</option>)}</SortedSelect></div>
     </div>
     <div className="reference-registry-notice"><span className="reference-summary-icon tone-blue"><SvgIcon name="shield" size={17} /></span><div><strong>Authoritative sources only</strong><p>This page does not edit or duplicate configuration. Platform masters, business operations, reference imports and provider overrides each keep their existing API, review and audit boundary.</p></div></div>
     {error && <div className="reference-registry-error" role="alert"><strong>Some registry data needs attention</strong><span>{error}</span><Button variant="secondary" onClick={() => window.location.reload()}>Retry</Button></div>}

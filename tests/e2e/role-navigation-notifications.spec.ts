@@ -30,6 +30,10 @@ test.use({ trace: 'retain-on-failure', video: 'off', screenshot: 'only-on-failur
 
 async function expandProviderGroups(page: import('playwright/test').Page) {
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
+  if (!await navigation.isVisible()) {
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await expect(navigation).toBeVisible();
+  }
   const toggles = navigation.locator('button.nav-group-toggle');
   for (let index = 0; index < await toggles.count(); index += 1) {
     const toggle = toggles.nth(index);
@@ -48,6 +52,9 @@ async function chooseProvider(page: import('playwright/test').Page, session: Liv
   const providerSelect = accountMenu.getByRole('combobox', { name: 'Provider', exact: true });
   await providerSelect.selectOption(provider!.provider_id);
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
+  if (!await page.getByRole('complementary', { name: 'Operations navigation' }).isVisible()) {
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  }
   await expect(page.getByRole('complementary', { name: 'Operations navigation' })).toBeVisible();
   return provider!;
 }
@@ -72,6 +79,7 @@ async function verifyNotificationInbox(page: import('playwright/test').Page, pat
 test('live role matrix exposes only authorized menus and notification inboxes', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(600_000);
+  await page.addInitScript(() => localStorage.setItem('trise-theme', 'dark'));
 
   await page.addInitScript(() => {
     const responses: Array<{ path: string; status: number }> = [];
@@ -87,10 +95,15 @@ test('live role matrix exposes only authorized menus and notification inboxes', 
 
   for (const persona of personas) {
     const session = await localSignIn(page, configuredAccount(persona)) as LiveSession;
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     const platformAdmin = session.user.attributes.platform_admin === true;
 
     if (platformAdmin) {
       const navigation = page.getByRole('complementary', { name: 'Platform administration navigation' });
+      if (!await navigation.isVisible()) {
+        await page.getByRole('button', { name: 'Menu', exact: true }).click();
+        await expect(navigation).toBeVisible();
+      }
       await expect(navigation).toBeVisible();
       const actualKeys = await renderedMenuKeys(navigation);
       const expectedKeys = navigationForSession({ platformAdmin: true, platformCapabilities: session.user.attributes.platform_capabilities || [], providerCapabilities: [] }).platform.map((item) => item.key);

@@ -8,6 +8,7 @@ test.use({ trace: 'on-first-retry', video: 'off', screenshot: 'only-on-failure',
 test('Provider Administrator can open every capability-backed provider deep link', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
   test.setTimeout(180_000);
+  await page.addInitScript(() => localStorage.setItem('trise-theme', 'dark'));
   await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   const accountMenu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
@@ -30,7 +31,8 @@ test('Provider Administrator can open every capability-backed provider deep link
   const routes = [
     'overview', 'work-intake', 'leads', 'requests', 'quotations', 'billing',
     'projects', 'bookings', 'jobs', 'customers', 'sites', 'assets', 'onboarding',
-    'amc', 'workforce', 'attendance', 'my-leave', 'compliance', 'audit',
+    'amc', 'amc/plans', 'workforce', 'attendance', 'my-leave', 'configuration/support-coverage',
+    'configuration/extra-day-credits', 'compliance', 'audit',
     'reports', 'configuration', 'configuration/quotation-terms-templates',
     'business-profile', 'subscriptions', 'team-access', 'notifications'
   ];
@@ -39,22 +41,22 @@ test('Provider Administrator can open every capability-backed provider deep link
     await expect(page.getByText(/is not available in this session\./, { exact: false })).toHaveCount(0);
     if (route === 'configuration/quotation-terms-templates') {
       const navigation = page.locator('#provider-navigation');
-      await expect(page.getByRole('heading', { name: 'Quotation templates', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Quotation terms templates', exact: true })).toBeVisible();
       await expect(navigation.locator('[data-nav-key="quotation-terms-templates"]')).toHaveClass(/active/);
       await expect(navigation.locator('[data-nav-key="configuration"]')).not.toHaveClass(/active/);
-      const scopeFilter = page.getByLabel('Filter quotation templates by scope');
+      const scopeFilter = page.getByLabel('Filter quotation terms templates by scope');
       await expect(scopeFilter).toBeVisible({ timeout: 30_000 });
       await scopeFilter.selectOption('PROVIDER');
       const providerTemplateRows = page.locator('.provider-terms-table tbody tr');
       if (await providerTemplateRows.count()) {
         const providerTemplate = providerTemplateRows.first();
         await providerTemplate.getByRole('button', { name: /Actions for/ }).click();
-        await page.getByRole('menuitem', { name: 'Edit template', exact: true }).click();
-        const editDialog = page.getByRole('dialog', { name: 'Edit quotation template', exact: true });
+        await page.getByRole('menuitem', { name: 'Edit terms template', exact: true }).click();
+        const editDialog = page.getByRole('dialog', { name: 'Edit quotation terms template', exact: true });
         await expect(editDialog).toBeVisible();
         await editDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-        await providerTemplate.getByRole('button', { name: 'View template', exact: true }).click();
-        await expect(page.getByRole('button', { name: 'Edit template', exact: true })).toBeVisible();
+        await providerTemplate.getByRole('button', { name: 'View terms template', exact: true }).click();
+        await expect(page.getByRole('button', { name: 'Edit terms', exact: true })).toBeVisible();
       }
     }
   }

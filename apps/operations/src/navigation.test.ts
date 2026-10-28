@@ -55,9 +55,9 @@ describe('Operations capability navigation', () => {
     expect(navigationForSession({ platformAdmin: false, providerCapabilities: [context(['business_profile'])] }, 'provider-1').provider.map((item) => item.key)).toEqual(['overview', 'business-profile']);
   });
 
-  it('labels quotation terms administration as Quotation Templates', () => {
+  it('labels quotation terms administration as Quotation Terms', () => {
     const item = navigationForSession({ platformAdmin: false, providerCapabilities: [context(['quotation_terms_admin'])] }, 'provider-1').provider.find((entry) => entry.key === 'quotation-terms-templates');
-    expect(item?.label).toBe('Quotation Templates');
+    expect(item?.label).toBe('Quotation Terms');
     expect(item?.hash).toBe('configuration/quotation-terms-templates');
   });
 

@@ -4,6 +4,29 @@ import { operationsData } from "./data";
 afterEach(() => vi.restoreAllMocks());
 
 describe("operations execution contracts", () => {
+  it("loads and replies to the provider's quotation conversation with revision and retry evidence", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    );
+
+    await operationsData.quotationCommunications("provider-7", "quotation-9");
+    await operationsData.createQuotationCommunication("provider-7", "quotation-9", {
+      expected_revision: 4,
+      message_type: "REPLY",
+      body: "We will confirm the handover date.",
+    }, "reply-retry-key");
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/quotations/quotation-9/communications");
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get("X-TRISE-Provider-Id")).toBe("provider-7");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "POST" });
+    expect(new Headers(fetchMock.mock.calls[1][1]?.headers).get("Idempotency-Key")).toBe("reply-retry-key");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      expected_revision: 4,
+      message_type: "REPLY",
+      body: "We will confirm the handover date.",
+    });
+  });
+
   it("requests a bounded unread-only notification preview", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [], page: { limit: 5, next: null, previous: null } }), { status: 200 }),

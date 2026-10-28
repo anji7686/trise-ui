@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, DetailSection, StatePanel } from "@trise/ui";
+import { Button, DetailSection, StatePanel, SortedSelect } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import { OperationsStatus as Status } from "./operations-status";
 import {
@@ -1585,7 +1585,7 @@ export function ProviderDocumentsStep({
         {!compactPhotoMode && scope !== "intake" && scope !== "journey" && (
           <label>
             Document type / scope
-            <select
+            <SortedSelect
               required
               value={classification}
               onChange={(event) => {
@@ -1627,7 +1627,7 @@ export function ProviderDocumentsStep({
                 </>
               )}
               <option value="OTHER">Other</option>
-            </select>
+            </SortedSelect>
           </label>
         )}
         {classification === "OTHER" &&

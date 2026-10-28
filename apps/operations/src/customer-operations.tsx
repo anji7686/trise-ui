@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader } from "@trise/ui";
+import { Button, PageHeader, SortedSelect } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import {
   DEFAULT_PAGE_SIZE,
@@ -763,15 +763,15 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
               <>
                 <label>
                   Customer relationship *
-                  <select name="customer_relationship_id" required>
+                  <SortedSelect name="customer_relationship_id" required>
                     <option value="">Select customer</option>
                     {customerRelationshipChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Location name *<input name="name" required />
                 </label>
-                <label>Country<select value="IN" disabled><option value="IN">India</option></select></label>
+                <label>Country<SortedSelect value="IN" disabled><option value="IN">India</option></SortedSelect></label>
                 <label>Address line / locality *<textarea name="address" required value={locationForm.address} onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))} /></label>
                 <label>PIN code *<input required inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} value={locationForm.pin_code} onChange={(event) => setLocationForm((current) => ({ ...current, pin_code: event.target.value.replace(/[^0-9]/g, "").slice(0, 6) }))} /></label>
                 <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={locationGeography.stateSearch} onSearch={locationGeography.setStateSearch} value={locationGeography.stateCode} onChange={(id) => chooseLocationReference("state", id)} options={locationGeography.stateOptions} placeholder="Select state / UT" required />
@@ -780,10 +780,10 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
                 <div className="customer-address-copy-row"><Button type="button" variant="secondary" disabled={!selectedCustomer || !String((attrs(selectedCustomer).billing_address as Record<string, unknown> | undefined)?.address_line || "").trim()} onClick={copySelectedBillingToShipping}>Copy billing to shipping/site</Button><small>Shipping/site address is the physical location used for delivery, visits and lift service.</small></div>
                 <label>
                   Classification
-                  <select name="classification">
+                  <SortedSelect name="classification">
                     <option>PRIMARY</option>
                     <option>SERVICE_SITE</option>
-                  </select>
+                  </SortedSelect>
                 </label>
               </>
             )}
@@ -791,40 +791,40 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
               <>
                 <label>
                   Customer relationship *
-                  <select name="customer_relationship_id" required value={selectedRelationshipId} onChange={(event) => { setSelectedRelationshipId(event.target.value); setSelectedLocationId(""); setSelectedAssetId(""); }}>
+                  <SortedSelect name="customer_relationship_id" required value={selectedRelationshipId} onChange={(event) => { setSelectedRelationshipId(event.target.value); setSelectedLocationId(""); setSelectedAssetId(""); }}>
                     <option value="">Select customer</option>
                     {customerRelationshipChoices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Service location *
-                  <select name="location_id" required value={selectedLocationId} onChange={(event) => { setSelectedLocationId(event.target.value); setSelectedAssetId(""); }}>
+                  <SortedSelect name="location_id" required value={selectedLocationId} onChange={(event) => { setSelectedLocationId(event.target.value); setSelectedAssetId(""); }}>
                     <option value="">Select location</option>
                     {locations.data.map((row) => (
                       <option key={row.id} value={row.id}>
                         {titleOf(row)}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Customer role at this site <span className="optional">Optional</span>
-                  <select name="site_relationship_role" defaultValue="" disabled={!selectedLocationId}>
+                  <SortedSelect name="site_relationship_role" defaultValue="" disabled={!selectedLocationId}>
                     <option value="">Not specified</option>
                     {customerSiteRelationshipRoles.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
+                  </SortedSelect>
                   <small className="form-help">This records a site relationship only. It does not grant portal access or permissions.</small>
                 </label>
                 <label>
                   Asset family / definition *
-                  <select name="asset_definition_id" required value={selectedDefinitionId} onChange={(event) => setSelectedDefinitionId(event.target.value)}>
+                  <SortedSelect name="asset_definition_id" required value={selectedDefinitionId} onChange={(event) => setSelectedDefinitionId(event.target.value)}>
                     <option value="">Select definition</option>
                     {definitions.data.filter((row) => ["active", "approved"].includes(String(attrs(row).status || "").toLowerCase())).map((row) => (
                       <option key={row.id} value={row.id}>
                         {definitionLabel(row)}
                       </option>
                     ))}
-                  </select>
+                  </SortedSelect>
                 </label>
                 <label>
                   Asset name *
@@ -838,7 +838,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
                   const enumValues = Array.isArray(validation.enum) ? validation.enum : [];
                   const common = { name: `attribute:${definition.id}`, required: Boolean(definitionAttrs.required) };
                   const textConstraints = { minLength: typeof validation.minLength === "number" ? validation.minLength : undefined, maxLength: typeof validation.maxLength === "number" ? validation.maxLength : undefined, min: typeof validation.minimum === "number" ? validation.minimum : undefined, max: typeof validation.maximum === "number" ? validation.maximum : undefined, pattern: typeof validation.pattern === "string" ? validation.pattern : undefined };
-                  return <label key={definition.id}>{label}{definitionAttrs.unit ? ` (${String(definitionAttrs.unit)})` : ""}{definitionAttrs.required ? " *" : ""}{enumValues.length ? <select {...common}><option value="">Select {label.toLowerCase()}</option>{enumValues.map((option) => <option key={String(option)} value={String(option)}>{String(option)}</option>)}</select> : ["BOOLEAN", "BOOL"].includes(valueType) ? <input type="checkbox" name={`attribute:${definition.id}`} /> : ["JSON", "OBJECT", "ARRAY"].includes(valueType) ? <textarea {...common} {...textConstraints} placeholder="Enter the configured JSON value" /> : <input {...common} {...textConstraints} type={["INTEGER", "DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "number" : valueType === "DATE" ? "date" : "text"} step={["DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "any" : undefined} />}</label>;
+                  return <label key={definition.id}>{label}{definitionAttrs.unit ? ` (${String(definitionAttrs.unit)})` : ""}{definitionAttrs.required ? " *" : ""}{enumValues.length ? <SortedSelect {...common}><option value="">Select {label.toLowerCase()}</option>{enumValues.map((option) => <option key={String(option)} value={String(option)}>{String(option)}</option>)}</SortedSelect> : ["BOOLEAN", "BOOL"].includes(valueType) ? <input type="checkbox" name={`attribute:${definition.id}`} /> : ["JSON", "OBJECT", "ARRAY"].includes(valueType) ? <textarea {...common} {...textConstraints} placeholder="Enter the configured JSON value" /> : <input {...common} {...textConstraints} type={["INTEGER", "DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "number" : valueType === "DATE" ? "date" : "text"} step={["DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "any" : undefined} />}</label>;
                 })}
                 {selectedDefinition && String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() !== "NONE" && (attrs(selectedDefinition).primary_identifier_type_id || attrs(selectedDefinition).identifier_policy_id || String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED") && <label>E-Code / primary identifier{String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED" ? " *" : " (optional)"}<input name="primary_identifier" required={String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED"} placeholder="For example KAB123A" /><small className="form-help">For elevator, lift and escalator equipment, use the E-Code assigned by your existing system. It is normalized for search and must be unique.</small></label>}
                 {selectedDefinition && selectedAttributes.length === 0 && <p className="notice">This definition has no additional configured attributes.</p>}
@@ -943,7 +943,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
                   )}
                 />
               </label>
-                <label>Country<select value="IN" disabled><option value="IN">India</option></select></label>
+                <label>Country<SortedSelect value="IN" disabled><option value="IN">India</option></SortedSelect></label>
                 <label>Address line / locality *<textarea name="address" required value={locationForm.address} onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))} /></label>
                 <label>PIN code *<input required inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} value={locationForm.pin_code} onChange={(event) => setLocationForm((current) => ({ ...current, pin_code: event.target.value.replace(/[^0-9]/g, "").slice(0, 6) }))} /></label>
                 <SearchableSelect label="State / UT" searchLabel="Search Indian states and UTs" search={locationGeography.stateSearch} onSearch={locationGeography.setStateSearch} value={locationGeography.stateCode} onChange={(id) => chooseLocationReference("state", id)} options={locationGeography.stateOptions} placeholder="Select state / UT" required />

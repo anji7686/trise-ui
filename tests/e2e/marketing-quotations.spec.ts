@@ -15,7 +15,19 @@ function actionMessage(page: import('playwright/test').Page, message: string) {
 async function navigateProvider(page: import('playwright/test').Page, label: string) {
   const navigation = page.getByRole('complementary', { name: 'Operations navigation' });
   const item = navigation.getByRole('button', { name: label, exact: true });
-  if (!await item.isVisible().catch(() => false)) await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  if (!await item.isVisible().catch(() => false)) {
+    const section = ({
+      'Leads & Surveys': 'Intake',
+      Quotations: 'Commercial',
+      'Projects & Installation': 'Delivery',
+    } as Record<string, string>)[label];
+    const expand = section && navigation.getByRole('button', { name: `Expand ${section}`, exact: true });
+    if (expand && await expand.isVisible().catch(() => false)) await expand.click();
+    else {
+      const menu = page.getByRole('button', { name: 'Menu', exact: true });
+      if (await menu.isVisible().catch(() => false)) await menu.click();
+    }
+  }
   await item.click();
 }
 
@@ -43,19 +55,17 @@ async function submitInstallationSurvey(
     data: {
       status: 'SUBMITTED',
       survey_date: new Date().toISOString().slice(0, 10),
-      proposed_elevator_count: 1,
+      proposed_elevator_count: 2,
       floor_count: 8,
       building_details: { building_type: 'Commercial' },
       technical_measurements: { shaft_width_mm: 2000 },
       requirements: {
-        equipment_type_code: 'PASSENGER_TRACTION',
         industry_segment: 'COMMERCIAL_OFFICE',
         application: 'PASSENGER_TRANSPORT',
+        profile_mode: 'PER_UNIT',
+        unit_requirement_mode: 'PER_UNIT',
         technology: 'ELECTRIC_TRACTION',
         drive_type: 'GEARLESS_TRACTION',
-        capacity_kg: 1000,
-        stops: 8,
-        quantity: 1,
         speed_band: 'MPS_100',
         door_configuration: 'SINGLE_SIDE',
         door_type: 'CENTRE_OPENING',
@@ -63,7 +73,23 @@ async function submitInstallationSurvey(
         control_system: 'SIMPLEX_COLLECTIVE',
         finish: 'TO_BE_CONFIRMED',
         safety_features: ['OVERLOAD_PROTECTION'],
-        standards_references: ['IS_17900_PART_1_2022'],
+        standards_references: [
+          'IS_17900_PART_4_2025', 'IS_17900_PART_6_2022', 'IS_17900_PART_7_SEC_6_2025',
+          'IS_4591_2020', 'IS_14671_1999', 'IS_17900_PART_1_2022', 'IS_17900_PART_2_2022',
+          'IS_17900_PART_3_SEC_1_2023', 'IS_17900_PART_5_2026', 'IS_17900_PART_3_SEC_2_2025',
+          'IS_17900_PART_7_SEC_4_2025', 'IS_17900_PART_20_2024', 'IS_15785_2007',
+          'NBC_INDIA_PART_8_SECTION_5',
+        ],
+        units: [
+          {
+            unit_key: 'UNIT-A', label: 'Passenger lift', equipment_type_code: 'PASSENGER_TRACTION', stops: 8, capacity_kg: 1000,
+            requirements: { application: 'PASSENGER_TRANSPORT', shaft_width_mm: 2000, safety_features: ['OVERLOAD_PROTECTION'] },
+          },
+          {
+            unit_key: 'UNIT-B', label: 'Service lift', equipment_type_code: 'INDUSTRIAL_FREIGHT_LIFT', stops: 5, capacity_kg: 1500,
+            requirements: { application: 'STAFF_SERVICE_GOODS', shaft_width_mm: 2400, safety_features: ['OVERLOAD_PROTECTION', 'EARTHQUAKE_OPERATION'] },
+          },
+        ],
       },
     },
   });
@@ -91,10 +117,10 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
 
   await navigateProvider(page, 'Leads & Surveys');
   await page.getByRole('button', { name: 'New lead', exact: true }).click();
-  await page.getByLabel('Reference code', { exact: true }).fill(reference);
-  await page.getByLabel('Source', { exact: true }).fill('MANAGER');
-  await page.getByLabel('Prospect name', { exact: true }).fill('Quotation Browser Prospect');
-  await page.getByLabel('Opportunity title', { exact: true }).fill('Browser quotation opportunity');
+  await page.getByLabel('Lead reference code', { exact: true }).fill(reference);
+  await page.getByRole('combobox', { name: 'Work source', exact: true }).selectOption({ label: 'Marketing' });
+  await page.getByLabel('Requester name', { exact: true }).fill('Quotation Browser Prospect');
+  await page.getByLabel('Work title', { exact: true }).fill('Browser quotation opportunity');
   await page.getByRole('button', { name: 'Create lead', exact: true }).click();
   await expect(actionMessage(page, 'Lead created by the server.')).toBeVisible();
   const createdLeadId = decodeURIComponent(page.url().split('#leads/')[1] || '');
@@ -111,10 +137,64 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
     await expect(requirementUnitOptions.locator('input[type="checkbox"]')).toHaveCount(1);
   }
   await page.getByLabel('Lift unit codes (comma separated)', { exact: true }).fill('Lift-A, Lift-B');
+  await page.getByRole('button', { name: '+ Add material line', exact: true }).click();
+  const liftScopedMaterial = page.locator('.quotation-material-editor-row').first();
+  await liftScopedMaterial.locator('textarea').nth(0).fill('Lift-B controller package');
+  await liftScopedMaterial.locator('input[type="number"]').nth(0).fill('1');
+  await liftScopedMaterial.locator('input[type="number"]').nth(1).fill('85000');
+  await liftScopedMaterial.locator('textarea').nth(1).fill('Controller model: MPS150\nStandards: IS 17900 PART 4 2025, IS 17900 PART 6 2022, NBC INDIA PART 8 SECTION 5');
+  const materialTemplateName = `Quotation E2E ${Date.now()}`;
+  await page.getByLabel('Save these lines as a provider material scope template', { exact: true }).fill(materialTemplateName);
+  await page.getByRole('button', { name: 'Save as template', exact: true }).click();
+  const templateScope = page.getByLabel('Template source', { exact: true });
+  await templateScope.selectOption('PROVIDER');
+  const materialTemplatePicker = page.getByLabel('Material scope template', { exact: true });
+  await expect(materialTemplatePicker.getByRole('option', { name: materialTemplateName, exact: true })).toHaveCount(1, { timeout: 15_000 });
+  await materialTemplatePicker.selectOption({ label: materialTemplateName });
+  await page.getByRole('button', { name: 'Use selected template', exact: true }).click();
+  await expect(liftScopedMaterial.locator('textarea').nth(0)).toHaveValue('Lift-B controller package');
+  await expect(liftScopedMaterial.locator('textarea').nth(1)).toHaveValue(/IS 17900 PART 4 2025/);
+  await liftScopedMaterial.getByRole('checkbox', { name: 'Apply Lift-B controller package to Lift-A', exact: true }).uncheck();
+  await expect(liftScopedMaterial).toContainText('Lift-B');
+  const materialTemplatesResponse = await page.request.get(`${api}/provider-material-scope-templates`, {
+    headers: { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId },
+  });
+  expect(materialTemplatesResponse.ok()).toBeTruthy();
+  const materialTemplatesPayload = await materialTemplatesResponse.json();
+  const createdMaterialTemplate = materialTemplatesPayload.data.find((template: { attributes: { name: string } }) =>
+    template.attributes.name === materialTemplateName);
+  expect(createdMaterialTemplate).toBeTruthy();
+  const archiveMaterialTemplate = await page.request.patch(
+    `${api}/provider-material-scope-templates/${createdMaterialTemplate.id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        'X-TRISE-Provider-Id': providerId,
+        'Idempotency-Key': crypto.randomUUID(),
+      },
+      data: { status: 'ARCHIVED', expected_revision: createdMaterialTemplate.attributes.revision },
+    },
+  );
+  expect(archiveMaterialTemplate.ok()).toBeTruthy();
   await page.locator('input[name="amount"]').first().fill('450000');
   await page.screenshot({ path: info.outputPath('quotation-create-draft.png') });
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(actionMessage(page, 'Quotation draft saved.')).toBeVisible();
+  const specificationOverview = page.getByRole('region', { name: 'Latest lift specifications', exact: true });
+  await expect(specificationOverview).toBeVisible();
+  await expect(specificationOverview).toContainText('Standards');
+  await expect(specificationOverview).toContainText('Passenger lift');
+  await expect(specificationOverview).toContainText('Service lift');
+  await expect(specificationOverview).toContainText('1000 kg');
+  await expect(specificationOverview).toContainText('1500 kg');
+  await specificationOverview.getByText('View full value', { exact: true }).click();
+  await expect(specificationOverview).toContainText('IS 17900 PART 4 2025');
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const customerPreview = page.getByRole('dialog', { name: 'Customer quotation preview', exact: true });
+  await expect(customerPreview).toContainText('Applies to lifts');
+  await expect(customerPreview).toContainText('Lift-B');
+  await expect(customerPreview).toContainText('IS 17900 PART 4 2025');
+  await customerPreview.getByRole('button', { name: 'Close preview', exact: true }).click();
   const quotationNumber = (await page.locator('.quotation-detail-record-header h2').textContent())?.trim();
   expect(quotationNumber).toBeTruthy();
   const quotationRowsResponse = await page.request.get(`${api}/quotations?page[limit]=100`, { headers: { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId } });
@@ -123,6 +203,12 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   const createdQuote = quotationRowsPayload.data.map((row: { data?: unknown }) => row.data || row)
     .find((row: { attributes: { quotation_number: string } }) => row.attributes.quotation_number === quotationNumber);
   expect(createdQuote.attributes.terms.elevator_units).toEqual([{ unit_code: 'Lift-A' }, { unit_code: 'Lift-B' }]);
+  expect(createdQuote.attributes.terms.materials).toEqual(expect.arrayContaining([
+    expect.objectContaining({ description: 'Lift-B controller package', unit_codes: ['Lift-B'] }),
+  ]));
+  expect(createdQuote.attributes.lines).toEqual(expect.arrayContaining([
+    expect.objectContaining({ description: 'Lift-B controller package', unit_codes: ['Lift-B'] }),
+  ]));
   expect(createdQuote.attributes.terms).not.toHaveProperty('payment_milestones');
   expect(createdQuote.attributes.terms).toHaveProperty('included_free_amc');
   await page.getByRole('tab', { name: 'Review & actions', exact: true }).click();
@@ -162,7 +248,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
 
 test('approved quotation converts to an installation project from the Manager workspace', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const api = e2eApiV1Base();
   const relationshipReader = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const providerId = providerIdFor(relationshipReader.user);
@@ -292,7 +378,7 @@ test('approved quotation converts to an installation project from the Manager wo
 
 test('Provider Administrator creates and converts an accepted paid AMC renewal quotation', async ({ page }, info) => {
   test.skip(!info.project.name.startsWith('operations'), 'Operations application only');
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const api = e2eApiV1Base();
   const manager = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   const providerId = providerIdFor(manager.user);
