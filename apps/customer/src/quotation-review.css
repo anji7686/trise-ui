@@ -28,6 +28,64 @@
 @media(max-width:600px){.quote-provider-card{grid-template-columns:minmax(0,1fr);gap:.75rem}.quote-provider-identity{align-items:flex-start}.quote-provider-contacts{grid-column:auto}.quote-secure{grid-column:auto;grid-row:auto;justify-self:start}.quote-section-nav{margin:0 -.25rem}.quote-section-nav button{padding-inline:.65rem;font-size:.72rem}}
 .quote-help button{padding:0;border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;text-align:left;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 
+/* Keep the quotation workspace aligned with the selected application theme. */
+:root[data-theme="dark"] body:has(.quotation-app-shell){background:linear-gradient(180deg,#142235 0,#0d1520 260px)}
+:root[data-theme="dark"] .quotation-app-shell{
+  --background:#0d1520;
+  --surface:#152131;
+  --text:#f1f5f9;
+  --secondary:#a8b6c8;
+  --border:#304158;
+  --primary:#a9c8f3;
+  --focus:#a9c8f3;
+  color:var(--text);
+}
+:root[data-theme="dark"] .quotation-app-shell .quotation-app-header{border-color:var(--border)}
+:root[data-theme="dark"] .quotation-app-shell .quotation-secure-pill,
+:root[data-theme="dark"] .quotation-app-shell .quote-secure{border-color:#46617f;background:#233b5c;color:#c7ddfb}
+:root[data-theme="dark"] .quotation-app-shell .quote-panel-heading>div>.quote-icon,
+:root[data-theme="dark"] .quotation-app-shell .quote-line h3 .quote-icon{background:#233b5c;color:#c7ddfb}
+:root[data-theme="dark"] .quotation-app-shell .quote-section-nav button span{background:#233b5c;color:#c7ddfb}
+:root[data-theme="dark"] .quotation-app-shell .quote-line{border-color:var(--border);border-left-color:#8bb9f1;background:#1d2d42}
+:root[data-theme="dark"] .quotation-app-shell .quote-line h3{color:var(--text)}
+:root[data-theme="dark"] .quotation-app-shell .quote-line-price strong,
+:root[data-theme="dark"] .quotation-app-shell .quote-price-breakdown .grand-total dd,
+:root[data-theme="dark"] .quotation-app-shell .quote-payment-list>div b{color:#c7ddfb}
+:root[data-theme="dark"] .quotation-app-shell .quote-payment-list>div{border-color:var(--border);background:#1d2d42}
+:root[data-theme="dark"] .quotation-app-shell .quote-payment-list>div strong{color:#a9c8f3}
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight{border-color:var(--border);background:#1d2d42;color:var(--text)}
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.amc,
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.warranty{border-color:#315b48;background:#1d3d31;color:#b9edcb}
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.amc small,
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.amc span,
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.warranty small{color:#94dcaf}
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.delivery,
+:root[data-theme="dark"] .quotation-app-shell .quote-exclusions{border-color:#6c5730;background:#453820;color:#f1d394}
+:root[data-theme="dark"] .quotation-app-shell .quote-highlight.delivery small,
+:root[data-theme="dark"] .quotation-app-shell .quote-exclusions h3 .quote-icon,
+:root[data-theme="dark"] .quotation-app-shell .quote-conditions summary .quote-icon{color:#edcc86}
+:root[data-theme="dark"] .quotation-app-shell .quote-history-row{background:linear-gradient(90deg,#1d2d42,transparent)}
+:root[data-theme="dark"] .quotation-app-shell .quote-error{border:1px solid #75414a;background:#4d2933;color:#ffb0b7}
+:root[data-theme="dark"] .quotation-app-shell .quote-success{border:1px solid #315b48;background:#1d3d31;color:#94dcaf}
+:root[data-theme="dark"] .quotation-app-shell .quote-provider-mark{border:1px solid var(--border);background:#233b5c;color:#c7ddfb}
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li{color:#a8b6c8}
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li:not(:last-child)::after{background:var(--border)}
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li>span{border-color:#52647a;background:#1d2d42;color:#c0ccdb}
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li.active>span,
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li.done>span{background:#a9c8f3;border-color:#a9c8f3;color:#102846}
+:root[data-theme="dark"] .quotation-app-shell .quotation-process li>div{background:var(--background)}
+:root[data-theme="dark"] .quotation-app-shell .quotation-app-header .customer-notification-trigger{border-color:var(--border);background:var(--surface);color:var(--text)}
+:root[data-theme="dark"] .quotation-app-shell .customer-notification-row{border-color:#304157;background:#1d2d43;color:var(--text)}
+:root[data-theme="dark"] .quotation-app-shell .customer-notification-row:hover,
+:root[data-theme="dark"] .quotation-app-shell .customer-notification-row:focus-visible{background:#233b5c}
+
+@media(max-width:360px){
+  .quotation-app-shell{padding-inline:10px}
+  .quotation-app-header{align-items:flex-start}
+  .quotation-app-header-right{flex-wrap:wrap;max-width:calc(100% - 5.3rem);row-gap:.35rem}
+  .quotation-app-header .customer-notification-anchor{margin-left:auto}
+}
+
 /* Mock-matched type, colors and visual hierarchy for the authenticated quote. */
 body:has(.quotation-app-shell){background:linear-gradient(180deg,#eaf1f9 0,#f3f6fa 260px)}
 .quotation-app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--background:#f3f6fa;--surface:#fff;--text:#1d2b3f;--secondary:#607189;--border:#d9e2ed;--primary:#153d70;--focus:#6ea6e5;color:var(--text)}
@@ -65,7 +123,6 @@ body:has(.quotation-app-shell){background:linear-gradient(180deg,#eaf1f9 0,#f3f6
   .quotation-app-header>.wordmark{flex:0 0 auto;min-width:0}
   .quotation-app-header .wordmark img{width:clamp(5.2rem,25vw,6.4rem);height:auto}
   .quotation-app-header-right{flex:1 1 auto;min-width:0;display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:.35rem;font-size:.66rem}
-  .quotation-app-header-right>span:first-child{white-space:nowrap;font-size:.62rem;line-height:1}
   .quotation-secure-pill{flex:0 0 auto;white-space:nowrap;gap:.35rem;padding:.4rem .48rem;font-size:.62rem;line-height:1}
   .quotation-secure-pill i{width:.42rem;height:.42rem;flex:0 0 .42rem}
   .quotation-app-header .customer-notification-trigger{width:2.35rem;height:2.35rem;flex:0 0 2.35rem}
@@ -80,14 +137,12 @@ body:has(.quotation-app-shell){background:linear-gradient(180deg,#eaf1f9 0,#f3f6
   .quote-all-link{padding:.35rem .1rem;font-size:.9rem}
 }
 @media(max-width:380px){
-  .quotation-app-header-right>span:first-child{display:none}
   .quotation-app-header .wordmark img{width:5.2rem}
   .quotation-secure-pill{font-size:.58rem;padding:.38rem .4rem}
 }
 @media(max-width:700px){
   .quotation-app-header .wordmark img{width:clamp(4.8rem,22vw,5.5rem)}
   .quotation-app-header-right{gap:.25rem}
-  .quotation-app-header-right>span:first-child{font-size:.58rem}
   .quotation-secure-pill{font-size:.58rem;padding:.35rem .4rem}
 }
 
@@ -127,7 +182,6 @@ body:has(.quotation-app-shell){background:linear-gradient(180deg,#eaf1f9 0,#f3f6
     border-radius:.7rem;
   }
   .quotation-app-shell .quotation-app-header>.wordmark img{width:clamp(4.8rem,22vw,5.5rem)}
-  .quotation-app-shell .quotation-app-header-right>span:first-child{display:none}
   .quotation-app-shell .quotation-secure-pill{
     color:#315e8e;
     background:#f7fbff;

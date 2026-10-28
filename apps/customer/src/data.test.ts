@@ -12,6 +12,21 @@ describe('customer booking contract', () => {
   });
 });
 
+describe('customer cursor pagination', () => {
+  it('defaults paged asset collections to 10 and forwards opaque cursors', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ data: [], page: { limit: 10, next: 'opaque-next', previous: null } }), { status: 200 }));
+
+    await customerData.assets('provider-page-default');
+    const firstPage = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(firstPage.searchParams.get('page[limit]')).toBe('10');
+
+    await customerData.assets('provider-page-next', { after: 'opaque cursor/value' });
+    const nextPage = new URL(String(fetchMock.mock.calls[1][0]));
+    expect(nextPage.searchParams.get('page[limit]')).toBe('10');
+    expect(nextPage.searchParams.get('page[after]')).toBe('opaque cursor/value');
+  });
+});
+
 describe('customer mutation contracts', () => {
   it('sends the expected profile revision and preserves a server conflict', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'conflict', message: 'stale resource' }), { status: 409 }));

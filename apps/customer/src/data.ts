@@ -3,6 +3,7 @@ import { apiClient } from '@trise/api-client';
 export type Link = { id: string; type: string };
 export type Resource<T> = { id: string; type: string; attributes: T; relationships: Record<string, Link | Link[] | null | undefined> };
 export type Collection<T> = { data: Resource<T>[]; page?: { next?: string | null; previous?: string | null } };
+export type CollectionPage = { limit?: number; after?: string };
 export type AssetAttributes = { name: string; status: string; provider_id: string; definition_version: number; revision: number; created_at: string; identifiers?: Array<{ value?: string; kind?: string }> };
 export type ProviderAttributes = { display_name: string; representation?: string };
 export type ServiceTypeAttributes = { name?: string; code?: string; status?: string; revision?: number };
@@ -28,6 +29,11 @@ export function buildBookingPayload(input: { summary: string; customerRelationsh
 }
 
 const query = (path: string, providerId?: string) => apiClient.request(path, {}, { providerId });
+const pagedPath = (path: string, page: CollectionPage = {}, sort = '-created_at,id') => {
+  const params = new URLSearchParams({ 'page[limit]': String(page.limit ?? 10), sort });
+  if (page.after) params.set('page[after]', page.after);
+  return `${path}?${params.toString()}`;
+};
 function normalizeCollection<T>(payload: { data: Array<Resource<T> | { data: Resource<T> }>; page?: Collection<T>['page'] }): Collection<T> {
   return { ...payload, data: payload.data.map((item) => 'data' in item ? item.data : item) };
 }
@@ -36,13 +42,13 @@ export const customerData = {
   updateMe: (body: Record<string, unknown>) => apiClient.request<Resource<UserAttributes>>('/me', { method: 'PATCH', body: JSON.stringify(body) }),
   providers: () => query('/providers') as Promise<Collection<ProviderAttributes>>,
   customers: (providerId: string) => query('/customers?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<{ display_name: string }>>,
-  assets: (providerId: string) => query('/assets?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<AssetAttributes>>,
+  assets: (providerId: string, page?: CollectionPage) => query(pagedPath('/assets', page), providerId) as Promise<Collection<AssetAttributes>>,
   asset: (providerId: string, id: string) => query(`/assets/${encodeURIComponent(id)}`, providerId) as Promise<Resource<AssetAttributes>>,
   serviceTypes: (providerId: string) => query('/service-types?page[limit]=100&sort=-created_at,id', providerId) as Promise<Collection<ServiceTypeAttributes>>,
   location: (providerId: string, id: string) => query(`/locations/${encodeURIComponent(id)}`, providerId) as Promise<Resource<LocationAttributes>>,
-  requests: (providerId: string) => query('/service-requests?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<RequestAttributes>>,
+  requests: (providerId: string, page?: CollectionPage) => query(pagedPath('/service-requests', page), providerId) as Promise<Collection<RequestAttributes>>,
   request: (providerId: string, id: string) => query(`/service-requests/${encodeURIComponent(id)}`, providerId) as Promise<Resource<ServiceRequestAttributes>>,
-  bookings: (providerId: string) => query('/service-bookings?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<BookingAttributes>>,
+  bookings: (providerId: string, page?: CollectionPage) => query(pagedPath('/service-bookings', page), providerId) as Promise<Collection<BookingAttributes>>,
   jobs: (providerId: string) => query('/service-jobs?page[limit]=25&sort=-created_at,id', providerId) as Promise<Collection<ServiceJobAttributes>>,
   installationProjects: async (providerId: string) => normalizeCollection<InstallationProjectAttributes>(await query('/service-cases?page[limit]=25&sort=-created_at,id', providerId) as { data: Array<Resource<InstallationProjectAttributes> | { data: Resource<InstallationProjectAttributes> }>; page?: Collection<InstallationProjectAttributes>['page'] }),
   acceptHandover: (providerId: string, caseId: string, body: Record<string, unknown>, key: string) => apiClient.request<{ data: Resource<{ event_kind: string; asset_id?: string | null; service_case_revision?: number; occurred_at?: string | null }> }>(`/service-cases/${encodeURIComponent(caseId)}/handover/accept`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(body) }, { providerId }).then((payload) => payload.data),
