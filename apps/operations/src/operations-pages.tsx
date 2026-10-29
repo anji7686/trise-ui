@@ -25,7 +25,7 @@ import './operations-pages.css';
 
 type T = (key: string) => string;
 type Section = 'team-access' | 'work-intake' | 'leads' | 'requests' | 'bookings' | 'quotations' | 'billing' | 'projects' | 'amc' | 'reports' | 'configuration' | 'workforce' | 'attendance' | 'my-leave' | 'audit' | 'compliance' | 'sites' | 'assets' | 'platform' | 'admin-invitations';
-export type OperationsRoute = { section: Section; id?: string; kind?: string; templateId?: string; creationType?: string };
+export type OperationsRoute = { section: Section; id?: string; kind?: string; templateId?: string; creationType?: string; relationshipId?: string; returnTo?: string };
 const fail = (error: unknown) => (error as { message?: string })?.message || 'The request could not be completed.';
 const go = (path: string) => { window.location.hash = path; };
 function Frame({ title, description, children, action }: { title: string; description: string; children: ReactNode; action?: ReactNode }) { return <section className="content feature-page"><PageHeader title={title} description={description} action={action} />{children}</section>; }
@@ -468,7 +468,7 @@ export function OperationsPages({ section, providerId, route, t }: { section: Se
   if (section === 'requests') return <ServiceRequestsPaginated providerId={providerId} route={route} canCreate={capabilities.includes('service_request_create')} canEdit={capabilities.includes('service_request_edit')} />;
   if (section === 'bookings') return <BookingsPaginated providerId={providerId} route={route} canCreate={capabilities.includes('service_booking_create')} />;
   if (section === 'billing') return <BillingWorkspace providerId={providerId} />;
-  if (section === 'quotations') return <QuotationsWorkspace providerId={providerId} initialQuotationId={route.id === 'new' ? undefined : route.id} initialCreate={route.id === 'new'} initialTemplateId={route.templateId} initialPurpose={route.creationType} />;
+  if (section === 'quotations') return <QuotationsWorkspace providerId={providerId} initialQuotationId={route.id === 'new' ? undefined : route.id} initialCreate={route.id === 'new'} initialTemplateId={route.templateId} initialPurpose={route.creationType} initialRelationshipId={route.relationshipId} returnTo={route.returnTo} />;
   if (section === 'workforce') return <WorkforceOperations providerId={providerId} canManageWorkforce={capabilities.includes('customer_admin')} canManageAccess={capabilities.includes('team_access')} canReviewLeave={capabilities.includes('customer_admin')} />;
   if (section === 'attendance') return <WorkforceSelfService providerId={providerId} initialTab="attendance" />;
   if (section === 'my-leave') return <WorkforceSelfService providerId={providerId} initialTab="leave" />;

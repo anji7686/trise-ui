@@ -625,6 +625,9 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
     }
   }
   const editAttributes = editing ? attrs(editing) : {};
+  const customerViewRelationshipId = customerToView ? relatedId(customerToView.relationships.customer_relationship) : undefined;
+  const customerViewRelationship = customerViewRelationshipId ? relationships.data.find((item) => item.id === customerViewRelationshipId) : undefined;
+  const canPrepareAmcOffer = canManage && Boolean(customerViewRelationshipId) && String(attrs(customerViewRelationship || { id: "", attributes: {} }).status || "").toUpperCase() === "ACTIVE";
   const viewCustomer = (row: Resource<GenericAttributes>) => {
     setCustomerToView(row);
     const relationshipId = relatedId(row.relationships.customer_relationship);
@@ -980,7 +983,9 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
               <div><span>Linked assets</span><strong>{linkedPreview(attrs(customerToView).linked_assets, "asset")}</strong></div>
               <div className="customer-view-address"><span>Billing address</span><strong>{(() => { const address = (attrs(customerToView).billing_address || {}) as Record<string, unknown>; return [address.address_line, address.address_line_2, address.locality, address.city, address.district, address.state, address.pin_code].filter(Boolean).map(String).join(", ") || "Not recorded"; })()}</strong></div>
             </div>
+            <p className="notice">For a paid AMC, continue with this customer’s linked elevator assets and a published plan. Existing equipment and coverage history stay attached to their current records.</p>
             <div className="provider-form-actions customer-view-actions">
+              {canPrepareAmcOffer && <Button onClick={() => { const relationshipId = customerViewRelationshipId; if (!relationshipId) return; setCustomerToView(null); window.location.hash = `quotations/new/MAINTENANCE_CONTRACT?relationship_id=${encodeURIComponent(relationshipId)}&return_to=customers`; }}>Prepare AMC offer</Button>}
               {canManage && <Button variant="secondary" onClick={() => { setCustomerToView(null); openEditor(customerToView, "customer"); }}>Edit customer</Button>}
               <Button type="button" variant="secondary" onClick={() => setCustomerToView(null)}>Close</Button>
             </div>
