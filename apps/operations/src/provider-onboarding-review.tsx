@@ -4,7 +4,7 @@ import { OperationsStatus as Status } from './operations-status';
 import { OnboardingEmptyState, OnboardingReviewSection } from './provider-onboarding-ui';
 import { activationBlocker, lifecycleActions } from './provider-lifecycle';
 import { collectPages, formatIndiaDateTime } from './subscription-support';
-import { operationsData, type PlatformPlan, type PlatformProviderAttributes, type PlatformSubscription, type PlatformSubscriptionRequest, type ProviderAdminInvitation, type ProviderBusinessProfile, type ProviderDocument, type ProviderOfficeLocationAttributes, type ProviderOnboardingContactAttributes, type ProviderVerificationReview, type Resource } from './data';
+import { formatBusinessProviderReferenceCode, operationsData, type PlatformPlan, type PlatformProviderAttributes, type PlatformSubscription, type PlatformSubscriptionRequest, type ProviderAdminInvitation, type ProviderBusinessProfile, type ProviderDocument, type ProviderOfficeLocationAttributes, type ProviderOnboardingContactAttributes, type ProviderVerificationReview, type Resource } from './data';
 
 const human = (value?: string | null) => value ? value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : 'Not available';
 const date = (value?: string | null) => value ? formatIndiaDateTime(value) : 'Not recorded';
@@ -21,9 +21,14 @@ type ReviewReadiness = {
   errors: Record<string, string>;
 };
 
-export function ProviderOnboardingReviewDashboard({ provider, business, documents, reviews, capabilities }: { provider: Resource<PlatformProviderAttributes>; business: ProviderBusinessProfile | null; documents: ProviderDocument[]; reviews: ProviderVerificationReview[]; capabilities: string[] }) {
+export function ProviderOnboardingReviewDashboard({ provider, business, documents, reviews, capabilities, onIssueCodes, onRegenerateSuggestions }: { provider: Resource<PlatformProviderAttributes>; business: ProviderBusinessProfile | null; documents: ProviderDocument[]; reviews: ProviderVerificationReview[]; capabilities: string[]; onIssueCodes: () => Promise<void>; onRegenerateSuggestions: (reason: string) => Promise<void> }) {
   const [data, setData] = useState<ReviewReadiness>({ contacts: null, locations: null, subscription: null, requests: null, plans: [], invitations: null, loading: true, errors: {} });
   const [reloadToken, setReloadToken] = useState(0);
+  const [issuingCodes, setIssuingCodes] = useState(false);
+  const [issueCodeError, setIssueCodeError] = useState('');
+  const [regeneratingCodes, setRegeneratingCodes] = useState(false);
+  const [regenerationReason, setRegenerationReason] = useState('');
+  const [regenerationError, setRegenerationError] = useState('');
   const canReadContacts = capabilities.some(capability => ['PLATFORM_PROVIDER_REGISTER', 'PLATFORM_PROVIDER_PROFILE_WRITE', 'PLATFORM_PROVIDER_BUSINESS_WRITE', 'PLATFORM_PROVIDER_ONBOARD'].includes(capability));
   const canReadSubscriptions = capabilities.includes('PLATFORM_SUBSCRIPTION_READ');
   const canReadPlans = capabilities.includes('PLATFORM_PLAN_READ');
@@ -66,6 +71,9 @@ export function ProviderOnboardingReviewDashboard({ provider, business, document
 
   const attributes = provider.attributes;
   const verification = business?.verification_status || attributes.business_verification_status;
+  const canIssueCodes = capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE') && attributes.business_verification_status === 'VERIFIED' && (!attributes.business_reference_code || !attributes.service_provider_reference_code);
+  const hasSuggestions = attributes.business_reference_code_status === 'SUGGESTED' || attributes.service_provider_reference_code_status === 'SUGGESTED';
+  const canRegenerateSuggestions = capabilities.includes('PLATFORM_PROVIDER_LIFECYCLE') && attributes.business_verification_status !== 'VERIFIED' && hasSuggestions;
   const blocker = activationBlocker(attributes.business_verification_status);
   const isActive = attributes.status === 'ACTIVE';
   const contacts = data.contacts?.filter(row => row.attributes.status === 'ACTIVE') || [];
@@ -98,7 +106,11 @@ export function ProviderOnboardingReviewDashboard({ provider, business, document
 
     <div className="onboarding-review-grid">
       <OnboardingReviewSection id="onboarding-business-review" title="Business and identity review" status={human(verification || 'NOT_SUBMITTED')} summary={`${attributes.display_name} · ${business?.profile.legal_name || 'Legal name not supplied'}`} href={`platform/providers/${provider.id}/business-profile/edit`} canOpen={capabilities.some(capability => ['PLATFORM_PROVIDER_PROFILE_WRITE', 'PLATFORM_PROVIDER_BUSINESS_WRITE'].includes(capability))}>
-        <dl className="provider-information-grid"><dt>Provider name</dt><dd>{attributes.display_name}</dd><dt>Provider code</dt><dd>{attributes.provider_code || 'Not supplied'}</dd><dt>Provider lifecycle</dt><dd>{human(attributes.status)}</dd><dt>Business verification</dt><dd>{human(verification)}</dd><dt>Legal name</dt><dd>{business?.profile.legal_name || 'Not supplied'}</dd><dt>Registration number</dt><dd>{business?.profile.registration_number || 'Not supplied'}</dd><dt>Tax identifiers</dt><dd>{[business?.profile.gstin && `GSTIN ${business.profile.gstin}`, business?.profile.pan_number && `PAN ${business.profile.pan_number}`, business?.profile.tax_identifier && `Tax ID ${business.profile.tax_identifier}`].filter(Boolean).join(' · ') || 'Not supplied'}</dd><dt>Registered address</dt><dd>{Object.values(business?.profile.address || {}).filter(Boolean).join(', ') || 'Not supplied'}</dd><dt>Profile revision</dt><dd>{business?.revision ?? 'Not available'}</dd></dl>
+        {canIssueCodes && <div className="platform-form-actions"><p>This verified Business profile is missing reference codes. Generate them now; issuance is audited and does not change the provider lifecycle.</p><Button variant="secondary" disabled={issuingCodes} onClick={() => { setIssuingCodes(true); setIssueCodeError(''); void onIssueCodes().catch(error => setIssueCodeError(error instanceof Error ? error.message : 'Reference codes could not be generated.')).finally(() => setIssuingCodes(false)); }}>{issuingCodes ? 'Generating…' : 'Generate missing B-CODE and SP-CODE'}</Button></div>}
+        {issueCodeError && <p className="platform-error" role="alert">{issueCodeError}</p>}
+        <dl className="provider-information-grid"><dt>B-CODE</dt><dd><strong>{formatBusinessProviderReferenceCode(attributes.business_reference_code) || 'Not generated'}</strong> · {human(attributes.business_reference_code_status)}</dd><dt>SP-CODE</dt><dd><strong>{formatBusinessProviderReferenceCode(attributes.service_provider_reference_code) || 'Not generated'}</strong> · {human(attributes.service_provider_reference_code_status)}</dd><dt>Provider name</dt><dd>{attributes.display_name}</dd><dt>Existing provider code</dt><dd>{attributes.provider_code || 'Not supplied'}</dd><dt>Provider lifecycle</dt><dd>{human(attributes.status)}</dd><dt>Business verification</dt><dd>{human(verification)}</dd><dt>Legal name</dt><dd>{business?.profile.legal_name || 'Not supplied'}</dd><dt>Registration number</dt><dd>{business?.profile.registration_number || 'Not supplied'}</dd><dt>Tax identifiers</dt><dd>{[business?.profile.gstin && `GSTIN ${business.profile.gstin}`, business?.profile.pan_number && `PAN ${business.profile.pan_number}`, business?.profile.tax_identifier && `Tax ID ${business.profile.tax_identifier}`].filter(Boolean).join(' · ') || 'Not supplied'}</dd><dt>Registered address</dt><dd>{Object.values(business?.profile.address || {}).filter(Boolean).join(', ') || 'Not supplied'}</dd><dt>Profile revision</dt><dd>{business?.revision ?? 'Not available'}</dd></dl>
+        {canRegenerateSuggestions && <div className="platform-form-actions"><label>Reason for regenerating the suggested codes<input value={regenerationReason} onChange={event => setRegenerationReason(event.target.value)} placeholder="For example, requested by the customer" maxLength={500} /></label><p className="platform-muted">Only unissued suggestions change. Existing issued codes remain fixed.</p><Button variant="secondary" disabled={regeneratingCodes || regenerationReason.trim().length < 3} onClick={() => { setRegeneratingCodes(true); setRegenerationError(''); void onRegenerateSuggestions(regenerationReason.trim()).then(() => setRegenerationReason('')).catch(error => setRegenerationError(error instanceof Error ? error.message : 'Code suggestions could not be regenerated.')).finally(() => setRegeneratingCodes(false)); }}>{regeneratingCodes ? 'Regenerating…' : 'Regenerate available suggestions'}</Button></div>}
+        {regenerationError && <p className="platform-error" role="alert">{regenerationError}</p>}
         <p className="onboarding-review-note">Business classification is not supplied by the current business-profile API.</p>
       </OnboardingReviewSection>
 
@@ -126,7 +138,7 @@ export function ProviderOnboardingReviewDashboard({ provider, business, document
       </OnboardingReviewSection>
 
       <OnboardingReviewSection id="onboarding-review-history" title="Review status history" status={pendingReviews ? `${pendingReviews} pending` : reviews.length ? 'Reviewed' : 'No review history'} summary={`${reviews.length} verification review records`} href={`platform/providers/${provider.id}?tab=reviews`} canOpen={capabilities.includes('PLATFORM_PROVIDER_READ')}>
-        {reviews.length ? <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>Review</th><th>Status</th><th>Submitted</th><th>Reviewed</th></tr></thead><tbody>{reviews.map(row => <tr key={row.id}><td>{human(row.attributes.review_kind)}</td><td><Status>{human(row.attributes.status)}</Status></td><td>{date(row.attributes.submitted_at)}</td><td>{date(row.attributes.reviewed_at)}</td></tr>)}</tbody></table></div> : <p>No verification reviews were returned.</p>}
+        {reviews.length ? <div className="platform-provider-table-wrap"><table className="platform-provider-table"><thead><tr><th>Review</th><th>Status</th><th>B-CODE</th><th>SP-CODE</th><th>Submitted</th><th>Reviewed</th></tr></thead><tbody>{reviews.map(row => <tr key={row.id}><td>{human(row.attributes.review_kind)}</td><td><Status>{human(row.attributes.status)}</Status></td><td>{formatBusinessProviderReferenceCode(row.attributes.business_reference_code) || 'Not issued'}</td><td>{formatBusinessProviderReferenceCode(row.attributes.service_provider_reference_code) || 'Not issued'}</td><td>{date(row.attributes.submitted_at)}</td><td>{date(row.attributes.reviewed_at)}</td></tr>)}</tbody></table></div> : <p>No verification reviews were returned.</p>}
         <Button variant="quiet" onClick={() => open(`platform/providers/${provider.id}?tab=reviews`)}>Open review actions</Button>
       </OnboardingReviewSection>
     </div>

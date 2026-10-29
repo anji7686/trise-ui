@@ -2689,8 +2689,55 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Decide Provider Verification Review */
+        /**
+         * Decide Provider Verification Review
+         * @description A BUSINESS_PROFILE verification issues B-CODE and SP-CODE by default. Set issue_reference_codes false to defer issuance to the Platform Admin generation action.
+         */
         post: operations["DecideProviderVerificationReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/reference-codes/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Missing Business and Service Provider Reference Codes
+         * @description Requires a verified Provider Business Profile with a complete registered address and canonical State. Issues existing draft suggestions when available; otherwise generates missing B-CODE and SP-CODE values. Never overwrites an issued code.
+         */
+        post: operations["IssuePlatformProviderReferenceCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/providers/{providerId}/reference-codes/suggestions/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regenerate Suggested Business and Service Provider Codes
+         * @description Requires a complete registered address and canonical State on a Business profile that is not yet verified. Suggestions are unique, searchable and replaceable until profile approval issues them as immutable codes.
+         */
+        post: operations["RegeneratePlatformProviderReferenceCodeSuggestions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11929,6 +11976,14 @@ export interface components {
             display_name: string;
             business_id?: components["schemas"]["Id"];
             business_name?: string;
+            /** @description Unique B-CODE suggestion while the profile is in draft/review; immutable after issuance on approval. */
+            business_reference_code?: string | null;
+            /** @enum {string} */
+            business_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
+            /** @description Unique SP-CODE suggestion while the profile is in draft/review; immutable after issuance on approval. */
+            service_provider_reference_code?: string | null;
+            /** @enum {string} */
+            service_provider_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
             /** @enum {string} */
             representation: "organization" | "person";
             provider_code?: string | null;
@@ -12150,6 +12205,10 @@ export interface components {
         };
         PlatformBusinessAttributes: {
             name: string;
+            /** @description Unique B-CODE suggestion while the linked profile is in draft/review; immutable after issuance on approval. */
+            reference_code?: string | null;
+            /** @enum {string} */
+            reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
             provider_count: number;
             /**
              * @description Effective operational status. A restricted Business blocks provider activity across all accounts.
@@ -12349,6 +12408,14 @@ export interface components {
         ProviderBusinessProfileResponse: {
             data: {
                 provider_id: components["schemas"]["Id"];
+                /** @description B-CODE suggestion while unapproved; immutable after issuance. */
+                business_reference_code?: string | null;
+                /** @enum {string} */
+                business_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
+                /** @description SP-CODE suggestion while unapproved; immutable after issuance. */
+                service_provider_reference_code?: string | null;
+                /** @enum {string} */
+                service_provider_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
                 operation_code?: string | null;
                 operation_profile_policy?: null | {
                     fields?: {
@@ -12433,6 +12500,12 @@ export interface components {
             review_kind: "BUSINESS_PROFILE" | "DOCUMENT_VERSION";
             /** @enum {string} */
             status: "PENDING_REVIEW" | "CORRECTIONS_REQUESTED" | "VERIFIED" | "REJECTED";
+            business_reference_code?: string | null;
+            /** @enum {string} */
+            business_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
+            service_provider_reference_code?: string | null;
+            /** @enum {string} */
+            service_provider_reference_code_status?: "UNISSUED" | "SUGGESTED" | "ISSUED";
             reason?: string | null;
             business_profile_revision?: number | null;
             /** Format: uuid */
@@ -12458,6 +12531,24 @@ export interface components {
             decision: "VERIFY" | "REQUEST_CORRECTIONS" | "REJECT";
             reason?: string | null;
             expected_revision: components["schemas"]["Revision"];
+            /**
+             * @description For a verified BUSINESS_PROFILE review
+             * @default true
+             */
+            issue_reference_codes: boolean;
+        };
+        IssueProviderReferenceCodes: {
+            expected_profile_revision: components["schemas"]["Revision"];
+        };
+        RegenerateProviderReferenceCodeSuggestions: {
+            expected_profile_revision: components["schemas"]["Revision"];
+            reason: string;
+        };
+        ProviderReferenceCodesResponse: {
+            data: {
+                business_reference_code: string;
+                service_provider_reference_code: string;
+            };
         };
         ProviderDocument: {
             id?: components["schemas"]["Id"];
@@ -20640,6 +20731,7 @@ export interface operations {
                 /** @description Mutually exclusive with page[after]. */
                 "page[before]"?: components["parameters"]["PageBefore"];
                 "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Search provider name, SP-CODE, or linked Business B-CODE. Reference-code searches accept the displayed hyphenated form or the same code without separators; matching uses a persisted normalized database search key. */
                 q?: string;
                 "filter[status]"?: ("PENDING" | "PENDING_ACTIVATION" | "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "CLOSED")[];
                 /** @description Filter provider accounts by their owning Business. This does not grant access to sibling provider records. */
@@ -21135,6 +21227,7 @@ export interface operations {
                 /** @description Mutually exclusive with page[before]; opaque cursor binds provider/resource/sort. */
                 "page[after]"?: components["parameters"]["PageAfter"];
                 "page[limit]"?: components["parameters"]["PageLimit"];
+                /** @description Search Business name or B-CODE reference. Reference-code searches accept the displayed hyphenated form or the same code without separators; matching uses a persisted normalized database search key. */
                 q?: string;
             };
             header?: never;
@@ -22505,6 +22598,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderVerificationReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    IssuePlatformProviderReferenceCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueProviderReferenceCodes"];
+            };
+        };
+        responses: {
+            /** @description Generated or existing reference codes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderReferenceCodesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    RegeneratePlatformProviderReferenceCodeSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegenerateProviderReferenceCodeSuggestions"];
+            };
+        };
+        responses: {
+            /** @description Newly reserved suggestions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderReferenceCodesResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

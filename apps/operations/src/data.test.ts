@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { operationsData } from "./data";
+import { formatBusinessProviderReferenceCode, operationsData } from "./data";
 
 afterEach(() => vi.restoreAllMocks());
+
+describe("Business and Service Provider reference-code display", () => {
+  it("inserts the display separator for compact stored codes and accepts existing formatted values", () => {
+    expect(formatBusinessProviderReferenceCode("KABDSZ0")).toBe("KAB-DSZ0");
+    expect(formatBusinessProviderReferenceCode("KAB-DSZ0")).toBe("KAB-DSZ0");
+    expect(formatBusinessProviderReferenceCode(null)).toBeNull();
+  });
+});
 
 describe("operations execution contracts", () => {
   it("loads and replies to the provider's quotation conversation with revision and retry evidence", async () => {

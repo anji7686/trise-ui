@@ -37,6 +37,7 @@ type Props = {
   initialQuotationId?: string;
   initialCreate?: boolean;
   initialTemplateId?: string;
+  initialPurpose?: string;
 };
 
 type QuotationMaterialLine = {
@@ -2441,13 +2442,20 @@ function QuotationFormPage({
   const [leadRequirement, setLeadRequirement] = useState<Resource<RequirementRevisionAttributes> | null>(null);
   const [leadRequirementLoading, setLeadRequirementLoading] = useState(false);
   const [leadRequirementError, setLeadRequirementError] = useState("");
+  const [associatedAssets, setAssociatedAssets] = useState<Resource<GenericAttributes>[]>([]);
+  const [associatedAssetsLoading, setAssociatedAssetsLoading] = useState(false);
+  const [associatedAssetsError, setAssociatedAssetsError] = useState("");
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const usesLiftAssetScope = isCreate && ["SERVICE", "CONTRACT_RENEWAL"].includes(purpose);
+  const assetUnitCode = (asset: Resource<GenericAttributes>) => String(asset.attributes.equipment_code || asset.attributes.asset_code || asset.attributes.code || asset.attributes.name || `Lift ${asset.id.slice(0, 8)}`);
+  const createTypeLabel: Record<string, string> = { INSTALLATION: "New installation", MODIFICATION: "Modification", TAKEOVER: "Takeover", SERVICE: "Service / repair", CONTRACT_RENEWAL: "AMC / contract renewal", MAINTENANCE_CONTRACT: "AMC quotation" };
   const title = isCreate
-    ? "New quotation"
+    ? `${createTypeLabel[purpose] || "New"} quotation`
     : isRevision
       ? "New quotation revision"
       : "Update quotation draft";
   const description = isCreate
-    ? "Prepare a provider-owned commercial draft from the latest Lead and survey scope."
+    ? `Prepare a ${createTypeLabel[purpose] || "new"} quotation with the right customer and scope details.`
     : isRevision
       ? "Create a new editable revision while preserving the previously issued version."
       : "Update the draft revision before it is issued or reviewed.";
@@ -2515,6 +2523,40 @@ function QuotationFormPage({
     return () => { active = false; };
   }, [isCreate, leadId, providerId]);
 
+  useEffect(() => {
+    if (!usesLiftAssetScope || !relationshipId) {
+      setAssociatedAssets([]);
+      setSelectedAssetIds([]);
+      setAssociatedAssetsError("");
+      setAssociatedAssetsLoading(false);
+      return;
+    }
+    let active = true;
+    setAssociatedAssets([]);
+    setSelectedAssetIds([]);
+    setAssociatedAssetsLoading(true);
+    setAssociatedAssetsError("");
+    void operationsData.assets(providerId, { customerRelationshipId: relationshipId, limit: 100 })
+      .then((result) => {
+        if (!active) return;
+        const assets = result.data;
+        setAssociatedAssets(assets);
+        setSelectedAssetIds(assets.map((asset) => asset.id));
+        if (assets.length) setLiftUnitCodes(assets.map(assetUnitCode).join(", "));
+      })
+      .catch((cause) => { if (active) setAssociatedAssetsError((cause as Error).message || "Customer lifts could not be loaded."); })
+      .finally(() => { if (active) setAssociatedAssetsLoading(false); });
+    return () => { active = false; };
+  }, [usesLiftAssetScope, relationshipId, providerId]);
+
+  const toggleAssociatedAsset = (asset: Resource<GenericAttributes>, checked: boolean) => {
+    const next = new Set(selectedAssetIds);
+    if (checked) next.add(asset.id); else next.delete(asset.id);
+    setSelectedAssetIds(Array.from(next));
+    const codes = associatedAssets.filter((item) => next.has(item.id)).map(assetUnitCode);
+    setLiftUnitCodes(codes.join(", "));
+  };
+
   return (
     <section className="quotation-form-page" aria-label={title}>
       <PageHeader
@@ -2523,7 +2565,7 @@ function QuotationFormPage({
         description={description}
         action={
           <Button type="button" variant="secondary" onClick={onCancel}>
-            ← Back to quotations
+          ← {isCreate && initialPurpose ? "Back to quotation types" : "Back to quotations"}
           </Button>
         }
       />
@@ -2608,23 +2650,19 @@ function QuotationFormPage({
                   <input type="hidden" name="lead_id" value={leadId} />
                 <QuotationRequirementSnapshot requirement={leadRequirement} loading={leadRequirementLoading} error={leadRequirementError} />
                 </div>
-                <label>
-                  Quotation type
-                  <SortedSelect name="purpose" value={purpose} onChange={(event) => setPurpose(event.target.value)}>
-                    <option value="INSTALLATION">New installation</option>
-                    <option value="MODIFICATION">Modification</option>
-                    <option value="TAKEOVER">Takeover</option>
-                    <option value="SERVICE">Service / repair</option>
-                    <option value="CONTRACT_RENEWAL">AMC / contract renewal</option>
-                  </SortedSelect>
-                  <small>Stage payment percentages are available only for New Installation, Modification and Takeover. AMC and service quotations use their commercial total or contract schedule.</small>
-                </label>
+                <div className="quotation-type-locked" aria-label={`Quotation type: ${createTypeLabel[purpose] || "New installation"}`}>
+                  <span>Quotation type</span>
+                  <strong>{createTypeLabel[purpose] || "New installation"}</strong>
+                  <small>The type was selected on the previous step. Stage payments apply to installation, modification and takeover quotations.</small>
+                  <input type="hidden" name="purpose" value={purpose} />
+                </div>
               </>
             )}
             <label>
               Description
               <input name="description" required defaultValue={initialDescription} />
             </label>
+            {usesLiftAssetScope && <fieldset className="quotation-associated-lifts"><legend>Customer’s associated lifts</legend><p>Select the lifts included in this service or AMC quotation. Selecting a customer loads its linked elevator assets automatically.</p>{associatedAssetsLoading ? <p role="status">Loading customer lifts…</p> : associatedAssetsError ? <p className="state-error" role="alert">{associatedAssetsError}</p> : associatedAssets.length ? <div>{associatedAssets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAssociatedAsset(asset, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetUnitCode(asset))}</strong><small>{assetUnitCode(asset)}{asset.attributes.location_name ? ` · ${String(asset.attributes.location_name)}` : ""}</small></span></label>)}</div> : relationshipId ? <p>No elevator assets are linked to this customer. You can still enter lift unit codes manually below.</p> : <p>Select a customer relationship to load its associated lifts.</p>}<input type="hidden" name="associated_assets_json" value={JSON.stringify(associatedAssets.filter((asset) => selectedAssetIds.includes(asset.id)).map((asset) => ({ id: asset.id, unit_code: assetUnitCode(asset) })))} /></fieldset>}
             {(isCreate || mode === "edit") && (
               <div className="quotation-unit-selection">
                 <label>
@@ -2745,11 +2783,244 @@ const sortQuotationActivities = (rows: Resource<GenericAttributes>[]) =>
       ).getTime(),
   );
 
+function amcRulePreview(plan: Resource<GenericAttributes> | undefined, context: { floors: string; capacity: string; stops: string; liftType: string; travelHeight: string; audience: string; usageClass?: string }) {
+  if (!plan) return { rule: "Choose an AMC catalog", amount: null as number | null, error: "No catalog selected for this lift." };
+  const version = plan.attributes.current_version && typeof plan.attributes.current_version === "object" ? plan.attributes.current_version as Record<string, unknown> : {};
+  const definition = version.plan && typeof version.plan === "object" ? version.plan as Record<string, unknown> : {};
+  const pricing = definition.pricing && typeof definition.pricing === "object" ? definition.pricing as Record<string, unknown> : {};
+  const cards = Array.isArray(pricing.rate_cards) ? pricing.rate_cards.map((item) => item && typeof item === "object" ? item as Record<string, unknown> : {}) : [];
+  const facts: Record<string, unknown> = { audience: context.audience, passenger_capacity: context.capacity, lift_type: context.liftType, number_of_stops: context.stops, travel_height_m: context.travelHeight, usage_class: context.usageClass };
+  const matches = (rule: Record<string, unknown>) => Object.entries(rule).every(([key, expected]) => {
+    const actual = facts[key];
+    if (Array.isArray(expected)) return expected.map(String).includes(String(actual));
+    if (expected && typeof expected === "object") {
+      const range = expected as Record<string, unknown>;
+      if (actual === undefined || actual === null || String(actual).trim() === "") return false;
+      const number = Number(actual);
+      return Number.isFinite(number) && (range.min == null || number >= Number(range.min)) && (range.max == null || number <= Number(range.max));
+    }
+    return String(actual || "").toUpperCase() === String(expected || "").toUpperCase();
+  });
+  if (cards.length) {
+    const matched = cards.find((card) => {
+      const dimensions = card.match && typeof card.match === "object" ? card.match as Record<string, unknown> : {};
+      return matches(dimensions);
+    });
+    if (!matched) return { rule: "No matching price rule", amount: null, error: "This lift does not match a pricing rule in the selected catalog." };
+    const base = matched.base && typeof matched.base === "object" ? matched.base as Record<string, unknown> : {};
+    const floors = Number(context.floors);
+    const includedFloors = Number(base.included_floors_above_ground || 4);
+    if (!Number.isFinite(floors) || floors < includedFloors) return { rule: "Matched rule · floor details need review", amount: null, error: `This rule requires at least G+${includedFloors} floors.` };
+    let amount = Number(base.amount || 0);
+    let coveredThrough = includedFloors;
+    const bands = (Array.isArray(matched.floor_rates) ? matched.floor_rates : []).map((item) => item as Record<string, unknown>).sort((left, right) => Number(left.from || 0) - Number(right.from || 0));
+    for (const band of bands) {
+      const from = Number(band.from || 0);
+      const to = band.to == null || band.to === "" ? floors : Number(band.to);
+      const first = Math.max(from, coveredThrough + 1);
+      const last = Math.min(to, floors);
+      if (last < first) continue;
+      amount += (last - first + 1) * Number(band.amount_per_floor || 0);
+      coveredThrough = last;
+    }
+    if (coveredThrough < floors) return { rule: "Matched rule · floor band incomplete", amount: null, error: "The selected catalog does not price every floor for this lift." };
+    const labels: Record<string, string> = { audience: "Audience", passenger_capacity: "Capacity", lift_type: "Lift type", number_of_stops: "Stops", travel_height_m: "Travel height", usage_class: "Usage" };
+    const typeLabels: Record<string, string> = { PASSENGER_TRACTION: "Passenger traction lift", PASSENGER_MRL: "Machine-room-less passenger lift", HOME_VILLA_LIFT: "Home and villa lift", HYDRAULIC_PASSENGER: "Hydraulic passenger lift", SERVICE_LIFT: "Service lift", HOSPITAL_BED_LIFT: "Hospital and bed lift", STRETCHER_LIFT: "Stretcher lift", GOODS_PASSENGER_LIFT: "Goods and passenger lift", INDUSTRIAL_FREIGHT_LIFT: "Industrial freight lift", CAR_LIFT: "Vehicle and car lift", DUMBWAITER: "Dumbwaiter", PLATFORM_LIFT: "Vertical platform lift", STAIR_CHAIR_LIFT: "Stairway chair lift", FIRE_EMERGENCY_LIFT: "Firefighter and emergency lift", EVACUATION_LIFT: "Occupant evacuation lift", ESCALATOR: "Escalator", MOVING_WALK: "Moving walk and travelator" };
+    const matchSummary = Object.entries((matched.match || {}) as Record<string, unknown>).map(([key, value]) => {
+      const humanize = (item: unknown) => key === "lift_type" ? typeLabels[String(item)] || String(item).replaceAll("_", " ").toLowerCase() : key === "audience" ? String(item).toUpperCase() === "RESIDENTIAL" ? "Residential community" : "Commercial building" : String(item).replaceAll("_", " ").toLowerCase();
+      const shown = Array.isArray(value) ? value.map(humanize).join(" / ") : value && typeof value === "object" ? `${(value as Record<string, unknown>).min ?? "any"}–${(value as Record<string, unknown>).max ?? "any"}` : humanize(value);
+      return `${labels[key] || key.replaceAll("_", " ")} ${shown}${key === "passenger_capacity" ? " passengers" : key === "number_of_stops" ? " stops" : key === "travel_height_m" ? " m" : ""}`;
+    }).join(" · ");
+    return { rule: `Matched rule · ${matchSummary || "catalog default"}`, amount, error: "" };
+  }
+  const eligibility = definition.eligibility && typeof definition.eligibility === "object" ? definition.eligibility as Record<string, unknown> : {};
+  const baseFloors = Number(pricing.base_floors || eligibility.base_floors || 4);
+  const floors = Number(context.floors);
+  const amount = Number(pricing.base_price || version.base_price || 0) + Math.max(floors - baseFloors, 0) * Number(pricing.additional_floor_price || 0);
+  return Number.isFinite(amount) && Number.isFinite(floors) ? { rule: "Legacy catalog pricing", amount, error: "" } : { rule: "Pricing needs review", amount: null, error: "Pricing context is incomplete." };
+}
+
+function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions }: { providerId: string; relationshipOptions: Array<{ id: string; label: string }> }) {
+  type LiftContext = { floors: string; capacity: string; stops: string; liftType: string; travelHeight: string; usageClass: string; audience: "RESIDENTIAL" | "COMMERCIAL" };
+  const [step, setStep] = useState(0);
+  const [relationshipId, setRelationshipId] = useState("");
+  const [assets, setAssets] = useState<Resource<GenericAttributes>[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [contexts, setContexts] = useState<Record<string, LiftContext>>({});
+  const [plans, setPlans] = useState<Collection<GenericAttributes> | null>(null);
+  const [planIdsByAsset, setPlanIdsByAsset] = useState<Record<string, string>>({});
+  const [bulkPlanId, setBulkPlanId] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState(dateInputValue(new Date()));
+  const [effectiveTo, setEffectiveTo] = useState(dateInputValue(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)));
+  const [loadingAssets, setLoadingAssets] = useState(false);
+  const [specificationStatus, setSpecificationStatus] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const equipmentCode = (asset: Resource<GenericAttributes>) => {
+    const primary = asset.attributes.primary_identifier && typeof asset.attributes.primary_identifier === "object" ? asset.attributes.primary_identifier as Record<string, unknown> : {};
+    const identifiers = Array.isArray(asset.attributes.identifiers) ? asset.attributes.identifiers as Array<Record<string, unknown>> : [];
+    const identifiedCode = identifiers.find((identifier) => String(identifier.identifier_type_code || "").toUpperCase() === "EQUIPMENT_CODE");
+    return String(asset.attributes.equipment_code || (String(primary.identifier_type_code || "").toUpperCase() === "EQUIPMENT_CODE" ? primary.value : "") || identifiedCode?.value || "");
+  };
+  const assetCode = (asset: Resource<GenericAttributes>) => equipmentCode(asset) || String(asset.attributes.asset_code || asset.attributes.code || asset.attributes.name || `Lift ${asset.id.slice(0, 8)}`);
+  useEffect(() => { let active = true; operationsData.providerAmcPlans(providerId, "ACTIVE").then((result) => { if (active) setPlans(result); }).catch((cause) => { if (active) setError((cause as Error).message || "Published AMC plans could not be loaded."); }); return () => { active = false; }; }, [providerId]);
+  useEffect(() => {
+    if (!relationshipId) { setAssets([]); setSelectedAssetIds([]); setContexts({}); setPlanIdsByAsset({}); setSpecificationStatus(""); return; }
+    let active = true;
+    setLoadingAssets(true); setAssets([]); setSelectedAssetIds([]); setContexts({}); setPlanIdsByAsset({});
+    setSpecificationStatus("");
+    operationsData.assets(providerId, { customerRelationshipId: relationshipId, limit: 100 }).then((result) => {
+      if (!active) return;
+      const next = result.data;
+      setAssets(next); setSelectedAssetIds(next.map((asset) => asset.id));
+      const initialContexts = Object.fromEntries(next.map((asset) => [asset.id, {
+        floors: String(asset.attributes.served_floors_above_ground || asset.attributes.floors_above_ground || ""),
+        capacity: String(asset.attributes.passenger_capacity || asset.attributes.passenger_capacity_count || ""),
+        stops: String(asset.attributes.number_of_stops || asset.attributes.stops || ""),
+        liftType: String(asset.attributes.equipment_type_code || asset.attributes.lift_type || ""),
+        travelHeight: String(asset.attributes.travel_height_m || ""),
+        usageClass: String(asset.attributes.usage_class || ""),
+        audience: String(asset.attributes.audience || "").toUpperCase() === "RESIDENTIAL" ? "RESIDENTIAL" : "COMMERCIAL",
+      }])) as Record<string, LiftContext>;
+      setContexts(initialContexts);
+      if (!next.length) { setSpecificationStatus("No lifts are linked to this customer."); return; }
+      void (async () => {
+        try {
+          const cases = await operationsData.serviceCases(providerId, { limit: 100 });
+          if (!active) return;
+          const selectedIds = new Set(next.map((asset) => asset.id));
+          const projects = cases.data.filter((project) =>
+            project.attributes.customer_relationship_id === relationshipId &&
+            (project.attributes.asset_ids || project.attributes.project_assets?.map((item) => item.id) || []).some((id) => selectedIds.has(id)),
+          );
+          const sourceIds = [...new Set(projects.map((project) => project.attributes.source_quotation_id).filter((id): id is string => Boolean(id)))];
+          const sourceQuotations = await Promise.all(sourceIds.map(async (id) => {
+            try { return [id, await operationsData.quotation(providerId, id)] as const; }
+            catch { return [id, null] as const; }
+          }));
+          if (!active) return;
+          const quotationById = new Map(sourceQuotations);
+          const toRecord = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+          const text = (record: Record<string, unknown>, keys: string[]) => {
+            for (const key of keys) {
+              const value = record[key];
+              if (value !== null && value !== undefined && String(value).trim() !== "") return String(value);
+            }
+            return "";
+          };
+          const projectValues: Record<string, Partial<LiftContext>> = {};
+          for (const project of projects) {
+            const quotation = quotationById.get(project.attributes.source_quotation_id || "");
+            if (!quotation) continue;
+            const quotationAttributes = quotation.attributes;
+            const scope = toRecord(quotationAttributes.requirement_scope);
+            const shared = toRecord(scope.requirements || quotationAttributes.requirements);
+            const units = Array.isArray(scope.units) ? scope.units.map(toRecord) : Array.isArray(shared.units) ? shared.units.map(toRecord) : [];
+            const projectAssetIds = project.attributes.asset_ids || project.attributes.project_assets?.map((item) => item.id) || [];
+            for (const asset of next.filter((item) => projectAssetIds.includes(item.id))) {
+              const code = assetCode(asset).toLowerCase();
+              const unit = units.find((item) => [item.asset_id, item.asset_code, item.unit_code, item.equipment_code, item.label, item.name].some((value) => {
+                const candidate = String(value || "").toLowerCase();
+                return candidate === asset.id.toLowerCase() || candidate === code;
+              }))
+                || (units.length === 1 ? units[0] : null);
+              const values = { ...shared, ...toRecord(unit?.requirements), ...(unit || {}) };
+              const audienceValue = text(values, ["audience", "building_audience", "building_use", "building_type"]).toUpperCase();
+              const projectContext: Partial<LiftContext> = {
+                floors: text(values, ["served_floors_above_ground", "floors_above_ground"]),
+                // Capacity in kilograms is a rated load, not a passenger count.
+                capacity: text(values, ["passenger_capacity", "passenger_capacity_count", "passenger_capacity_persons"]),
+                stops: text(values, ["number_of_stops", "stops"]),
+                liftType: text(values, ["equipment_type_code", "lift_type", "type"]),
+                travelHeight: text(values, ["travel_height_m", "travel_height"]),
+                usageClass: text(values, ["usage_class", "building_usage_class"]),
+                ...(audienceValue.includes("RESIDENT") ? { audience: "RESIDENTIAL" as const } : audienceValue.includes("COMMERCIAL") ? { audience: "COMMERCIAL" as const } : {}),
+              };
+              const populatedContext = Object.fromEntries(Object.entries(projectContext).filter(([, value]) => Boolean(value))) as Partial<LiftContext>;
+              if (Object.keys(populatedContext).length) projectValues[asset.id] = { ...projectValues[asset.id], ...populatedContext };
+            }
+          }
+          if (Object.keys(projectValues).length) {
+            setContexts((current) => Object.fromEntries(Object.entries(current).map(([id, context]) => [id, { ...context, ...projectValues[id] }])));
+            setSpecificationStatus("Project specifications were loaded where available. Review the editable lift details before continuing.");
+          } else {
+            setSpecificationStatus("No linked project specifications were found. Available lift record details have been prefilled.");
+          }
+        } catch {
+          if (active) setSpecificationStatus("Project specifications could not be loaded. Available lift record details are prefilled and can be edited.");
+        }
+      })();
+    }).catch((cause) => { if (active) setError((cause as Error).message || "Customer lifts could not be loaded."); }).finally(() => { if (active) setLoadingAssets(false); });
+    return () => { active = false; };
+  }, [providerId, relationshipId]);
+  const availablePlans = (plans?.data || []).filter((plan) => {
+    const version = plan.attributes.current_version as Record<string, unknown> | undefined;
+    return String(version?.status || "").toUpperCase() === "PUBLISHED" && !/^FREE_AMC(?:_|$)/i.test(String(plan.attributes.code || ""));
+  });
+  const chosenAssets = assets.filter((asset) => selectedAssetIds.includes(asset.id));
+  const planForAsset = (assetId: string) => availablePlans.find((plan) => plan.id === planIdsByAsset[assetId]);
+  const versionForPlan = (plan: Resource<GenericAttributes> | undefined) => plan?.attributes.current_version && typeof plan.attributes.current_version === "object" ? plan.attributes.current_version as Record<string, unknown> : {};
+  const definitionForPlan = (plan: Resource<GenericAttributes> | undefined) => { const version = versionForPlan(plan); return version.plan && typeof version.plan === "object" ? version.plan as Record<string, unknown> : {}; };
+  const planNeedsUsageClass = (plan: Resource<GenericAttributes> | undefined) => {
+    const pricing = definitionForPlan(plan).pricing;
+    const cards = pricing && typeof pricing === "object" ? (pricing as Record<string, unknown>).rate_cards : undefined;
+    return Array.isArray(cards) && cards.some((item) => { const match = item && typeof item === "object" ? (item as Record<string, unknown>).match : undefined; return match && typeof match === "object" && "usage_class" in match; });
+  };
+  const previewForAsset = (asset: Resource<GenericAttributes>) => amcRulePreview(planForAsset(asset.id), contexts[asset.id] || { floors: "", capacity: "", stops: "", liftType: "", travelHeight: "", usageClass: "", audience: "COMMERCIAL" });
+  const estimateRows = chosenAssets.map((asset) => ({ asset, plan: planForAsset(asset.id), preview: previewForAsset(asset) }));
+  const estimateTotal = estimateRows.every((row) => row.preview.amount !== null && !row.preview.error) ? estimateRows.reduce((sum, row) => sum + (row.preview.amount || 0), 0) : null;
+  function toggleAsset(assetId: string, checked: boolean) { setSelectedAssetIds((current) => checked ? [...new Set([...current, assetId])] : current.filter((id) => id !== assetId)); }
+  function setPlanForAsset(assetId: string, selectedPlanId: string) { setPlanIdsByAsset((current) => ({ ...current, [assetId]: selectedPlanId })); }
+  function applyPlanToSelectedAssets() { if (bulkPlanId) setPlanIdsByAsset((current) => Object.fromEntries([...new Set([...Object.keys(current), ...chosenAssets.map((asset) => asset.id)])].map((id) => [id, selectedAssetIds.includes(id) ? bulkPlanId : current[id] || ""]))); }
+  function continueStep() {
+    setError("");
+    if (step === 0 && (!relationshipId || chosenAssets.length === 0)) { setError("Select a customer and at least one associated lift."); return; }
+    if (step === 1 && chosenAssets.some((asset) => !planForAsset(asset.id))) { setError("Choose a published AMC catalog for every selected lift. You can use the same catalog or assign different catalogs lift by lift."); return; }
+    if (step === 2 && (!effectiveFrom || !effectiveTo || effectiveTo <= effectiveFrom || chosenAssets.some((asset) => !contexts[asset.id]?.capacity || !contexts[asset.id]?.floors))) { setError("Enter a valid term and the passenger capacity and floors for every selected lift."); return; }
+    if (step === 2 && estimateRows.some((row) => row.preview.error)) { setError(estimateRows.find((row) => row.preview.error)?.preview.error || "Fix the catalog pricing match before continuing."); return; }
+    setStep((value) => Math.min(3, value + 1));
+  }
+  async function createDraft(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!relationshipId || chosenAssets.length === 0 || chosenAssets.some((asset) => !planForAsset(asset.id) || !versionForPlan(planForAsset(asset.id)).id)) return;
+    setBusy(true); setError("");
+    try {
+      const from = `${effectiveFrom}T00:00:00Z`; const to = `${effectiveTo}T00:00:00Z`;
+      const termsForm = new FormData(event.currentTarget);
+      const terms = quotationTermsForApi({ effective_from: from, effective_to: to, paid_renewal: false, included_free_amc: { months: 0 } }, quotationTermSelectionFromForm(termsForm), false);
+      terms.included_free_amc = { months: 0 };
+      const created = await operationsData.createQuotation(providerId, {
+        customer_relationship_id: relationshipId,
+        purpose: "MAINTENANCE_CONTRACT",
+        terms,
+        currency: "INR",
+        lines: chosenAssets.map((asset) => {
+          const context = contexts[asset.id];
+          const selectedPlan = planForAsset(asset.id);
+          const selectedVersion = versionForPlan(selectedPlan);
+          return { description: `${String(selectedPlan?.attributes.name || "AMC")} · ${String(asset.attributes.name || assetCode(asset))}`, quantity: 1, provider_service_plan_version_id: String(selectedVersion.id), asset_id: asset.id, pricing_context: { served_floors_above_ground: Number(context.floors), passenger_capacity: Number(context.capacity), ...(context.stops ? { number_of_stops: Number(context.stops) } : {}), audience: context.audience, ...(context.liftType ? { lift_type: context.liftType.toUpperCase() } : {}), ...(context.travelHeight ? { travel_height_m: Number(context.travelHeight) } : {}), ...(context.usageClass ? { usage_class: context.usageClass.toUpperCase() } : {}) } };
+        }),
+      }, crypto.randomUUID());
+      window.location.hash = `quotations/${created.id}`;
+    } catch (cause) { setError((cause as Error).message || "AMC quotation draft could not be created."); } finally { setBusy(false); }
+  }
+  const steps = ["Customer & lifts", "Catalog per lift", "Term & lift details", "Review"];
+  return <section className="quotation-form-page amc-quotation-page" aria-label="New AMC quotation"><PageHeader eyebrow="Sales & Marketing · AMC" title="New AMC quotation" description="Choose the customer’s lifts and a published plan. The selected plan supplies the coverage and the server calculates each lift’s price." action={<Button type="button" variant="secondary" onClick={() => { window.location.hash = "quotations/new"; }}>Cancel</Button>} /><section className="quotation-form-shell detail-card"><div className="quotation-form-intro"><div><span className="eyebrow">Step {step + 1} of 4</span><h2>{steps[step]}</h2></div><p className="notice">{["Select a customer to load their associated lifts.", "Choose the published AMC plan to apply to this quote.", "Check the term and fill any pricing details missing from the lift record.", "Review each lift and plan coverage before creating the draft."][step]}</p></div><nav className="amc-form-steps" aria-label="AMC quotation setup">{steps.map((label, index) => <button type="button" key={label} className={index === step ? "is-active" : index < step ? "is-complete" : ""} onClick={() => { if (index < step) setStep(index); }}><span>{index < step ? "✓" : index + 1}</span>{label}</button>)}</nav><form className="amc-quotation-steps-form" onSubmit={(event) => { event.preventDefault(); if (step < 3) continueStep(); else void createDraft(event); }}>
+    {step === 0 && <div className="amc-quotation-step-grid"><label>Customer relationship *<SortedSelect required value={relationshipId} onChange={(event) => setRelationshipId(event.target.value)}><option value="">Select customer</option>{relationshipOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</SortedSelect></label><fieldset className="quotation-associated-lifts"><legend>Associated lifts</legend><p>Lifts linked to this customer are selected by default. Each E-Code identifies the registered equipment asset; the quotation keeps the underlying asset link.</p>{loadingAssets ? <p role="status">Loading customer lifts…</p> : assets.length ? <div>{assets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAsset(asset.id, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetCode(asset))}</strong><small>{equipmentCode(asset) ? `E-Code · ${equipmentCode(asset)}` : `Asset code · ${assetCode(asset)}`}</small></span></label>)}</div> : relationshipId ? <p>No elevator assets are linked to this customer.</p> : <p>Select a customer to load their lifts.</p>}</fieldset></div>}
+    {step === 1 && <div className="amc-quotation-step-grid"><div className="amc-plan-bulk-apply"><label>Apply one catalog to selected lifts<SortedSelect value={bulkPlanId} onChange={(event) => setBulkPlanId(event.target.value)} disabled={!plans}><option value="">{plans ? "Select a published catalog" : "Loading catalogs…"}</option>{availablePlans.map((plan) => <option key={plan.id} value={plan.id}>{String(plan.attributes.name || "AMC plan")} · v{String((plan.attributes.current_version as Record<string, unknown> | undefined)?.version || "1")}</option>)}</SortedSelect></label><Button type="button" variant="secondary" disabled={!bulkPlanId || !chosenAssets.length} onClick={applyPlanToSelectedAssets}>Apply to all selected lifts</Button><small>Use one catalog for every lift, or choose a different catalog below for any lift.</small></div>{chosenAssets.map((asset) => { const selectedPlan = planForAsset(asset.id); const definition = definitionForPlan(selectedPlan); const entitlements = definition.entitlements && typeof definition.entitlements === "object" ? definition.entitlements as Record<string, unknown> : {}; const includedItems = Array.isArray(definition.included) ? definition.included.map(String) : []; const excludedItems = Array.isArray(definition.excluded) ? definition.excluded.map(String) : []; return <fieldset className="amc-lift-catalog-assignment" key={asset.id}><legend>{String(asset.attributes.display_name || asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</legend><label>AMC catalog for this lift *<SortedSelect value={planIdsByAsset[asset.id] || ""} onChange={(event) => setPlanForAsset(asset.id, event.target.value)} disabled={!plans}><option value="">{plans ? "Select a published catalog" : "Loading catalogs…"}</option>{availablePlans.map((plan) => <option key={plan.id} value={plan.id}>{String(plan.attributes.name || "AMC plan")} · v{String((plan.attributes.current_version as Record<string, unknown> | undefined)?.version || "1")}</option>)}</SortedSelect></label>{selectedPlan && <div className="amc-lift-catalog-summary"><strong>{String(selectedPlan.attributes.name || "AMC plan")} · {String(entitlements.preventive_frequency || "Frequency not set").replaceAll("_", " ")} · {String(entitlements.scheduled_visits || "—")} visits / year · {String(entitlements.breakdown_callbacks || "—")} callbacks</strong><div><span>Included</span><p>{includedItems.join(" · ") || "No included items listed"}</p></div><div><span>Excluded / chargeable</span><p>{excludedItems.join(" · ") || "No exclusions listed"}</p></div></div>}</fieldset>; })}{plans && availablePlans.length === 0 && <p className="notice">No published paid AMC catalogs are available. Publish an approved plan before creating an AMC quotation.</p>}</div>}
+    {step === 2 && <div className="amc-quotation-step-grid"><div className="quotation-renewal-date-grid"><label>Effective from *<input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required /></label><label>Effective to *<input type="date" value={effectiveTo} onChange={(event) => setEffectiveTo(event.target.value)} required /></label></div><p className="amc-context-hint">{specificationStatus || "Loading project specifications…"} Each lift is checked against its assigned catalog’s Type, Audience, passenger capacity, stops, floors and travel height rules.</p>{chosenAssets.map((asset) => { const plan = planForAsset(asset.id); const preview = previewForAsset(asset); return <fieldset className="amc-lift-context" key={asset.id}><legend>{String(asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</legend><small className="amc-lift-assigned-catalog">Catalog: {String(plan?.attributes.name || "Not selected")}</small><div><label>Audience *<SortedSelect value={contexts[asset.id]?.audience || "COMMERCIAL"} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], audience: event.target.value as LiftContext["audience"] } }))}><option value="RESIDENTIAL">Residential community</option><option value="COMMERCIAL">Commercial building</option></SortedSelect></label><label>Passenger capacity *<input type="number" min="1" value={contexts[asset.id]?.capacity || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], capacity: event.target.value } }))} /></label><label>Floors above ground *<input type="number" min="1" value={contexts[asset.id]?.floors || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], floors: event.target.value } }))} /></label><label>Stops<input type="number" min="1" value={contexts[asset.id]?.stops || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], stops: event.target.value } }))} /></label><label>Lift type<SortedSelect value={contexts[asset.id]?.liftType || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], liftType: event.target.value } }))}><option value="">Select lift type</option><option value="PASSENGER_TRACTION">Passenger traction lift</option><option value="PASSENGER_MRL">Machine-room-less passenger lift</option><option value="HOME_VILLA_LIFT">Home and villa lift</option><option value="HYDRAULIC_PASSENGER">Hydraulic passenger lift</option><option value="SERVICE_LIFT">Service lift</option><option value="HOSPITAL_BED_LIFT">Hospital and bed lift</option><option value="STRETCHER_LIFT">Stretcher lift</option><option value="GOODS_PASSENGER_LIFT">Goods and passenger lift</option><option value="INDUSTRIAL_FREIGHT_LIFT">Industrial freight lift</option><option value="CAR_LIFT">Vehicle and car lift</option><option value="DUMBWAITER">Dumbwaiter</option><option value="PLATFORM_LIFT">Vertical platform lift</option><option value="STAIR_CHAIR_LIFT">Stairway chair lift</option><option value="FIRE_EMERGENCY_LIFT">Firefighter and emergency lift</option><option value="EVACUATION_LIFT">Occupant evacuation lift</option><option value="ESCALATOR">Escalator</option><option value="MOVING_WALK">Moving walk and travelator</option></SortedSelect></label>{planNeedsUsageClass(plan) && <label>Usage class *<input value={contexts[asset.id]?.usageClass || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], usageClass: event.target.value } }))} placeholder="e.g. passenger" /></label>}<label>Travel height (m)<input type="number" min="0.1" step="0.1" value={contexts[asset.id]?.travelHeight || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], travelHeight: event.target.value } }))} /></label></div><div className={`amc-lift-price-match${preview.error ? " has-error" : ""}`}><span>{preview.rule}</span>{preview.amount !== null && <strong>{formatMoneyForQuotation(preview.amount)} / year before GST</strong>}{preview.error && <small>{preview.error}</small>}</div></fieldset>; })}</div>}
+    {step === 3 && <div className="amc-quotation-review"><section><h3>Customer &amp; covered lifts</h3><p>{relationshipOptions.find((item) => item.id === relationshipId)?.label || "Customer not selected"}</p>{estimateRows.map(({ asset, plan, preview }) => <div className="amc-quote-lift-review" key={asset.id}><strong>{String(asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</strong><span>{contexts[asset.id]?.capacity || "—"} passengers · {contexts[asset.id]?.floors || "—"} floors · {contexts[asset.id]?.stops || "—"} stops</span><span>Catalog: {String(plan?.attributes.name || "Not selected")} · {preview.rule}</span>{plan && <span>Scope: {Array.isArray(definitionForPlan(plan).included) ? (definitionForPlan(plan).included as unknown[]).map(String).join(" · ") : "Included work follows this catalog"} · Exclusions: {Array.isArray(definitionForPlan(plan).excluded) ? (definitionForPlan(plan).excluded as unknown[]).map(String).join(" · ") : "see catalog terms"}</span>}<b>{preview.amount === null ? "Price needs review" : `${formatMoneyForQuotation(preview.amount)} / year before GST`}</b></div>)}</section><section><h3>Term &amp; estimate</h3><p>{chosenAssets.length} lift(s) · {effectiveFrom} to {effectiveTo}</p><p><strong>Estimated subtotal before GST:</strong> {estimateTotal === null ? "Resolve unmatched pricing rules" : formatMoneyForQuotation(estimateTotal)}</p><p>Each lift uses its assigned published catalog. Included work, exclusions, visits, callbacks and terms follow that catalog; each catalog version is retained on the quote line and contract asset scope.</p></section><p className="notice">The subtotal above previews the matched catalog rules before tax. Create the draft to let the server calculate authoritative line amounts, discounts and tax. Then review the full total in customer preview/PDF before issuing.</p></div>}
+    {error && <p className="notice state-error" role="alert">{error}</p>}<div className="provider-form-actions">{step === 0 ? <Button type="button" variant="secondary" onClick={() => { window.location.hash = "quotations/new"; }}>Cancel</Button> : <Button type="button" variant="secondary" onClick={() => { setError(""); setStep((value) => Math.max(0, value - 1)); }}>Back</Button>}{step < 3 ? <Button type="button" onClick={continueStep}>Continue</Button> : <Button type="submit" busy={busy} disabled={busy || !chosenAssets.length || chosenAssets.some((asset) => !planForAsset(asset.id))}>Create draft quotation</Button>}</div></form></section></section>;
+}
+
+function formatMoneyForQuotation(value: unknown) { const amount = Number(value); return Number.isFinite(amount) ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount) : "Price on review"; }
+
 export function QuotationsWorkspace({
   providerId,
   initialQuotationId,
   initialCreate = false,
   initialTemplateId,
+  initialPurpose,
 }: Props) {
   const { session } = useAuth();
   const [quotations, setQuotations] =
@@ -3391,6 +3662,16 @@ export function QuotationsWorkspace({
       const commercial = quotationCommercialLinesAndAmount(form);
       const termSelection = quotationTermSelectionFromForm(form);
       const purpose = String(form.get("purpose") || "INSTALLATION");
+      let selectedAssets: Array<{ id: string; unit_code: string }> = [];
+      try {
+        const parsedAssets = JSON.parse(String(form.get("associated_assets_json") || "[]"));
+        if (Array.isArray(parsedAssets)) selectedAssets = parsedAssets.filter((asset): asset is { id: string; unit_code: string } => Boolean(asset) && typeof asset.id === "string" && typeof asset.unit_code === "string");
+      } catch { throw new Error("The selected customer lift list could not be read. Refresh and try again."); }
+      const scopedLines = commercial.lines.map((line) => {
+        const lineCodes = Array.isArray(line.unit_codes) ? line.unit_codes.map(String) : [];
+        const matchedAsset = lineCodes.length === 1 ? selectedAssets.find((asset) => asset.unit_code === lineCodes[0]) : undefined;
+        return matchedAsset ? { ...line, asset_id: matchedAsset.id } : line;
+      });
       const unitCodes = String(form.get("lift_unit_codes") || "")
         .split(",")
         .map((code) => code.trim())
@@ -3432,7 +3713,7 @@ export function QuotationsWorkspace({
             effective_to: effectiveTo.toISOString(),
           }, termSelection, supportsStagePayments(purpose)),
           currency: "INR",
-          lines: commercial.lines,
+          lines: scopedLines,
         },
         crypto.randomUUID(),
       );
@@ -5427,6 +5708,24 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
     );
   }
 
+  if (initialCreate && !initialPurpose && !initialTemplateId) {
+    const projectTypes = [
+      ["INSTALLATION", "New installation", "New elevator supply, installation and handover scope.", "building", "01"],
+      ["MODIFICATION", "Modification", "Modernization, upgrade or changes to installed equipment.", "settings", "02"],
+      ["TAKEOVER", "Takeover", "Take over ongoing maintenance for an existing installation.", "clipboard", "03"],
+    ] as const;
+    const serviceTypes = [
+      ["SERVICE", "Service / repair", "Quote a repair, callout or other elevator service work.", "activity", "04"],
+      ["MAINTENANCE_CONTRACT", "AMC quotation", "Select a published AMC plan and quote it against the customer’s lifts.", "calendar", "05"],
+    ] as const;
+    const renderType = ([purpose, title, description, icon, number]: typeof projectTypes[number] | typeof serviceTypes[number]) => <button type="button" className="quotation-type-card" key={purpose} onClick={() => { window.location.hash = `quotations/new/${purpose}`; }}><span className="quotation-type-card-icon"><SvgIcon name={icon} size={21} /></span><span className="quotation-type-card-copy"><small className="quotation-type-number">TYPE {number}</small><strong>{title}</strong><span>{description}</span></span><span className="quotation-type-arrow" aria-hidden="true">→</span></button>;
+    return <section className="content feature-page quotation-type-picker"><PageHeader eyebrow="Sales & Marketing · Quotations" title="Choose quotation type" description="Start with the work you’re quoting. We’ll open a form tailored to that quotation type." action={<Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>← Back to quotations</Button>} /><div className="quotation-type-intro"><div className="quotation-type-intro-mark"><SvgIcon name="clipboard" size={23} /></div><div><strong>What are you quoting today?</strong><span>Choose a category below. You can review customer, scope and commercial details on the next page.</span></div></div><section className="quotation-type-section"><header><div><span>PROJECT &amp; DELIVERY</span><h2>Installation and project work</h2></div><small>3 quotation types</small></header><div className="quotation-type-grid">{projectTypes.map(renderType)}</div></section><section className="quotation-type-section"><header><div><span>SERVICE &amp; MAINTENANCE</span><h2>Ongoing service</h2></div><small>2 quotation types</small></header><div className="quotation-type-grid">{serviceTypes.map(renderType)}</div></section></section>;
+  }
+
+  if (initialCreate && initialPurpose === "MAINTENANCE_CONTRACT") {
+    return <ProviderAmcQuotationCreatePage providerId={providerId} relationshipOptions={selectableRelationships} />;
+  }
+
   if (initialCreate) {
     return (
       <section className="content provider-leads quotation-form-route">
@@ -5442,7 +5741,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
           onLoadMoreRelationships={() => void loadMoreCustomerRelationships()}
           initialDescription="Elevator installation"
           initialLiftUnitCodes="Lift 1"
-          initialPurpose="INSTALLATION"
+          initialPurpose={initialPurpose || "INSTALLATION"}
           initialTemplateId={initialTemplateId}
           templates={materialScopeTemplates}
           termsTemplates={quotationTermsTemplates}
@@ -5450,7 +5749,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
           onCreateTemplate={saveMaterialScopeTemplate}
           onSubmit={createQuotation}
           onCancel={() => {
-            window.location.hash = "quotations";
+            window.location.hash = initialPurpose ? "quotations/new" : "quotations";
           }}
         />
         <QuotationActionNotifications
@@ -5513,46 +5812,17 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
               {hasPermission("QUOTATION_CREATE") && (
                 <Button
                   type="button"
-                  variant="secondary"
-                  onClick={() => setInitialAmcOpen(true)}
-                >
-                  Create AMC quotation
-                </Button>
-              )}
-              {hasPermission("QUOTATION_CREATE") && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={contractsLoading || contractsError || !contracts?.data.some((item) =>
-                      ["active", "approved"].includes(
-                        String(item.attributes.status || "").toLowerCase(),
-                      ),
-                    )}
-                  onClick={() => {
-                    setRenewalFormPredecessorId("");
-                    setRenewalOpen(true);
-                  }}
-                  title={contractsError ? "Active contracts could not be loaded." : contractsLoading ? "Loading active contracts…" : undefined}
-                >
-                  {contractsLoading ? "Loading AMC contracts…" : "Create paid AMC renewal"}
-                </Button>
-              )}
-              {hasPermission("QUOTATION_CREATE") && (
-                <Button
-                  type="button"
                   onClick={() => {
                     window.location.hash = "quotations/new";
                   }}
                 >
-                  + New quotation
+                  + New quotations
                 </Button>
               )}
             </div>
           }
         />
       )}
-      {!initialQuotationId && contractsError && <p className="notice" role="status">AMC renewal eligibility could not be checked. Refresh the page to retry.</p>}
-      {!initialQuotationId && !contractsLoading && !contractsError && contracts && !contracts.data.some((item) => ["active", "approved"].includes(String(item.attributes.status || "").toLowerCase())) && <p className="notice" role="status">No active maintenance contracts are available for paid renewal.</p>}
       <div className="feature-summary-grid quotation-summary-grid">
         <div>
           <span>Drafts on page</span>

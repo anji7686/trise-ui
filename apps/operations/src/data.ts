@@ -1,6 +1,12 @@
 import { apiClient } from "@trise/api-client";
 import type { components } from "../../../packages/api-client/src/generated";
 
+export function formatBusinessProviderReferenceCode(value?: string | null): string | null {
+  if (!value) return value ?? null;
+  const match = value.trim().match(/^([A-Z]{2}[BP])-?([0-9A-HJKMNP-TV-Z]{4})$/i);
+  return match ? `${match[1].toUpperCase()}-${match[2].toUpperCase()}` : value;
+}
+
 export const PLATFORM_AVAILABILITY_CHANGED_EVENT = "trise:platform-availability-changed";
 const PLATFORM_AVAILABILITY_CACHE_MS = 60_000;
 type PlatformAvailabilityResponse = { data: PlatformAvailability };
@@ -186,6 +192,10 @@ export type ProviderAttributes = {
   representation?: string;
 };
 export type PlatformProviderAttributes = ProviderAttributes & {
+  service_provider_reference_code?: string | null;
+  service_provider_reference_code_status?: 'UNISSUED' | 'SUGGESTED' | 'ISSUED';
+  business_reference_code?: string | null;
+  business_reference_code_status?: 'UNISSUED' | 'SUGGESTED' | 'ISSUED';
   status: string;
   operational_status?:
     "ACTIVE" | "PENDING" | "RESTRICTED" | "BLOCKED" | "CLOSED" | "UNKNOWN";
@@ -430,6 +440,8 @@ export type PlatformComplianceRequirement = Resource<{
 }>;
 export type ProviderBusinessProfile = {
   provider_id: string;
+  business_reference_code?: string | null;
+  service_provider_reference_code?: string | null;
   operation_code?: string | null;
   operation_profile_policy?: { fields: Record<string, { label: string; required: boolean; options: string[] }> } | null;
   profile: {
@@ -451,6 +463,8 @@ export type ProviderBusinessProfile = {
 export type ProviderVerificationReviewAttributes = {
   review_kind: string;
   status: string;
+  business_reference_code?: string | null;
+  service_provider_reference_code?: string | null;
   reason?: string | null;
   business_profile_revision?: number | null;
   document_version_id?: string | null;
@@ -1260,6 +1274,8 @@ export type BusinessDocument = {
 };
 export type BusinessSummary = {
   name: string;
+  reference_code?: string | null;
+  reference_code_status?: 'UNISSUED' | 'SUGGESTED' | 'ISSUED';
   provider_count: number;
   status: "ACTIVE" | "ON_HOLD" | "SUSPENDED" | "BLOCKED" | "CLOSED";
   operational_status?:
@@ -1857,6 +1873,7 @@ export type ServiceCaseAttributes = {
   journey_abandonment_reason?: string | null;
   project_classification_key?: string | null;
   customer_relationship_id?: string | null;
+  source_quotation_id?: string | null;
   service_location_id?: string | null;
   service_location_name?: string | null;
   service_location_source?: "PROJECT" | "ASSET" | null;
@@ -6224,11 +6241,37 @@ export const operationsData = {
   decideProviderVerificationReview: (
     providerId: string,
     reviewId: string,
-    body: { decision: string; reason?: string; expected_revision: number },
+    body: { decision: string; reason?: string; expected_revision: number; issue_reference_codes?: boolean },
     key: string,
   ) =>
     apiClient.request<ProviderVerificationReview>(
       `/platform/providers/${encodeURIComponent(providerId)}/verification-reviews/${encodeURIComponent(reviewId)}/decision`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify(body),
+      },
+    ),
+  issueProviderReferenceCodes: (
+    providerId: string,
+    body: { expected_profile_revision: number },
+    key: string,
+  ) =>
+    apiClient.request<{ data: { business_reference_code: string; service_provider_reference_code: string } }>(
+      `/platform/providers/${encodeURIComponent(providerId)}/reference-codes/issue`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify(body),
+      },
+    ),
+  regenerateProviderReferenceCodeSuggestions: (
+    providerId: string,
+    body: { expected_profile_revision: number; reason: string },
+    key: string,
+  ) =>
+    apiClient.request<{ data: { business_reference_code: string | null; service_provider_reference_code: string | null } }>(
+      `/platform/providers/${encodeURIComponent(providerId)}/reference-codes/suggestions/regenerate`,
       {
         method: "POST",
         headers: { "Idempotency-Key": key },
