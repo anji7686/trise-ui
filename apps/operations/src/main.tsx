@@ -60,16 +60,12 @@ function errorText(error: unknown) { return (error as { message?: string })?.mes
 function hasProviderOperationsAccess(session: { platformAdmin?: boolean; providerCapabilities: Array<{ roleContext?: string; operationsAccess?: boolean }> } | null) {
   return Boolean(session?.platformAdmin || session?.providerCapabilities.some((context) => context.operationsAccess !== false && context.roleContext?.toUpperCase() !== 'CUSTOMER'));
 }
-async function loadAuthorizedProviders() {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      return await operationsData.providers();
-    } catch (cause) {
-      if ((cause as { code?: string }).code !== 'context_changed' || attempt === 2) throw cause;
-      await new Promise((resolve) => window.setTimeout(resolve, 40));
-    }
-  }
-  throw new Error('Provider list could not be loaded.');
+function authorizedProvidersFromSession(session: { providerCapabilities: Array<{ providerId: string; displayName: string; roleContext?: string; operationsAccess?: boolean }> }): Collection<ProviderAttributes> {
+  return {
+    data: session.providerCapabilities
+      .filter((context) => context.operationsAccess !== false && context.roleContext?.toUpperCase() !== 'CUSTOMER')
+      .map((context) => ({ id: context.providerId, type: 'providers', attributes: { display_name: context.displayName }, relationships: {} })),
+  };
 }
 function PlatformMaintenanceBanner({ maintenance, operations = [] }: { maintenance: PublicPlatformMaintenance | null; operations?: PlatformAvailability['operations'] }) {
   if (!maintenance) return null;
@@ -395,7 +391,7 @@ function Shell() {
       return;
     }
     setProviderId(readProviderPreference(session.userId));
-    loadAuthorizedProviders().then(setProviders).catch(() => setProviders({ data: [] }));
+    setProviders(authorizedProvidersFromSession(session));
   }, [session?.userId, session?.platformAdmin]);
   useEffect(() => {
     if (!session || session.platformAdmin || !hasProviderOperationsAccess(session) || !providers) return;
@@ -540,7 +536,7 @@ function AccountMenuV2() {
     setName(session.displayName); setLocale(session.locale || 'en');
     if (session.platformAdmin || !hasProviderOperationsAccess(session)) { setProviders(null); setProviderId(''); return () => { cancelled = true; }; }
     setProviderId(readProviderPreference(session.userId));
-    loadAuthorizedProviders().then((result) => { if (!cancelled) setProviders(result); }).catch(() => { if (!cancelled) setProviders({ data: [] }); });
+    setProviders(authorizedProvidersFromSession(session));
     return () => { cancelled = true; };
   }, [session?.userId, session?.platformAdmin, session?.providerCapabilities.length]);
   useEffect(() => {

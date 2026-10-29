@@ -99,7 +99,7 @@
 .login-topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:4.5rem; max-width:1280px; margin:0 auto; border-bottom:1px solid #d8e2ee; }
 .login-topbar-brand { display:flex; align-items:center; gap:.8rem; min-width:0; }
 .login-topbar-logo-badge { display:flex; align-items:center; padding:.2rem .55rem; border-radius:.55rem; background:#193458; box-shadow:0 3px 10px rgba(25,52,88,.16); }
-.login-topbar-logo-badge .trise-brand-header-dark,.login-brand-panel .trise-brand-header-dark { display:flex; align-items:center; background:transparent; }
+.login-topbar-logo-badge .trise-brand-header-dark,.login-brand-panel .trise-brand-header-dark { display:flex; align-items:center; background:#264673; }
 .login-topbar-brand .trise-brand-logo,.login-brand-panel .trise-brand-logo { opacity:1; filter:none; }
 .login-topbar-brand .trise-brand-header { padding:0; }
 .login-topbar-brand .trise-brand-logo { display:block; width:9rem; height:auto; max-height:2.8rem; object-fit:contain; }

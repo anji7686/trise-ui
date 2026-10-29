@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="264" viewBox="0 0 1096 361" role="img" aria-labelledby="trise-title trise-desc">
+  <rect width="100%" height="100%" fill="#264673" />
  <title id="trise-title">TRise India</title>
  <desc id="trise-desc">TRise India tricolor logo with saffron stylized T, green and white speed lines, and Rise India wordmark</desc>
   <path fill="#FC7901" fill-rule="evenodd" d="M514,330 L515,334 L518,337 L636,337 L640,332 L639,327 L635,324 L520,324 L517,325Z M43,94 L276,88 L401,88 L401,91 L260,325 L303,324 L323,320 L343,312 L361,300 L376,285 L406,240 L482,105 L493,93 L501,88 L513,85 L611,86 L633,82 L661,66 L681,44 L702,14 L315,14 L284,19Z"/>

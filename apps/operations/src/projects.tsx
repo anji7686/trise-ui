@@ -1329,7 +1329,6 @@ function HandoverPanel({
 }) {
   const units = project.attributes.project_assets || [];
   const [assetId, setAssetId] = useState(units.length === 1 ? units[0].id : "");
-  const [evidenceId, setEvidenceId] = useState("");
   const [events, setEvents] = useState<Array<Resource<GenericAttributes>>>(() =>
     (project.attributes.handover_events || []).map((event) => ({
       id: event.id,
@@ -1342,6 +1341,13 @@ function HandoverPanel({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const evidenceInput = useRef<HTMLInputElement>(null);
+  const [handoverDocuments, setHandoverDocuments] = useState<Collection<ProviderDocumentAttributes> | null>(null);
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [evidenceLoadError, setEvidenceLoadError] = useState("");
   const [sources, setSources] = useState<Collection<GenericAttributes> | null>(null);
   const [sourceId, setSourceId] = useState("");
   const [coverageAssetId, setCoverageAssetId] = useState(units[0]?.id || "");
@@ -1355,6 +1361,22 @@ function HandoverPanel({
       })),
     );
   }, [project.id, project.attributes.revision, project.attributes.handover_events]);
+  useEffect(() => {
+    let active = true;
+    setHandoverDocuments(null);
+    setEvidenceLoadError("");
+    void operationsData.providerDocuments(providerId, project.id)
+      .then((result) => {
+        if (!active) return;
+        setHandoverDocuments(result);
+        const eligibleIds = result.data
+          .filter((document) => document.attributes.classification.toUpperCase() === "SERVICE_CASE_HANDOVER_REPORT" && document.attributes.status.toUpperCase() === "AVAILABLE")
+          .map((document) => document.id);
+        setSelectedEvidenceIds((current) => current.filter((id) => eligibleIds.includes(id)));
+      })
+      .catch((cause) => { if (active) setEvidenceLoadError(fail(cause)); });
+    return () => { active = false; };
+  }, [providerId, project.id]);
   useEffect(() => {
     if (!canCommenceCoverage || !events.some((event) => String(event.attributes.event_kind) === "ACCEPTED")) {
       setSources(null);
@@ -1372,9 +1394,60 @@ function HandoverPanel({
   const commencedEvent = events.find((event) => String(event.attributes.event_kind) === "COMMENCED" && event.attributes.asset_id === coverageAssetId);
   const acceptedForCoverageAsset = events.some((event) => String(event.attributes.event_kind) === "ACCEPTED" && event.attributes.asset_id === coverageAssetId);
   const sourcesForCoverageAsset = sources?.data.filter((source) => Array.isArray(source.attributes.asset_ids) && source.attributes.asset_ids.includes(coverageAssetId)) || [];
+  const handoverReports = (handoverDocuments?.data || []).filter((document) =>
+    document.attributes.classification.toUpperCase() === "SERVICE_CASE_HANDOVER_REPORT" &&
+    document.attributes.status.toUpperCase() === "AVAILABLE",
+  );
+  async function uploadHandoverReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const file = evidenceInput.current?.files?.[0];
+    if (!file) return;
+    const allowed = ["application/pdf", "image/png", "image/jpeg"];
+    if (!allowed.includes(file.type) || file.size < 1 || file.size > 26_214_400) {
+      setUploadError("Choose a non-empty PDF, PNG or JPEG report no larger than 25 MiB.");
+      return;
+    }
+    setUploadBusy(true);
+    setUploadError("");
+    setUploadMessage("");
+    try {
+      const checksum = await sha256Hex(file);
+      const key = uuid();
+      const created = await operationsData.createProviderDocument(providerId, {
+        filename: file.name,
+        media_type: file.type,
+        size_bytes: file.size,
+        checksum,
+        classification: "SERVICE_CASE_HANDOVER_REPORT",
+        visibility: "customer",
+        owner: { type: "SERVICE_CASE", id: project.id },
+        source: { type: "SERVICE_CASE", id: project.id },
+      }, key);
+      const response = await fetch(created.transfer.url, {
+        method: created.transfer.method,
+        headers: created.transfer.headers,
+        body: file,
+        mode: "cors",
+        credentials: "omit",
+      });
+      if (!response.ok) throw new Error(`Private storage rejected the report (HTTP ${response.status}).`);
+      await operationsData.finalizeProviderDocument(providerId, created.document.id,
+        { version_id: created.version.id, checksum, size_bytes: file.size }, `${key}-finalize`);
+      const result = await operationsData.providerDocuments(providerId, project.id);
+      setHandoverDocuments(result);
+      setSelectedEvidenceIds((current) => current.includes(created.document.id) ? current : [...current, created.document.id]);
+      if (evidenceInput.current) evidenceInput.current.value = "";
+      setUploadMessage("The commissioning report is uploaded and available to the customer for handover review.");
+    } catch (cause) {
+      setUploadError(fail(cause));
+    } finally {
+      setUploadBusy(false);
+    }
+  }
   async function request(event: FormEvent) {
     event.preventDefault();
     if (!units.length || !assetId) { setError("An authorized elevator unit is required for per-unit handover."); return; }
+    if (!selectedEvidenceIds.length) { setError("Select at least one customer-visible quality report before requesting handover."); return; }
     setBusy(true);
     setError("");
     setMessage("");
@@ -1385,7 +1458,7 @@ function HandoverPanel({
         {
           expected_revision: project.attributes.revision,
           asset_id: assetId || undefined,
-          evidence_ids: [evidenceId.trim()],
+          evidence_ids: selectedEvidenceIds,
         },
         uuid(),
       );
@@ -1429,7 +1502,7 @@ function HandoverPanel({
             server-enforced milestone, evidence and authorization gates pass.
           </p>
         </div>
-        {canRequestHandover && requestableUnits.length > 0 && <Button variant="secondary" onClick={() => { setAssetId(requestableUnits[0].id); setShowRequestDialog(true); }}>Request handover</Button>}
+        {canRequestHandover && requestableUnits.length > 0 && <Button variant="secondary" onClick={() => { setAssetId(requestableUnits[0].id); setSelectedEvidenceIds((current) => current.length ? current : handoverReports.slice(0, 1).map((report) => report.id)); setShowRequestDialog(true); }}>Request handover</Button>}
       </div>
       {!units.length && <p className="notice">Per-unit handover is unavailable until an authorized elevator unit is linked to this project.</p>}
       {units.length > 1 && (
@@ -1440,6 +1513,21 @@ function HandoverPanel({
       )}
       {error && <ActionNotification kind="error" title="Handover action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
       {message && <ActionNotification title="Handover update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
+      <section className="project-handover-evidence" aria-label="Customer handover evidence">
+        <div>
+          <h4>Quality report for customer review</h4>
+          <p>Upload the commissioning report before requesting handover. The report is shared with the customer as soon as the upload finishes.</p>
+        </div>
+        {canRequestHandover && <form className="project-handover-report-upload" onSubmit={(event) => void uploadHandoverReport(event)}>
+          <label>PDF, PNG or JPEG report<input ref={evidenceInput} type="file" accept="application/pdf,image/png,image/jpeg" required /></label>
+          <Button type="submit" busy={uploadBusy}>{uploadBusy ? "Uploading…" : "Upload and share report"}</Button>
+        </form>}
+        <p className="notice">Files uploaded here are customer-visible immediately after finalization. Malware scanning is unavailable in this workspace; upload only the approved handover report.</p>
+        {evidenceLoadError && <ActionNotification kind="error" title="Project evidence could not be loaded" onClose={() => setEvidenceLoadError("")}>{evidenceLoadError}</ActionNotification>}
+        {uploadError && <ActionNotification kind="error" title="Report upload needs attention" onClose={() => setUploadError("")}>{uploadError}</ActionNotification>}
+        {uploadMessage && <ActionNotification title="Customer report shared" onClose={() => setUploadMessage("")}>{uploadMessage}</ActionNotification>}
+        {handoverReports.length > 0 ? <ul className="project-handover-evidence-list">{handoverReports.map((report) => <li key={report.id}><strong>{report.attributes.filename}</strong><span>Available to the customer · {displayLabel(report.attributes.scan_state, "Scan state unavailable")}</span></li>)}</ul> : <p className="notice">{handoverDocuments === null && !evidenceLoadError ? "Loading project reports…" : "No customer-visible handover report has been uploaded."}</p>}
+      </section>
       <section className="amc-coverage-placeholder" aria-label="AMC coverage after handover">
         <div>
           <span className="page-eyebrow">Coverage after handover</span>
@@ -1468,20 +1556,17 @@ function HandoverPanel({
             ))}
           </SortedSelect>
         </label>
-        <label>
-          Handover evidence reference *
-          <input
-            aria-label="Handover evidence document ID"
-            required
-            value={evidenceId}
-            onChange={(event) => setEvidenceId(event.target.value)}
-            placeholder="Approved evidence reference"
-          />
-        </label>
+        <fieldset className="project-handover-evidence-choice">
+          <legend>Quality reports for customer review *</legend>
+          {handoverReports.length ? handoverReports.map((report) => <label key={report.id}>
+            <input type="checkbox" checked={selectedEvidenceIds.includes(report.id)} onChange={(event) => setSelectedEvidenceIds((current) => event.target.checked ? [...current, report.id] : current.filter((id) => id !== report.id))} />
+            <span><strong>{report.attributes.filename}</strong><small>Shared with customer · {displayLabel(report.attributes.scan_state, "Scan state unavailable")}</small></span>
+          </label>) : <p>Upload and share a quality report before requesting handover.</p>}
+        </fieldset>
         <Button
           type="submit"
           busy={busy}
-          disabled={!units.length || !assetId || !evidenceId.trim()}
+          disabled={!units.length || !assetId || !selectedEvidenceIds.length}
         >
           Request handover
         </Button>

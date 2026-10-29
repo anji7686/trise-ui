@@ -44,17 +44,15 @@ export default function DevelopmentSignInForm() {
     }
     await signIn(email, secret);
   }
-  if (quickSignInEnabled) return <form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
-    <strong>Local development sign-in</strong>
+  if (quickSignInEnabled) return <details className="development-sign-in"><summary>Local development sign-in</summary><form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
     <p>Choose an approved synthetic account. Password entry is disabled for this local-only convenience.</p>
     <label style={{ display: 'grid', gap: '0.25rem' }}>Account<select name="email" aria-label="Test email" required value={email} onChange={event => setEmail(event.target.value)} disabled={pending}>
       <option value="">Choose an account</option>
       {configuredEmails.map((configuredEmail: string) => <option key={configuredEmail} value={configuredEmail}>{configuredEmail}</option>)}
     </select></label>
     <button type="submit" disabled={pending}>{pending ? 'Signing in…' : 'Sign in as selected account'}</button>
-  </form>;
-  return <form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
-    <strong>Local development sign-in</strong>
+  </form></details>;
+  return <details className="development-sign-in"><summary>Local development sign-in</summary><form onSubmit={event => { void submit(event); }} style={{ display: 'grid', gap: '0.75rem', maxWidth: '26rem', marginTop: '1rem' }}>
     <p>Use your approved test email and local secret.</p>
     <label style={{ display: 'grid', gap: '0.25rem' }}>Test email<input name="email" list="trise-development-sign-in-emails" type="email" autoComplete="username" required maxLength={320} value={email} onChange={event => { setEmail(event.target.value); setSecret(''); }} disabled={pending} /></label>
     <datalist id="trise-development-sign-in-emails">{configuredEmails.map((configuredEmail: string) => <option key={configuredEmail} value={configuredEmail} />)}</datalist>
@@ -68,5 +66,5 @@ export default function DevelopmentSignInForm() {
       if (event.target.checked && email && /^[a-f0-9]{40}$/.test(secret)) void signIn(email, secret);
     }} /> Automatically sign in when my email and local secret are ready</label>
     <button type="submit" disabled={pending}>{pending ? 'Signing in…' : 'Sign in locally'}</button>
-  </form>;
+  </form></details>;
 }

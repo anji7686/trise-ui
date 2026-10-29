@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">TRISE India</title>
+  <defs>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102947" />
+      <stop offset="1" stop-color="#1c3b62" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#navy)" />
+  <g transform="translate(4.5 19) scale(.08)">
+    <path fill="#FC7901" fill-rule="evenodd" d="M43 94 276 88h125v3L260 325l43-1 20-4 20-8 18-12 15-15 30-45 76-135 11-12 8-5 12-3 98 1 22-4 28-16 20-22 21-30H315l-31 5Z" />
+    <path fill="#03A329" fill-rule="evenodd" d="m323 192-9 0-1 1-19 2-5 2-9 1-40 10-4 2-7 1-7 3-7 1-4 2h-3l-4 2-7 1-14 5-17 4-7 3-10 2-7 3-10 2-7 3-10 2-7 3-7 1-6 3h-3l-17 6h-3l-58 19 259-1Z" />
+    <path fill="#FAFAFA" fill-rule="evenodd" d="M373 110 358 110 357 111 336 112 335 113 311 116 301 119 283 122 131 160 127 162 104 167 100 169 85 172 81 174 70 176 59 180 52 181 48 183 37 185 33 187 17 191 20 190 55 190 56 189 89 189 90 188 122 188 123 187 155 187 156 186 185 186 186 185 215 185 216 184 246 184 247 183 330 181 346 153Z" />
+  </g>
+</svg>

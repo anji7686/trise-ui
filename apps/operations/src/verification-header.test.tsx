@@ -4,7 +4,7 @@ import { TriseBrandHeader } from '@trise/ui';
 import { VerificationHeader } from './verification-header';
 
 describe('VerificationHeader', () => {
-  it('uses the transparent horizontal TRISE logo and secure context', () => {
+  it('uses the approved original TRISE logo artwork and secure context', () => {
     const markup = renderToStaticMarkup(<VerificationHeader />);
 
     expect(markup).toContain('/assets/trise-india-logo-dark-header.svg');

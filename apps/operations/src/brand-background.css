@@ -10,6 +10,26 @@
   flex: 0 1 auto;
 }
 
+/* Match each original wordmark to a consistent, theme-appropriate surface
+   across workspace, sign-in, and public verification headers. */
+.trise-brand-header {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #e4eaf1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.trise-brand-header-dark {
+  border-color: #264673;
+  background: #264673;
+}
+
+.wordmark .trise-brand-logo { max-width: 100%; }
+
 .wordmark-theme-aware > span {
   display: block;
 }

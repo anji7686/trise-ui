@@ -41,12 +41,12 @@ export function authFailureMessage(cause: unknown, action: 'load' | 'sign-in' = 
 function loadGoogleScript() {
   if (window.google) return Promise.resolve();
   if (googleScriptPromise) return googleScriptPromise;
-  googleScriptPromise = new Promise<void>((resolve, reject) => {
+  const attempt = new Promise<void>((resolve, reject) => {
     authDiagnostic('gis-script-requested');
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${GOOGLE_SCRIPT}"]`);
     if (existing) {
       existing.addEventListener('load', () => { authDiagnostic('gis-script-loaded'); resolve(); }, { once: true });
-      existing.addEventListener('error', () => { authDiagnostic('gis-script-failed'); reject(new Error('Google Identity Services script failed to load')); }, { once: true });
+      existing.addEventListener('error', () => { existing.remove(); authDiagnostic('gis-script-failed'); reject(new Error('Google Identity Services script failed to load')); }, { once: true });
       return;
     }
     const element = document.createElement('script');
@@ -54,10 +54,14 @@ function loadGoogleScript() {
     element.async = true;
     element.defer = true;
     element.addEventListener('load', () => { authDiagnostic('gis-script-loaded'); resolve(); }, { once: true });
-    element.addEventListener('error', () => { authDiagnostic('gis-script-failed'); reject(new Error('Google Identity Services script failed to load')); }, { once: true });
+    element.addEventListener('error', () => { element.remove(); authDiagnostic('gis-script-failed'); reject(new Error('Google Identity Services script failed to load')); }, { once: true });
     document.head.appendChild(element);
   });
-  return googleScriptPromise;
+  googleScriptPromise = attempt;
+  return attempt.catch((cause) => {
+    if (googleScriptPromise === attempt) googleScriptPromise = null;
+    throw cause;
+  });
 }
 
 export function AuthProvider({ children, client = apiClient }: { children: ReactNode; client?: ApiClient }) {
@@ -157,6 +161,7 @@ function GoogleIdentityButton() {
   const { signInWithGoogleIdentityToken } = useAuth();
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [gisError, setGisError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
   useEffect(() => {
     if (!clientId || !container) return;
@@ -175,9 +180,9 @@ function GoogleIdentityButton() {
       window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'large', text: 'signin_with' });
     }).catch(() => { if (!cancelled) setGisError('Google Identity Services could not load. Check network access and try again.'); });
     return () => { cancelled = true; };
-  }, [clientId, container, signInWithGoogleIdentityToken]);
+  }, [clientId, container, loadAttempt, signInWithGoogleIdentityToken]);
   if (!clientId) return <p role="status">Google sign-in is not configured for this local origin.</p>;
-  if (gisError) return <p role="status">{gisError}</p>;
+  if (gisError) return <div className="customer-login-gis-error"><p role="alert">{gisError}</p><button type="button" onClick={() => { setGisError(null); setLoadAttempt((attempt) => attempt + 1); }}>Retry Google sign-in</button></div>;
   return <div ref={setContainer} aria-label="Sign in with Google" />;
 }
 

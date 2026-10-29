@@ -798,6 +798,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/providers/{providerId}/support-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get Provider Customer Support Contact
+         * @description Active customer relationship only. Returns the currently effective primary CUSTOMER_SUPPORT contact explicitly designated by the provider, with email, mobile and landline fields only. Returns data: null when the provider has not designated an active primary support contact. Does not expose business contacts, personal contact records, or provider administration data.
+         */
+        get: operations["GetProviderCustomerSupportContact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/overview": {
         parameters: {
             query?: never;
@@ -2966,7 +2988,7 @@ export interface paths {
         };
         /**
          * List Customer Relationship
-         * @description Related customer acting on own authorized records; scoped provider operations may act with explicit permission.
+         * @description Related customer acting on own authorized records; scoped provider operations may act with explicit permission. An optional requested_window creates a linked REQUESTED ServiceBooking atomically; it is a preference, not confirmation.
          */
         get: operations["ListCustomerRelationship"];
         put?: never;
@@ -5926,6 +5948,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notification-preference-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Customer Notification Preference Options
+         * @description Returns only optional category and channel choices derived from the current provider's active notification policy. Mandatory channels and policy internals are not exposed.
+         */
+        get: operations["ListNotificationPreferenceOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notification-preferences": {
         parameters: {
             query?: never;
@@ -5939,7 +5981,11 @@ export interface paths {
          */
         get: operations["ListNotificationPreference"];
         put?: never;
-        post?: never;
+        /**
+         * Set Customer Notification Preference
+         * @description Creates or updates the authenticated customer's choice for a currently available optional policy category and channel. Absence means the configured default; this records a preference, not legal consent.
+         */
+        post: operations["SetNotificationPreference"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6107,7 +6153,7 @@ export interface paths {
         };
         /**
          * List Document
-         * @description Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
+         * @description Provider staff and assigned agents follow their existing permission scopes. A customer may create only a CUSTOMER_SUBMISSION owned by the authenticated customer party under an active provider relationship, with CUSTOMER visibility and a source limited to that party, an authorized asset, or that party's service request. The provider's later review, scan and availability policy still controls shared reads.
          */
         get: operations["ListDocument"];
         put?: never;
@@ -6148,6 +6194,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/{documentId}/customer-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get Customer Document Preview
+         * @description Reads only an available document already visible to the authenticated customer. A preview is returned only when its source is a submitted service report from the same provider. Draft report content is never returned. Other document types return data: null and continue to use the separately authorized private document transfer.
+         */
+        get: operations["GetCustomerDocumentPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/{documentId}/upload-finalization": {
         parameters: {
             query?: never;
@@ -6161,7 +6229,7 @@ export interface paths {
         put?: never;
         /**
          * Finalize Document Upload
-         * @description Malware scanning is disabled by platform policy. Finalization records NOT_SCANNED with a server timestamp and reason, never a client flag. Independent source/owner relationship and document/version visibility checks; Customer own disclosed documents, Agent assigned-work evidence, provider staff only by permission.
+         * @description Malware scanning is disabled by platform policy. Finalization records NOT_SCANNED with a server timestamp and reason, never a client flag. The uploader must own the pending document and version in the selected provider context. Customer finalization additionally requires the same active relationship, a CUSTOMER owner association for the authenticated party, CUSTOMER visibility and UPLOAD_PENDING status; provider staff and assigned agents follow their existing permission scopes.
          */
         post: operations["FinalizeDocumentUpload"];
         delete?: never;
@@ -11420,6 +11488,8 @@ export interface components {
                 role?: string;
                 inheritance_mode?: string;
                 capabilities?: string[];
+                /** @description Display name of the member. Returned only for a membership visible to the authenticated party or scoped provider operations. */
+                member_display_name?: string;
                 status?: string;
                 /** Format: date-time */
                 effective_from?: string;
@@ -11430,6 +11500,32 @@ export interface components {
         };
         ResourceMembershipCollection: {
             data: components["schemas"]["ResourceMembership"][];
+            page: components["schemas"]["Page"];
+        };
+        ResourceMembershipInvitation: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "resource-membership-invitations";
+            attributes: {
+                status: string;
+                role: string;
+                capabilities: string[];
+                /** Format: date-time */
+                effective_from: string;
+                effective_to?: string | null;
+                /** Format: date-time */
+                expires_at: string;
+                revision: number;
+                /** @description True only for the authenticated invitation recipient while the invitation is pending and unexpired. */
+                can_accept: boolean;
+            };
+            relationships: Record<string, never>;
+        };
+        ResourceMembershipInvitationResponse: {
+            data: components["schemas"]["ResourceMembershipInvitation"];
+        };
+        ResourceMembershipInvitationCollection: {
+            data: components["schemas"]["ResourceMembershipInvitation"][];
             page: components["schemas"]["Page"];
         };
         ContactPointCreate: {
@@ -11861,13 +11957,24 @@ export interface components {
             display_name: string;
             capabilities: ("customers" | "customer_admin" | "onboarding" | "configuration" | "business_profile" | "requests" | "service_request_create" | "service_request_edit" | "bookings" | "jobs" | "my_work" | "workforce" | "audit" | "team_access" | "team_invitation_manage" | "compliance" | "sales_marketing" | "quotations" | "projects" | "subscriptions" | "amc" | "reports" | "work_intake" | "work_intake_create" | "work_intake_edit")[];
         };
+        /** @description Authenticated user's own profile fields. Email and phone are returned only by self-scoped session and /me responses; they are not customer/provider directory fields. */
         UserAttributes: {
             /** Format: date-time */
             created_at: string;
             display_name: string;
+            /**
+             * Format: email
+             * @description Email address on the authenticated user's account, if present.
+             */
+            email?: string;
+            /** @description True only when an active external identity for this account has a verified identity timestamp and an account email is present. */
+            email_verified?: boolean;
+            /** @description Phone number on the authenticated user's account, if present. */
+            phone?: string;
             locale?: string;
             platform_admin?: boolean;
             platform_capabilities?: string[];
+            /** @description Current self-service profile revision used by PATCH /me expected_revision. */
             revision: components["schemas"]["Revision"];
             provider_capabilities: components["schemas"]["ProviderCapabilityContext"][];
         };
@@ -13034,7 +13141,10 @@ export interface components {
             created_at: string;
             provider_id: components["schemas"]["Id"];
             status: components["schemas"]["ServiceState"];
+            reference_code: string;
             summary: string;
+            /** @description Customer-reported safety concern. It is evidence for provider review, not an emergency classification or dispatch instruction. */
+            customer_emergency_signal: boolean;
             revision: components["schemas"]["Revision"];
             allowed_transitions: components["schemas"]["AllowedTransition"][];
             description: string;
@@ -13145,6 +13255,7 @@ export interface components {
                 location?: components["schemas"]["ResourceLink"] | null;
                 service_location?: components["schemas"]["ResourceLink"] | null;
                 service_type: components["schemas"]["ResourceLink"];
+                service_bookings?: components["schemas"]["ResourceLink"][];
             };
         };
         ServiceRequestCollection: {
@@ -13157,9 +13268,11 @@ export interface components {
             provider_id: components["schemas"]["Id"];
             status: components["schemas"]["ServiceState"];
             summary: string;
+            service_request_reference_code?: string;
             revision: components["schemas"]["Revision"];
             allowed_transitions: components["schemas"]["AllowedTransition"][];
             requested_window: components["schemas"]["TimeWindow"];
+            scheduled_window?: components["schemas"]["TimeWindow"] | null;
         };
         /** @description Authorized canonical ServiceBooking representation; fields and linked resources require independent authorization. */
         ServiceBooking: {
@@ -13170,6 +13283,7 @@ export interface components {
             relationships: {
                 customer_relationship: components["schemas"]["ResourceLink"];
                 asset?: components["schemas"]["ResourceLink"] | null;
+                service_request?: components["schemas"]["ResourceLink"] | null;
                 location?: components["schemas"]["ResourceLink"] | null;
                 service_type: components["schemas"]["ResourceLink"];
                 service_location?: components["schemas"]["ResourceLink"] | null;
@@ -13185,6 +13299,10 @@ export interface components {
             provider_id: components["schemas"]["Id"];
             status: components["schemas"]["ServiceState"];
             summary: string;
+            assigned_technician?: {
+                display_name: string;
+            } | null;
+            completed_at?: string | null;
             revision: components["schemas"]["Revision"];
             allowed_transitions: components["schemas"]["AllowedTransition"][];
             scheduled_window?: components["schemas"]["TimeWindow"] | null;
@@ -13582,6 +13700,41 @@ export interface components {
             paid_renewal?: boolean;
             commercial_party_roles: components["schemas"]["CommercialPartySelection"];
             commercial_party_snapshot_present: boolean;
+            customer_safe_summary?: components["schemas"]["MaintenanceContractCustomerSummary"];
+        };
+        MaintenanceContractCustomerSummary: {
+            coverage_status?: string;
+            plan_name?: string;
+            plan_code?: string;
+            plan_version?: number;
+            /** Format: date-time */
+            effective_from?: string;
+            /** Format: date-time */
+            effective_to?: string;
+            covered_elevator_count?: number;
+            covered_assets?: {
+                asset_id: components["schemas"]["Id"];
+                display_name: string;
+                status: string;
+                service_location_name?: string;
+                /** Format: date-time */
+                effective_from: string;
+                effective_to: string | null;
+            }[];
+            covered_assets_truncated?: boolean;
+            customer_terms?: components["schemas"]["QuotationTerms"];
+            upcoming_service?: {
+                /** Format: date-time */
+                due_at: string;
+                /** @enum {string} */
+                status: "planned" | "scheduled" | "rescheduled";
+                asset_id?: components["schemas"]["Id"];
+                asset_name?: string;
+                service_location_name?: string;
+            } | null;
+            preventive_frequency?: string;
+            scheduled_visits?: number;
+            service_priority?: string;
         };
         /** @description ADR-014: activated versions immutable except lifecycle; amendments/successor renewals preserve all history. */
         MaintenanceContract: {
@@ -14137,6 +14290,18 @@ export interface components {
             enabled: boolean;
             revision: components["schemas"]["Revision"];
         };
+        NotificationPreferenceOption: {
+            category: string;
+            channel: string;
+            /** @description Existing saved value, or the configured default when no preference has been saved. */
+            enabled: boolean;
+            preference_id: components["schemas"]["Id"] | null;
+            revision: components["schemas"]["Revision"] | null;
+            provider_id: components["schemas"]["Id"];
+        };
+        NotificationPreferenceOptionCollection: {
+            data: components["schemas"]["NotificationPreferenceOption"][];
+        };
         /** @description Recipient/contact/channel/category scope; preference cannot override jurisdiction/platform constraints or establish legal consent by itself. */
         NotificationPreference: {
             id: components["schemas"]["Id"];
@@ -14301,6 +14466,30 @@ export interface components {
         NotificationBudgetCollection: {
             data: components["schemas"]["NotificationBudget"][];
             page: components["schemas"]["Page"];
+        };
+        CustomerDocumentPreview: {
+            data: components["schemas"]["CustomerServiceReportPreview"] | null;
+        };
+        CustomerServiceReportPreview: {
+            id: components["schemas"]["Id"];
+            /** @constant */
+            type: "customer-service-report-previews";
+            attributes: components["schemas"]["CustomerServiceReportPreviewAttributes"];
+        };
+        CustomerServiceReportPreviewAttributes: {
+            provider_name: string;
+            title: string;
+            summary: string;
+            work_performed: string;
+            observations: string | null;
+            asset_name: string | null;
+            site_name: string | null;
+            technician_name: string | null;
+            /** Format: date-time */
+            service_date: string | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            version: number;
         };
         DocumentAttributes: {
             /** Format: date-time */
@@ -14626,6 +14815,13 @@ export interface components {
             asset_id?: components["schemas"]["Id"];
             location_id?: components["schemas"]["Id"];
             service_type_id: components["schemas"]["Id"];
+            /** @description Optional customer-preferred visit window. Supplying it atomically creates a linked ServiceBooking in REQUESTED state; this is not a confirmed appointment or availability result. */
+            requested_window?: {
+                /** Format: date-time */
+                starts_at: string;
+                /** Format: date-time */
+                ends_at: string;
+            };
             description?: string;
             request_type_id: components["schemas"]["Id"];
             issue_category_id?: components["schemas"]["Id"];
@@ -15258,6 +15454,14 @@ export interface components {
             enabled: boolean;
             expected_revision: components["schemas"]["Revision"];
         };
+        /** @description Records preference, not legal consent or a change to mandatory notification policy. */
+        NotificationPreferenceSet: {
+            category: string;
+            channel: string;
+            enabled: boolean;
+            /** @description Required current revision when updating a saved choice; null when creating the first choice. */
+            expected_revision: components["schemas"]["Revision"] | null;
+        };
         /** @description Cannot reduce below committed usage/reservations; budget is provider policy bounded by platform controls. */
         NotificationBudgetPatch: {
             /** @description Decimal serialized without binary floating-point loss. */
@@ -15496,10 +15700,10 @@ export interface components {
             session_id: components["schemas"]["Id"];
         };
         Session: components["schemas"]["WebSession"] | components["schemas"]["NativeSession"];
-        /** @description Self-revocation only. session_id permitted only with current scope; security administrators require separately authorized operations. */
+        /** @description Self-revocation only. current revokes one session, others revokes all refresh sessions except the authenticated session, and all revokes every refresh session including the authenticated session. session_id is permitted only with current scope; security administrators require separately authorized operations. */
         SessionRevoke: {
             /** @enum {string} */
-            scope: "current" | "all";
+            scope: "current" | "others" | "all";
             session_id?: components["schemas"]["Id"];
         } & unknown;
         DocumentTarget: {
@@ -19326,6 +19530,48 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
             500: components["responses"]["ServerError"];
+        };
+    };
+    GetProviderCustomerSupportContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized provider support contact or no designated contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: null | {
+                            id: components["schemas"]["Id"];
+                            /** @constant */
+                            type: "provider-support-contacts";
+                            attributes: {
+                                provider_id: components["schemas"]["Id"];
+                                provider_name: string;
+                                display_name: string;
+                                contact_methods: {
+                                    email?: string;
+                                    mobile?: string;
+                                    landline?: string;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     GetPlatformAdministrationOverview: {
@@ -23192,6 +23438,8 @@ export interface operations {
                 "filter[customer_id]"?: components["schemas"]["Id"][];
                 /** @description Repeat this parameter for OR within this field; different fields combine with AND. Authorization applied before filtering. */
                 "filter[status]"?: string[];
+                /** @description Case-insensitive search across the authorized asset display name, resource identifier and permitted active asset identifiers. Authorization is applied before matching. */
+                "filter[q]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
                 "filter[created_at][gte]"?: string;
                 /** @description UTC RFC3339 date range per ADR-011. */
@@ -29938,6 +30186,35 @@ export interface operations {
             500: components["responses"]["ServerError"];
         };
     };
+    ListNotificationPreferenceOptions: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer-owned options for the active provider relationship. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferenceOptionCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
     ListNotificationPreference: {
         parameters: {
             query?: {
@@ -29977,6 +30254,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationPreferenceCollection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    SetNotificationPreference: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+                /** @description Optional replay protection for the preference command. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferenceSet"];
+            };
+        };
+        responses: {
+            /** @description Saved customer preference. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreference"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -30446,6 +30759,35 @@ export interface operations {
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
+            500: components["responses"]["ServerError"];
+        };
+    };
+    GetCustomerDocumentPreview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One requested provider context, verified through provider membership OR authorized customer/provider relationship; never authority. Agents also require permitted assignment. Body/path cannot override it. */
+                "X-TRISE-Provider-Id": components["parameters"]["ProviderContext"];
+            };
+            path: {
+                documentId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Submitted customer-visible service report preview, or no supported preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDocumentPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["ServerError"];
         };
     };
@@ -37451,7 +37793,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ResourceMembershipInvitationCollection"];
+                };
             };
         };
     };
@@ -37488,7 +37832,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ResourceMembershipInvitationResponse"];
+                };
             };
             /** @description Unauthorized */
             401: {
@@ -37529,7 +37875,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ResourceMembershipInvitationResponse"];
+                };
             };
             /** @description Unauthorized */
             401: {

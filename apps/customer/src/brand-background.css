@@ -11,6 +11,24 @@
   flex: 0 1 auto;
 }
 
+/* Keep the original vector wordmark on a background suited to its colors
+   everywhere the shared brand header appears. */
+.trise-brand-header {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 6px 9px;
+  border: 1px solid #e4eaf1;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.trise-brand-header-dark {
+  border-color: #264673;
+  background: #264673;
+}
+
 .customer-header .wordmark .trise-brand-logo,
 .topbar .wordmark .trise-brand-logo {
   display: block;
@@ -19,6 +37,8 @@
   object-fit: contain;
   object-position: left center;
 }
+
+.wordmark .trise-brand-logo { max-width: 100%; }
 
 @media (max-width: 700px) {
   .customer-header .wordmark .trise-brand-logo,

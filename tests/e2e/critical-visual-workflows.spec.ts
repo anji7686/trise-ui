@@ -36,15 +36,43 @@ async function requireProviderContext(page: Page) {
 
 test('authenticated Customer critical views render at the configured viewport', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith('customer'), 'Customer visual workflow runs in Customer projects only.');
+  test.setTimeout(60_000);
   await localSignIn(page, configuredAccount('CUSTOMER'));
-  await expect(page.getByRole('button', { name: 'Projects', exact: true })).toBeVisible();
+  await expect(page.locator('.customer-home')).toBeVisible();
   await capture(page, testInfo, 'customer-home');
-  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await navigateHash(page, '/assets');
   await expect(page).toHaveURL(/#\/assets$/);
   await capture(page, testInfo, 'customer-assets');
-  await page.getByRole('button', { name: 'Projects', exact: true }).click();
+  await navigateHash(page, '/projects');
   await expect(page).toHaveURL(/#\/projects$/);
   await capture(page, testInfo, 'customer-installation-projects');
+  await navigateHash(page, '/places');
+  await expect(page.getByRole('heading', { name: 'Your places', exact: true })).toBeVisible();
+  await page.getByLabel('Search places', { exact: true }).fill('Green Heights');
+  await page.getByRole('combobox', { name: 'Place type', exact: true }).selectOption('COMMUNITY');
+  const greenHeightsCommunity = page.getByRole('button', { name: /Green Heights Community Community/ });
+  await expect(greenHeightsCommunity).toBeVisible();
+  await expect(page.getByRole('button', { name: /Green Heights Building/ })).toHaveCount(0);
+  await capture(page, testInfo, 'customer-places');
+  await greenHeightsCommunity.click();
+  await expect(page.getByRole('heading', { name: 'Green Heights Community', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Assets at this place', exact: true })).toBeVisible();
+  await expect(page.locator('.customer-place-asset-list button')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /ELP05 Browser Lift 1/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /ELP05 Browser Lift 2/ })).toBeVisible();
+  if (testInfo.project.name === 'customer-mobile') {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const clearance = await page.evaluate(({ panel, navigation }) => {
+      const panelBottom = document.querySelector(panel)?.getBoundingClientRect().bottom;
+      const navigationTop = document.querySelector(navigation)?.getBoundingClientRect().top;
+      return panelBottom === undefined || navigationTop === undefined ? null : navigationTop - panelBottom;
+    }, { panel: '.customer-place-detail-page > .customer-feature-panel:last-of-type', navigation: '.customer-mobile-navigation' });
+    expect(clearance, 'the final place panel should scroll above the fixed mobile navigation').not.toBeNull();
+    expect(clearance).toBeGreaterThanOrEqual(0);
+    expect(clearance).toBeLessThanOrEqual(24);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
+  await capture(page, testInfo, 'customer-place-detail');
   await localSignOut(page);
 });
 

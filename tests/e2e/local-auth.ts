@@ -35,9 +35,14 @@ export async function localSignIn(page: Page, email: string) {
   const account = approvedLocalAccounts().find(item => item.email === email);
   if (!account) throw new Error('Account is not on the approved local list');
   await page.goto('/');
-  await page.locator('select[name="email"], input[name="email"]').first().waitFor({ state: 'visible' });
+  const localSignInSummary = page.locator('details.development-sign-in > summary');
+  await localSignInSummary.waitFor({ state: 'visible', timeout: 15_000 });
+  const localSignInDetails = page.locator('details.development-sign-in');
+  if (!await localSignInDetails.evaluate(element => (element as HTMLDetailsElement).open)) await localSignInSummary.click();
+  await expect(localSignInDetails).toHaveAttribute('open', '');
   const quickEmail = page.locator('select[name="email"]');
   const credentialEmail = page.locator('input[name="email"]');
+  await Promise.any([quickEmail.waitFor({ state: 'visible' }), credentialEmail.waitFor({ state: 'visible' })]);
   const quickMode = await quickEmail.isVisible().catch(() => false);
   if (quickMode) {
     await quickEmail.selectOption(email);
@@ -51,12 +56,7 @@ export async function localSignIn(page: Page, email: string) {
   const response = await signedIn;
   expect(response.status()).toBe(200);
   const { user, access_token: accessToken } = await response.json();
-  const accountMenu = page.getByRole('button', { name: 'Open account menu', exact: true });
-  if (await accountMenu.isVisible().catch(() => false)) {
-    await expect(accountMenu).toBeVisible();
-  } else {
-    await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
-  }
+  await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
   return { user, accessToken: accessToken as string };
 }
 
@@ -64,12 +64,17 @@ export async function localSignOut(page: Page) {
   const closeMenu = page.getByRole('button', { name: 'Close menu', exact: true });
   if (await closeMenu.isVisible().catch(() => false)) await closeMenu.click();
   const dialog = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
-  const accountMenu = page.getByRole('button', { name: 'Open account menu', exact: true });
-  if (await accountMenu.isVisible().catch(() => false)) {
-    if (!await dialog.isVisible()) await accountMenu.click();
-    await dialog.getByRole('button', { name: 'Sign out', exact: true }).click();
+  const accountMenu = page.locator('[aria-label="Open account menu"], [aria-label="Open profile menu"]');
+  if (await accountMenu.isVisible().catch(() => false) && !await dialog.isVisible()) await accountMenu.click();
+  const menu = await dialog.isVisible().catch(() => false) ? dialog : page;
+  const signOutAction = menu.getByRole('button', { name: /^(?:Sign out|Logout)$/ }).first();
+  if (await signOutAction.isVisible().catch(() => false)) {
+    await signOutAction.click();
   } else {
-    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    // The customer mobile shell keeps account actions under Profile rather
+    // than placing a profile menu in the compact header.
+    await page.goto('/#/profile');
+    await page.getByRole('button', { name: /^Sign out$/ }).click();
   }
-  await expect(page.locator('select[name="email"], input[name="email"]').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('details.development-sign-in > summary')).toBeVisible({ timeout: 15_000 });
 }
