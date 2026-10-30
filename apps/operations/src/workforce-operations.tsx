@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import {
   DEFAULT_PAGE_SIZE,
   operationsData,
@@ -266,7 +266,7 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
         {canManageWorkforce && tab === "leave" && <Button onClick={() => setMode("leave")} disabled={!agents.data.length}>Request leave</Button>}
       </div>
       {mode && (
-        <OperationsDialog title={formTitle} onClose={() => { setMode(null); setQualification(null); setSelectedLeaveRequest(null); }} busy={busy}>
+        <OperationsDialog title={formTitle} titleInfo={mode === "reviewLeave" ? <InfoNotice>The server checks the request revision and lifecycle before recording this decision.</InfoNotice> : undefined} onClose={() => { setMode(null); setQualification(null); setSelectedLeaveRequest(null); }} busy={busy}>
           <form
             className="provider-form"
             onSubmit={(event) => void submit(event)}
@@ -342,7 +342,6 @@ export function WorkforceOperations({ providerId, canManageWorkforce = false, ca
                 <p><strong>{String(attrs(selectedLeaveRequest).leave_type || "Leave request")}</strong><br />{String(attrs(selectedLeaveRequest).starts_at || "Start time unavailable")} – {String(attrs(selectedLeaveRequest).ends_at || "End time unavailable")}</p>
                 <label>Decision *<SortedSelect name="action" required><option value="approve">Approve</option><option value="reject">Reject</option></SortedSelect></label>
                 <label>Reason *<textarea name="reason" required minLength={1} maxLength={1000} /></label>
-                <p className="notice">The server checks the request revision and lifecycle before recording this decision.</p>
               </>
             )}
             {mode === "availability" && (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
   DEFAULT_PAGE_SIZE,

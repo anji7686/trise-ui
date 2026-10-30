@@ -131,7 +131,7 @@ test('customer can review independently progressing elevator units across linked
   if (info.project.name === 'customer-mobile') {
     const mobileClearance = await page.evaluate(() => {
       const navigation = document.querySelector('.customer-mobile-navigation');
-      const documents = document.querySelector('.customer-project-aside > section:nth-child(3)');
+      const documents = document.querySelector('.customer-project-history') || document.querySelector('.customer-project-aside > section:last-of-type');
       return navigation && documents ? navigation.getBoundingClientRect().top - documents.getBoundingClientRect().bottom : null;
     });
     if (mobileClearance === null) throw new Error('The last project panel or fixed mobile navigation was not rendered.');

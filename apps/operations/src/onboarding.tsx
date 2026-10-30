@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Button, SortedSelect } from '@trise/ui';
+import { Button, SortedSelect, InfoNotice } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { operationsData, type Collection, type GenericAttributes, type IndiaPincodeLookup, type RequirementCatalogue, type Resource } from './data';
 import { SearchableSelect } from './searchable-select';
@@ -18,9 +18,9 @@ function messageFor(error: unknown) { return (error as { message?: string })?.me
 function titleOf(item: Resource<GenericAttributes>) { return String(item.attributes.name || item.attributes.display_name || item.attributes.title || item.attributes.code || item.id); }
 function linkOf(item: Resource<GenericAttributes> | undefined, name: string) { return item?.relationships[name] as Link | null | undefined; }
 
-function Panel({ title, description, children, collapsible = false, className = '' }: { title: string; description: string; children: ReactNode; collapsible?: boolean; className?: string }) {
-  if (collapsible) return <details className="detail-card onboarding-panel onboarding-optional-panel"><summary className="section-heading"><div><h3>{title}</h3><p>{description}</p></div><span className="optional">Optional · add now or later</span></summary><div className="onboarding-panel-content">{children}</div></details>;
-  return <section className={`detail-card onboarding-panel ${className}`}><div className="section-heading"><div><h3>{title}</h3><p>{description}</p></div></div>{children}</section>;
+function Panel({ title, description, children, collapsible = false, className = '', titleInfo }: { title: string; description: string; children: ReactNode; collapsible?: boolean; className?: string; titleInfo?: ReactNode }) {
+  if (collapsible) return <details className="detail-card onboarding-panel onboarding-optional-panel"><summary className="section-heading"><div><div className="trise-info-heading-row"><h3>{title}</h3>{titleInfo}</div><p>{description}</p></div><span className="optional">Optional · add now or later</span></summary><div className="onboarding-panel-content">{children}</div></details>;
+  return <section className={`detail-card onboarding-panel ${className}`}><div className="section-heading"><div><div className="trise-info-heading-row"><h3>{title}</h3>{titleInfo}</div><p>{description}</p></div></div>{children}</section>;
 }
 
 export function PropertyOnboarding({ providerId }: { providerId: string }) {
@@ -508,7 +508,9 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
     setBusy(name); setError(''); setMessage('');
     try {
       const result = await operationsData.createAsset(providerId, { name, asset_definition_id: definitionId, definition_version: Number(selectedDefinition?.attributes.version || 1), customer_relationship_id: relationshipId, owner_party_id: partyId, location_id: serviceLocationId, values, identifier_inputs: [] }, keyFor(`asset:${name}`));
-      setSavedAssets((current) => [...current, result]); setAssetNameDraft(''); setMessage(`${name} saved with its selected building context. Add the next lift with a unique name or code.`);
+      const identifiers = Array.isArray(result.attributes.identifiers) ? result.attributes.identifiers as Array<Record<string, unknown>> : [];
+      const generatedCode = String(identifiers.find((item) => String(item.identifier_type_code || '').toUpperCase() === 'EQUIPMENT_CODE')?.value || '');
+      setSavedAssets((current) => [...current, result]); setAssetNameDraft(''); setMessage(`${name} saved with its selected building context.${generatedCode ? ` E-Code: ${generatedCode}.` : ''} Add the next lift with a unique name.`);
     } catch (cause) { setError(messageFor(cause)); } finally { setBusy(''); }
   }
 
@@ -635,7 +637,7 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
       {propertyReady && <p className="onboarding-ready-banner" role="status"><strong>Buildings ready</strong><span>{buildingLocations.length} building{buildingLocations.length === 1 ? '' : 's'} saved. Continue to register assets or skip to contacts and access.</span></p>}
       {renderStepActions(propertyReady, 'Continue to assets')}
     </Panel>}
-    {step === 'assets' && <Panel className="onboarding-property-panel" title="Register elevators" description="Register every elevator as an asset. Each lift uses the same type, stops and rated capacity fields carried through project requirements, plus the specifications configured for its asset definition.">
+    {step === 'assets' && <Panel className="onboarding-property-panel" title="Register elevators" description="Register every elevator as an asset. Each lift uses the same type, stops and rated capacity fields carried through project requirements, plus the specifications configured for its asset definition." titleInfo={<InfoNotice>Each saved elevator is one unit in the building inventory. Manufacturer, model, serial number, installation date and other fields come from the selected asset definition.</InfoNotice>}>
       {definitionsLoading && <p className="onboarding-inline-note" role="status">Loading available asset types…</p>}
       {requirementCatalogueLoading && <p className="onboarding-inline-note" role="status">Loading the elevator type catalogue…</p>}
       {requirementCatalogueError && <p className="onboarding-inline-note" role="alert">Elevator type options could not be loaded: {requirementCatalogueError}</p>}
@@ -654,7 +656,6 @@ export function PropertyOnboarding({ providerId }: { providerId: string }) {
         <Button type="submit" busy={Boolean(busy)} disabled={!definitionId || definitionsLoading || attributeDefinitionsLoading || attributeDefinitions === null || requirementCatalogueLoading || !coreElevatorSpecsReady}>Save elevator asset</Button>
       </form>}
       <div className="record-grid">{existingElevators.map((name) => <article className="record-card" key={name}><Status>Saved</Status><strong>{name}</strong><small>Building context saved</small></article>)}</div>
-      <p className="notice">Each saved elevator is one unit in the building inventory. Manufacturer, model, serial number, installation date and other fields come from the selected asset definition.</p>
       {renderStepActions(true, 'Continue to contacts & access')}
     </Panel>}
     {step === 'finish' && <section className="onboarding-finish-summary"><div><p className="onboarding-eyebrow">OPTIONAL NEXT STEPS</p><h3>Contacts and customer access</h3><p>Add people responsible for the property or configure the customer’s scoped portal access.</p></div></section>}

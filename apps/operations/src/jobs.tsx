@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Button, PageHeader, SortedSelect } from '@trise/ui';
+import { Button, PageHeader, SortedSelect, InfoNotice } from '@trise/ui';
 import { OperationsStatus as Status } from './operations-status';
 import { ExecutionPanel } from './execution';
 import { DEFAULT_PAGE_SIZE, operationsData, type AgentAttributes, type AssignmentAttributes, type Collection, type JobAttributes, type PartDefinitionAttributes, type PartUsageAttributes, type ProviderWorkJourney, type Resource, type ServiceReportAttributes, type VisitAttributes, type WorkNoteAttributes } from './data';

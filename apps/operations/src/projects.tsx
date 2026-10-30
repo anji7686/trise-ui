@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, FilterToolbar, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, FilterToolbar, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import {
   DEFAULT_PAGE_SIZE,
@@ -718,11 +718,10 @@ function ProjectCommercialStagePanel({ providerId, project, permissions, onChang
     }
   }
   return <section className="project-commercial-stage-panel" aria-label="Payment stages and release control">
-    <div className="section-heading"><div><span className="eyebrow">Commercial gate</span><h3>Payment stages & release control</h3><p>Stage-first view of the accepted commercial baseline. Allocation, credit and release decisions remain server-controlled and auditable.</p>{project.attributes.journey_stage_status === 'COMPLETED' && <small className="notice-inline">Project scope is read-only; Handover settlement and release remain available until financial close.</small>}</div>{canRecordPayment && paymentStagesAllowed && !paymentStagesFrozen && <Button variant="secondary" onClick={() => setDialog("schedule")}>Add payment stage</Button>}</div>
+    <div className="section-heading"><div><span className="eyebrow">Commercial gate</span><div className="trise-info-heading-row"><h3>Payment stages &amp; release control</h3>{paymentStagesAllowed && paymentStagesFrozen && <InfoNotice>The accepted quotation froze the percentage plan. Collections, allocation evidence and authorized release remain available.</InfoNotice>}</div><p>Stage-first view of the accepted commercial baseline. Allocation, credit and release decisions remain server-controlled and auditable.</p>{project.attributes.journey_stage_status === 'COMPLETED' && <small className="notice-inline">Project scope is read-only; Handover settlement and release remain available until financial close.</small>}</div>{canRecordPayment && paymentStagesAllowed && !paymentStagesFrozen && <Button variant="secondary" onClick={() => setDialog("schedule")}>Add payment stage</Button>}</div>
     {error && <ActionNotification kind="error" title="Payment stage action needs attention" onClose={() => setError("")}>{error}</ActionNotification>}
     {message && <ActionNotification title="Payment stage updated" onClose={() => setMessage("")}>{message}</ActionNotification>}
     {!paymentStagesAllowed && <p className="notice">Stage payments are not applicable to this project. AMC/service commercial terms remain contract-scoped.</p>}
-    {paymentStagesAllowed && paymentStagesFrozen && <p className="notice">The accepted quotation froze the percentage plan. Collections, allocation evidence and authorized release remain available.</p>}
     {schedules?.data.length ? <div className="project-commercial-stage-list">{schedules.data.map((schedule) => { const due = Number(schedule.attributes.due_amount || 0); const collected = Number(schedule.attributes.collected_amount || 0); const outstanding = Number(schedule.attributes.outstanding_amount || 0); const collectedPercent = due > 0 ? Math.min(100, Math.round((collected / due) * 100)) : 0; const stagePayments = (payments?.data || []).filter((payment) => payment.attributes.payment_schedule_id === schedule.id || payment.attributes.allocations?.some((allocation) => allocation.payment_schedule_id === schedule.id)); return <article className="project-commercial-stage" key={schedule.id}><div className="project-commercial-stage-heading"><div><Status>{displayLabel(schedule.attributes.status, "Open")}</Status><h4>{displayLabel(schedule.attributes.milestone_code, "Payment stage")}</h4><p>{schedule.attributes.description}</p></div><strong>{schedule.attributes.currency_code} {schedule.attributes.due_amount}</strong></div><div className="project-commercial-stage-progress"><span style={{ width: `${collectedPercent}%` }} /><small>{collectedPercent}% collected · {schedule.attributes.currency_code} {schedule.attributes.outstanding_amount} outstanding</small></div><div className="project-commercial-stage-facts"><span>Due <strong>{schedule.attributes.due_on || "Date not set"}</strong></span><span>Collected <strong>{schedule.attributes.collected_amount}</strong></span><span>Release <strong>{outstanding <= 0 ? "Eligible for review" : "Awaiting evidence"}</strong></span></div>{stagePayments.length > 0 && <div className="project-commercial-payment-evidence" aria-label={`${displayLabel(schedule.attributes.milestone_code, "Payment stage")} payment evidence`}><strong>Payment evidence</strong>{stagePayments.map((payment) => <div className="project-commercial-payment-row" key={payment.id}><span><Status>{displayLabel(payment.attributes.status, "Received")}</Status><strong>{payment.attributes.payment_reference}</strong><small>{displayLabel(payment.attributes.method, "Payment method")} · {payment.attributes.amount} {payment.attributes.currency_code}</small></span>{canReleaseStage && ["RECEIVED", "PENDING_VERIFICATION"].includes(payment.attributes.status) && <Button variant="quiet" busy={verifyingPaymentId === payment.id} disabled={verifyingPaymentId !== null} onClick={() => void verifyPayment(payment)}>Verify settlement</Button>}</div>)}</div>}<div className="action-footer">{canRecordPayment && outstanding > 0 && <Button variant="secondary" onClick={() => record(schedule, "payment")}>Record collection</Button>}{canReleaseStage && outstanding <= 0 && <Button variant="secondary" onClick={() => record(schedule, "release")}>Authorize stage release</Button>}</div></article>; })}</div> : schedules ? <p className="notice">No payment stages have been configured for this project.</p> : <p className="notice">Loading payment stages…</p>}
     {dialog === "schedule" && <PaymentScheduleDialog providerId={providerId} caseId={project.id} expectedRevision={project.attributes.revision} initialBasis={project.attributes.adjusted_project_total || project.attributes.payment_schedule_total || "0"} initialStages={paymentStagePolicy?.stages || []} close={() => setDialog(null)} saved={() => { setDialog(null); setMessage("Payment stage recorded."); void load(); onChanged(); }} />}
     {dialog === "payment" && activeSchedule && <PaymentDialog providerId={providerId} caseId={project.id} schedule={activeSchedule} close={() => setDialog(null)} saved={() => { setDialog(null); setMessage("Payment evidence recorded for verification."); void load(); onChanged(); }} />}
@@ -864,10 +863,9 @@ function LegacyProjectDetailContent({
           )}
         </section>
         <section className="detail-card project-material-requirements">
-          <h3>Material requirements</h3>
-          <p className="notice">
-            Planned materials are captured from the accepted quotation snapshot or added to this project by the provider. Inventory and stock are not represented here.
-          </p>
+          <div className="trise-info-heading-row"><h3>Material requirements</h3>
+            <InfoNotice>Planned materials are captured from the accepted quotation snapshot or added to this project by the provider. Inventory and stock are not represented here.</InfoNotice>
+          </div>
           {requirements?.data.length ? (
             requirements.data.map((item) => (
               <article className="record-card" key={item.id}>
@@ -1039,7 +1037,7 @@ function LegacyProjectDetailContent({
       {dialog === "release" && activeSchedule && (
         <StageReleaseDialog providerId={providerId} caseId={project.id} schedule={activeSchedule} close={() => setDialog(null)} saved={() => { setDialog(null); setMessage("Stage release decision recorded."); void reload(); onProjectChanged(); }} />
       )}
-      {closeOpen && <OperationsDialog title="Close project" busy={closeBusy} onClose={() => setCloseOpen(false)}><form className="provider-form project-action-form" onSubmit={(event) => { event.preventDefault(); setCloseBusy(true); setError(""); void operationsData.closeServiceCase(providerId, project.id, { expected_revision: project.attributes.revision, reason: closeReason }, uuid()).then(() => { setCloseOpen(false); setMessage("Project closed. AMC and service history remains available from the shared journey."); onProjectChanged(); }).catch((cause) => setError(fail(cause))).finally(() => setCloseBusy(false)); }}><p className="notice">This records the governed project close after handover acceptance and the first preventive service report. The AMC/service journey remains active.</p><label>Close reason *<textarea required minLength={3} maxLength={500} value={closeReason} onChange={(event) => setCloseReason(event.target.value)} /></label>{error && <p className="feature-error" role="alert">{error}</p>}<div className="provider-form-actions"><Button type="button" variant="quiet" onClick={() => setCloseOpen(false)}>Cancel</Button><Button type="submit" busy={closeBusy}>Confirm close</Button></div></form></OperationsDialog>}
+      {closeOpen && <OperationsDialog title="Close project" titleInfo={<InfoNotice>This records the governed project close after handover acceptance and the first preventive service report. The AMC/service journey remains active.</InfoNotice>} busy={closeBusy} onClose={() => setCloseOpen(false)}><form className="provider-form project-action-form" onSubmit={(event) => { event.preventDefault(); setCloseBusy(true); setError(""); void operationsData.closeServiceCase(providerId, project.id, { expected_revision: project.attributes.revision, reason: closeReason }, uuid()).then(() => { setCloseOpen(false); setMessage("Project closed. AMC and service history remains available from the shared journey."); onProjectChanged(); }).catch((cause) => setError(fail(cause))).finally(() => setCloseBusy(false)); }}><label>Close reason *<textarea required minLength={3} maxLength={500} value={closeReason} onChange={(event) => setCloseReason(event.target.value)} /></label>{error && <p className="feature-error" role="alert">{error}</p>}<div className="provider-form-actions"><Button type="button" variant="quiet" onClick={() => setCloseOpen(false)}>Cancel</Button><Button type="submit" busy={closeBusy}>Confirm close</Button></div></form></OperationsDialog>}
     </>
   );
 }
@@ -2200,6 +2198,18 @@ function seededPaymentStages(initialStages: PaymentStageSeed[]) {
   ];
 }
 
+function paymentStageCodesForSave(stages: ReturnType<typeof seededPaymentStages>) {
+  const used = new Set<string>();
+  return stages.map((stage, index) => {
+    const base = stage.milestone_code.trim() || `STAGE_${index + 1}`;
+    let code = base;
+    let suffix = 2;
+    while (used.has(code.toLowerCase())) code = `${base}_${suffix++}`;
+    used.add(code.toLowerCase());
+    return { ...stage, milestone_code: code };
+  });
+}
+
 function PaymentScheduleDialog({
   providerId,
   caseId,
@@ -2225,17 +2235,15 @@ function PaymentScheduleDialog({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const totalBasisPoints = stages.reduce((sum, stage) => sum + Math.round(Number(stage.percentage || 0) * 100), 0);
-    const identifiers = stages.map((stage) => stage.milestone_code.trim().toLowerCase());
     if (!Number.isFinite(Number(basis)) || Number(basis) <= 0) { setError("Enter the accepted payable total used as the payment basis."); return; }
     if (stages.some((stage) => !Number.isFinite(Number(stage.percentage)) || Number(stage.percentage) < 0)) { setError("Stage percentages must be valid non-negative numbers."); return; }
-    if (new Set(identifiers).size !== identifiers.length || identifiers.some((identifier) => !identifier)) { setError("Every stage must have a unique identifier."); return; }
     if (totalBasisPoints !== 10000) { setError(`Stage percentages must total exactly 100.00% (currently ${(totalBasisPoints / 100).toFixed(2)}%).`); return; }
     setBusy(true);
     try {
       await operationsData.configurePaymentSchedules(
         providerId,
         caseId,
-        { expected_revision: expectedRevision, payment_basis_amount: basis, payment_basis_currency_code: currency.toUpperCase(), stages: stages.map((stage, index) => ({ ...stage, sequence: index + 1, percentage: Number(stage.percentage) })) },
+        { expected_revision: expectedRevision, payment_basis_amount: basis, payment_basis_currency_code: currency.toUpperCase(), stages: paymentStageCodesForSave(stages).map((stage, index) => ({ ...stage, sequence: index + 1, percentage: Number(stage.percentage) })) },
         uuid(),
       );
       saved();
@@ -2250,31 +2258,37 @@ function PaymentScheduleDialog({
   let allocatedCents = 0;
   const stageAmounts = stages.map((stage, index) => {
     const roundedCents = Math.round(basisCents * Math.round(Number(stage.percentage || 0) * 100) / 10000);
-    const cents = index === stages.length - 1 ? basisCents - allocatedCents : roundedCents;
+    const cents = totalBasisPoints === 10000 && index === stages.length - 1 ? basisCents - allocatedCents : roundedCents;
     allocatedCents += cents;
     return cents;
   });
+  const allocatedAmountCents = stageAmounts.reduce((sum, amount) => sum + amount, 0);
   return (
-    <OperationsDialog title="Configure payment stages" busy={busy} onClose={close}>
+    <OperationsDialog className="payment-stage-dialog" title="Configure payment stages" titleInfo={initialStages.length > 0 ? <InfoNotice>Stages were prefilled from the accepted quotation. Review the allocation and save; the project keeps that commercial snapshot.</InfoNotice> : undefined} busy={busy} onClose={close}>
       <form className="provider-form payment-stage-editor" onSubmit={(event) => void submit(event)}>
         {error && <p className="feature-error">{error}</p>}
-        {initialStages.length > 0 && <p className="notice">Stages were prefilled from the accepted quotation. Review the allocation and save; the project keeps that commercial snapshot.</p>}
-        <p className="notice payment-stage-guidance">Calculated stage amounts use the payable basis. Configure any number of stages; allocation must total exactly 100.00%. The accepted schedule remains immutable after acceptance.</p>
+        <p className="payment-stage-guidance">Set the payable amount, then divide it across stages. Percentages must total 100%.</p>
         <div className="payment-stage-basis"><label>Payment basis *<input aria-label="Payment basis" required type="number" min="0.01" step="0.01" value={basis} onChange={(event) => setBasis(event.target.value)} /></label>
         <label>Currency *<SortedSelect aria-label="Payment currency" required value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="INR">INR · Indian rupee</option>{currency !== "INR" && <option value={currency}>{currency}</option>}</SortedSelect></label></div>
         {stages.map((stage, index) => {
           return <fieldset className="record-card payment-stage-card" key={`${stage.milestone_code}-${index}`}><legend>Stage {index + 1}</legend>
-            <label>Identifier *<input required value={stage.milestone_code} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, milestone_code: event.target.value } : item))} /></label>
-            <label>Name *<input required value={stage.description} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></label>
-            <label>Percentage *<input required type="number" min="0" max="100" step="0.01" value={stage.percentage} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, percentage: event.target.value } : item))} /></label>
-            <label>Calculated amount<input readOnly value={`${(stageAmounts[index] / 100).toFixed(2)} ${currency.toUpperCase()}`} /></label>
-            <label>Trigger<SortedSelect value={stage.trigger_kind} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}><option value="MANUAL">Manual</option><option value="CUSTOMER_ACCEPTANCE">Customer acceptance</option><option value="STAGE_COMPLETION">Stage completion</option><option value="DELIVERY">Delivery</option><option value="HANDOVER">Handover</option></SortedSelect></label>
-            <label>Material release condition<SortedSelect value={stage.material_release_condition} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, material_release_condition: event.target.value } : item))}>{PAYMENT_RELEASE_CONDITIONS.map(([value, label]) => <option value={value} key={value || "NONE"}>{label}</option>)}{stage.material_release_condition && !PAYMENT_RELEASE_CONDITIONS.some(([value]) => value === stage.material_release_condition) && <option value={stage.material_release_condition}>{stage.material_release_condition}</option>}</SortedSelect></label>
-            <label><input type="checkbox" checked={stage.customer_acceptance_required} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, customer_acceptance_required: event.target.checked } : item))} /> Customer acceptance required</label>
-            <Button type="button" variant="secondary" disabled={stages.length <= 1} onClick={() => setStages(stages.filter((_, itemIndex) => itemIndex !== index))}>Remove stage</Button>
+            <div className="payment-stage-fields payment-stage-primary-fields">
+              <label>Stage name *<input required value={stage.description} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} /></label>
+              <label>Share of total *<span className="payment-stage-percentage"><input aria-label={`Stage ${index + 1} percentage`} required type="number" min="0" max="100" step="0.01" value={stage.percentage} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, percentage: event.target.value } : item))} /><span>%</span></span></label>
+              <label>Amount<input readOnly value={`${(stageAmounts[index] / 100).toFixed(2)} ${currency.toUpperCase()}`} /></label>
+            </div>
+            <details className="payment-stage-advanced">
+              <summary>More stage settings</summary>
+              <div className="payment-stage-fields">
+                <label>Payment trigger<SortedSelect value={stage.trigger_kind} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, trigger_kind: event.target.value } : item))}><option value="MANUAL">Manual</option><option value="CUSTOMER_ACCEPTANCE">Customer acceptance</option><option value="STAGE_COMPLETION">Stage completion</option><option value="DELIVERY">Delivery</option><option value="HANDOVER">Handover</option></SortedSelect></label>
+                <label>Material release condition<SortedSelect value={stage.material_release_condition} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, material_release_condition: event.target.value } : item))}>{PAYMENT_RELEASE_CONDITIONS.map(([value, label]) => <option value={value} key={value || "NONE"}>{label}</option>)}{stage.material_release_condition && !PAYMENT_RELEASE_CONDITIONS.some(([value]) => value === stage.material_release_condition) && <option value={stage.material_release_condition}>{stage.material_release_condition}</option>}</SortedSelect></label>
+                <label className="payment-stage-acceptance"><input type="checkbox" checked={stage.customer_acceptance_required} onChange={(event) => setStages(stages.map((item, itemIndex) => itemIndex === index ? { ...item, customer_acceptance_required: event.target.checked } : item))} /> Customer acceptance required</label>
+                <Button type="button" variant="secondary" disabled={stages.length <= 1} onClick={() => setStages(stages.filter((_, itemIndex) => itemIndex !== index))}>Remove stage</Button>
+              </div>
+            </details>
           </fieldset>;
         })}
-        <p className={`payment-stage-total${totalBasisPoints === 10000 ? ' is-valid' : ' is-invalid'}`} role="status">Total allocation: {(totalBasisPoints / 100).toFixed(2)}% · {(stageAmounts.reduce((sum, amount) => sum + amount, 0) / 100).toFixed(2)} {currency.toUpperCase()}</p>
+        <p className={`payment-stage-total${totalBasisPoints === 10000 ? ' is-valid' : ' is-invalid'}`} role="status">Total allocation: {(totalBasisPoints / 100).toFixed(2)}% · Amount allocated: {(allocatedAmountCents / 100).toFixed(2)} {currency.toUpperCase()}{totalBasisPoints !== 10000 && ` · ${(Math.abs(10000 - totalBasisPoints) / 100).toFixed(2)}% ${totalBasisPoints < 10000 ? 'remaining' : 'over'}`}</p>
         <div className="payment-stage-actions"><Button type="button" variant="secondary" onClick={() => setStages([...stages, { milestone_code: `STAGE_${stages.length + 1}`, description: "New stage", percentage: "0", trigger_kind: "MANUAL", material_release_condition: "", customer_acceptance_required: false }])}>Add stage</Button>
         <Button type="submit" busy={busy}>Save payment-stage configuration</Button></div>
       </form>
@@ -2324,10 +2338,9 @@ function StageReleaseDialog({
   return <OperationsDialog title={`Authorize ${displayLabel(schedule.attributes.milestone_code, "payment stage")} release`} busy={busy} onClose={close}>
     <form className="provider-form project-action-form stage-release-form" onSubmit={(event) => void submit(event)}>
       {error && <p className="feature-error" role="alert">{error}</p>}
-      <p className="notice">Choose whether this stage is released by settled receipts or by an explicitly approved customer credit arrangement. The accepted quotation revision is checked by the server.</p>
       <label>Accepted quotation revision *<input required type="number" min="1" value={quotationRevision} onChange={(event) => setQuotationRevision(event.target.value)} /></label>
       <label>Release rule version *<input required maxLength={80} value={ruleVersion} onChange={(event) => setRuleVersion(event.target.value)} /></label>
-      <label>Release basis *<SortedSelect value={releaseBasis} onChange={(event) => setReleaseBasis(event.target.value as "SETTLED_PAYMENT" | "APPROVED_CREDIT")}><option value="SETTLED_PAYMENT">Settled payment</option><option value="APPROVED_CREDIT">Approved customer credit</option></SortedSelect></label>
+      <label className="info-label"><span className="info-label-heading"><span>Release basis *</span><InfoNotice>Choose whether to release against settled receipts or an explicitly approved customer credit arrangement. The accepted quotation revision is checked by the server.</InfoNotice></span><SortedSelect value={releaseBasis} onChange={(event) => setReleaseBasis(event.target.value as "SETTLED_PAYMENT" | "APPROVED_CREDIT")}><option value="SETTLED_PAYMENT">Settled payment</option><option value="APPROVED_CREDIT">Approved customer credit</option></SortedSelect></label>
       {releaseBasis === "APPROVED_CREDIT" && <><label>Approved credit amount *<input required type="number" min={schedule.attributes.outstanding_amount} step="0.01" value={creditAmount} onChange={(event) => setCreditAmount(event.target.value)} /></label><label>Credit due date *<input required type="date" value={creditDueOn} onChange={(event) => setCreditDueOn(event.target.value)} /></label><label>Credit reference<input value={creditReference} onChange={(event) => setCreditReference(event.target.value)} placeholder="Builder commitment / approval reference" /></label></>}
       <label>Decision reason *<textarea required maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <Button type="submit" busy={busy}>Authorize material/execution release</Button>
@@ -2402,8 +2415,8 @@ function PaymentDialog({
             }
           />
         </label>
-        <label>
-          Method *
+        <label className="info-label">
+          <span className="info-label-heading"><span>Method *</span><InfoNotice>Cash and cheque are recorded as received; online is recorded as pending verification until an authorized verifier settles it.</InfoNotice></span>
           <SortedSelect
             required
             value={form.method}
@@ -2442,10 +2455,6 @@ function PaymentDialog({
             }
           />
         </label>
-        <p className="notice">
-          Cash and cheque are recorded as received; online is recorded as
-          pending verification until an authorized verifier settles it.
-        </p>
         <Button type="submit" busy={busy}>
           Record collection
         </Button>
@@ -2839,12 +2848,12 @@ function DeliveryDialog({
   return (
     <OperationsDialog
       title={`Record delivery — ${shipment.attributes.shipment_number}`}
+      titleInfo={<InfoNotice>Verify every dispatched line. Partial acceptance remains open until the outstanding quantity is reconciled.</InfoNotice>}
       busy={busy}
       onClose={close}
     >
       <form className="provider-form project-action-form delivery-reconcile-form" onSubmit={(e) => void submit(e)}>
         {error && <p className="feature-error">{error}</p>}
-        <p className="notice">Verify every dispatched line. Partial acceptance remains open until the outstanding quantity is reconciled.</p>
         <div className="delivery-material-lines" aria-label="Shipment delivery lines">
           {shipment.attributes.lines.map((line) => {
             const decision = decisions.find((item) => item.shipment_line_id === line.id);

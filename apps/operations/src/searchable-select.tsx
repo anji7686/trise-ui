@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 
 export type LookupOption = { id: string; label: string; detail?: string };
 export function sortedSearchOptions(options: LookupOption[], search: string) {
@@ -10,7 +10,7 @@ export function requiresSearchTerm(search: string, required: boolean, minimumLen
   return required && search.trim().length < minimumLength;
 }
 
-export function SearchableSelect({ label, searchLabel, search, onSearch, value, onChange, options, placeholder = 'Select an option', required = true, disabled = false, error = '', searchRequired = false }: { label: string; searchLabel: string; search: string; onSearch: (value: string) => void; value: string; onChange: (value: string) => void; options: LookupOption[]; placeholder?: string; required?: boolean; disabled?: boolean; error?: string; searchRequired?: boolean }) {
+export function SearchableSelect({ label, searchLabel, search, onSearch, value, onChange, options, placeholder = 'Select an option', required = true, disabled = false, error = '', searchRequired = false, labelAdornment }: { label: string; searchLabel: string; search: string; onSearch: (value: string) => void; value: string; onChange: (value: string) => void; options: LookupOption[]; placeholder?: string; required?: boolean; disabled?: boolean; error?: string; searchRequired?: boolean; labelAdornment?: ReactNode }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -39,7 +39,7 @@ export function SearchableSelect({ label, searchLabel, search, onSearch, value, 
     setOpen(true);
   }
   return <div ref={root} className={`subscription-combobox${error ? ' has-error' : ''}`}>
-    <label htmlFor={id}>{label}</label>
+    <div className="search-select-label-row"><label htmlFor={id}>{label}</label>{labelAdornment && <span className="search-select-label-adornment">{labelAdornment}</span>}</div>
     <div className="search-select-control"><input ref={input} id={id} type="text" disabled={disabled} required={required} value={display} pattern={selected ? undefined : '(?!)'} title={placeholder} placeholder={searchLabel} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-list`} aria-activedescendant={open && results.length ? `${id}-option-${activeIndex}` : undefined} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} onClick={openResults} onFocus={openResults} onChange={event => { onChange(''); onSearch(event.target.value); setActive(0); setOpen(true); }} onKeyDown={event => {
       if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); }
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

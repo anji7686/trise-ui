@@ -7931,6 +7931,7 @@ export const operationsData = {
       limit?: number;
       query?: string;
       status?: string;
+      purpose?: string;
       quotationId?: string;
       customerRelationshipId?: string;
       customerEmail?: string;
@@ -7946,6 +7947,7 @@ export const operationsData = {
     if (params.before) page.set("page[before]", params.before);
     if (params.query) page.set("filter[q]", params.query);
     if (params.status) page.set("filter[status]", params.status);
+    if (params.purpose) page.set("filter[purpose]", params.purpose);
     if (params.quotationId) page.set("filter[quotation_id]", params.quotationId);
     if (params.customerRelationshipId)
       page.set(
@@ -8393,6 +8395,11 @@ export const operationsData = {
       `/maintenance-contracts/${encodeURIComponent(id)}/asset-scopes?page[limit]=100`,
       providerId,
     ) as Promise<Collection<GenericAttributes>>,
+  maintenanceContractAssetScope: (providerId: string, id: string, scopeId: string) =>
+    query(
+      `/maintenance-contracts/${encodeURIComponent(id)}/asset-scopes/${encodeURIComponent(scopeId)}`,
+      providerId,
+    ) as Promise<Resource<GenericAttributes>>,
   maintenanceContractCoverageRules: (providerId: string, id: string) =>
     query(
       `/maintenance-contracts/${encodeURIComponent(id)}/coverage-rules?page[limit]=100`,

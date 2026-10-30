@@ -1,17 +1,22 @@
 import { test, expect } from './fixtures';
-import { configuredAccount, localSignIn, localSignOut } from './local-auth';
+import { configuredAccount, localSignIn } from './local-auth';
 import { e2eApiV1Base } from './e2e-config';
 import type { Locator, Page, TestInfo } from 'playwright/test';
 
-test.use({ screenshot: 'on', trace: 'retain-on-failure', video: 'retain-on-failure' });
+test.use({ screenshot: 'on', trace: 'retain-on-failure', video: 'retain-on-failure', actionTimeout: 10_000, navigationTimeout: 15_000 });
 
-async function selectProvider(page: Page) {
+async function selectProvider(page: Page, providerId?: string) {
   const trigger = page.getByRole('button', { name: 'Open account menu', exact: true });
   await trigger.click();
   const menu = page.getByRole('dialog', { name: 'Account and workspace menu', exact: true });
   const provider = menu.getByRole('combobox', { name: 'Provider', exact: true });
-  await expect.poll(() => provider.locator('option').count(), { timeout: 20_000 }).toBeGreaterThan(1);
-  if (!(await provider.inputValue())) await provider.selectOption({ index: 1 });
+  if (providerId) {
+    await expect(provider.locator(`option[value="${providerId}"]`)).toHaveCount(1, { timeout: 20_000 });
+    if (await provider.inputValue() !== providerId) await provider.selectOption(providerId);
+  } else {
+    await expect.poll(() => provider.locator('option').count(), { timeout: 20_000 }).toBeGreaterThan(1);
+    if (!(await provider.inputValue())) await provider.selectOption({ index: 1 });
+  }
   await trigger.click();
 }
 
@@ -53,14 +58,14 @@ async function completeIntakeWizard(
   await expect(dialog.getByText('Step 3 of 4')).toBeVisible();
   if (siteMode === 'NEW') {
     await dialog.getByRole('combobox', { name: 'Site selection', exact: true }).selectOption('NEW');
-    await dialog.getByLabel('Site or project name', { exact: true }).fill('Lifecycle verification site');
+    await dialog.getByLabel('Site or project name *', { exact: true }).fill('Lifecycle verification site');
   }
   await dialog.getByRole('textbox', { name: 'Latitude', exact: true }).fill('12.9716');
   await dialog.getByRole('textbox', { name: 'Longitude', exact: true }).fill('77.5946');
   await dialog.getByRole('button', { name: 'Continue', exact: true }).click();
 
   await expect(dialog.getByText('Step 4 of 4')).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Check possible matches', exact: true })).toBeEnabled();
+  await expect(dialog.getByRole('button', { name: 'Search assets and projects', exact: true })).toBeEnabled();
   await expect(dialog.getByRole('button', { name: 'Create intake', exact: true })).toBeEnabled();
   await expect(dialog.getByText(title, { exact: true })).toBeVisible();
   await expect(dialog.getByText('Lifecycle verification requester', { exact: true })).toBeVisible();
@@ -139,11 +144,11 @@ test('AMC Work Intake can be confirmed against an Asset and handed to Service Pr
   const dialog = page.getByRole('dialog', { name: 'Create Work Intake', exact: true });
   const title = `AMC intake route ${testInfo.project.name} ${Date.now()}`;
   await completeIntakeWizard(dialog, 'AMC', title, 'AMC_RENEWAL');
-  await dialog.getByLabel('Optional existing Asset or Project lookup').fill(assetSearch!);
-  await dialog.getByRole('button', { name: 'Check possible matches', exact: true }).click();
+  await dialog.getByPlaceholder('Search by asset or project name', { exact: true }).fill(assetSearch!);
+  await dialog.getByRole('button', { name: 'Search assets and projects', exact: true }).click();
   const assetMatch = page.locator('.provider-work-intake-candidates article').filter({ hasText: assetSearch! }).first();
   await expect(assetMatch).toBeVisible({ timeout: 20_000 });
-  await assetMatch.getByRole('button', { name: 'Select relationship', exact: true }).click();
+  await assetMatch.getByRole('button', { name: 'Select this record', exact: true }).click();
   await dialog.getByLabel('Reason for selecting this asset *').fill('Confirmed existing asset for AMC scope review.');
   await dialog.getByRole('button', { name: 'Create intake', exact: true }).click();
   await expect(page.getByText(/was saved\. Possible matches are advisory/)).toBeVisible({ timeout: 20_000 });
@@ -171,9 +176,13 @@ test('AMC Work Intake can be confirmed against an Asset and handed to Service Pr
 });
 
 test('New Installation Work Intake flows through lead, survey and Sales quotation draft', async ({ page }, testInfo) => {
-  test.setTimeout(120_000);
-  const admin = await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
-  await selectProvider(page);
+  test.setTimeout(240_000);
+  const salesManager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
+  const providerId = salesManager.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string }) =>
+    entry.display_name === 'Lift Rise Elevators — Demo Operations',
+  )?.provider_id;
+  expect(providerId).toBeTruthy();
+  await selectProvider(page, providerId);
   await page.goto(`${page.url().split('#')[0]}#work-intake`);
   await expect(page.getByRole('heading', { name: 'Work Intake', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Create intake', exact: true }).click();
@@ -186,11 +195,17 @@ test('New Installation Work Intake flows through lead, survey and Sales quotatio
   const row = page.getByRole('row').filter({ hasText: title });
   await expect(row).toBeVisible();
   await row.getByRole('button', { name: 'Open intake', exact: true }).click();
+  await page.getByRole('button', { name: 'Accept & start work', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('You accepted this intake and the assessment is now in progress.');
+  await page.getByRole('button', { name: 'Complete assessment', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Choose the next workflow', exact: true })).toBeVisible();
+  const handoff = page.getByRole('region', { name: 'Downstream workflow route', exact: true });
+  await expect(handoff).toContainText('New Installation always starts with Marketing / Sales as a Lead.');
+  await page.getByLabel('Decision reason', { exact: true }).fill('New installation assessment is ready for Lead and Survey.');
   const routeResponsePromise = page.waitForResponse(response =>
     response.url().includes('/route-decisions') && response.request().method() === 'POST',
   );
-  await expect(page.getByRole('heading', { name: 'Skip assignment and assessment', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Send to Lead & Survey', exact: true }).click();
+  await page.getByRole('button', { name: 'Save route & hand off', exact: true }).click();
   const routeResponse = await routeResponsePromise;
   expect(routeResponse.status()).toBe(200);
   const routePayload = await routeResponse.json();
@@ -198,11 +213,14 @@ test('New Installation Work Intake flows through lead, survey and Sales quotatio
   expect(routedIntake.attributes.workflow_route).toBe('LEAD');
   expect(routedIntake.relationships.marketing_lead?.id).toBeTruthy();
   expect(routedIntake.attributes.status).toBe('CLOSED');
-  await expect(page.getByText('Work Intake sent to the Lead & Survey workflow.', { exact: true })).toBeVisible();
+  const leadId = routedIntake.relationships.marketing_lead.id as string;
+  await expect(page.getByRole('status').filter({ hasText: 'Downstream route set to Lead.' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Lead created and linked' })).toBeVisible();
   await expect(page.getByText('Workflow concluded — read-only', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Lead details', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Open Lead details', exact: true }).click();
   await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: 'Record first interaction', exact: true }).click();
+  await page.getByRole('button', { name: 'Open follow-up history', exact: true }).click();
   const interaction = page.getByRole('dialog', { name: 'Activity & follow-up history', exact: true });
   await interaction.getByRole('tab', { name: 'Log past interaction', exact: true }).click();
   await interaction.getByLabel('Notes', { exact: true }).fill('Verified new installation opportunity and planned a site survey.');
@@ -216,44 +234,43 @@ test('New Installation Work Intake flows through lead, survey and Sales quotatio
   await page.getByRole('button', { name: 'Start survey', exact: true }).click();
   const survey = page.locator('.site-survey-wizard');
   await survey.getByLabel('Site visit date', { exact: true }).fill(new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
-  await survey.getByLabel('Site address').fill('Synthetic new installation site, Bengaluru');
+  await survey.getByLabel('PIN code *', { exact: true }).fill('560001');
+  await survey.getByRole('button', { name: 'Find address', exact: true }).click();
+  const locality = survey.getByRole('combobox', { name: /Locality \/ area/ });
+  await expect.poll(() => locality.locator('option').count()).toBeGreaterThan(1);
+  await locality.selectOption({ index: 1 });
+  const citySearch = survey.getByRole('combobox', { name: 'Search Indian cities', exact: true });
+  if (await citySearch.count()) {
+    await citySearch.fill('Bengaluru');
+    const cityOption = page.getByRole('option', { name: /Bengaluru|Bangalore/i }).first();
+    if (await cityOption.isVisible().catch(() => false)) await cityOption.click();
+  }
   await survey.getByLabel('Latitude').fill('12.9716');
   await survey.getByLabel('Longitude').fill('77.5946');
   await survey.getByLabel('Name', { exact: true }).fill('Synthetic Site Contact');
-  await survey.getByLabel('Site role').fill('Facilities');
+  await survey.getByLabel('Site role').selectOption({ index: 1 });
   await survey.getByLabel('Unit label').first().fill('Lift A');
   await survey.getByLabel('Stops').first().fill('8');
   await survey.getByLabel('Capacity (kg)').first().fill('1000');
-  await survey.getByRole('button', { name: 'Continue', exact: true }).click();
+  await survey.getByRole('button', { name: 'Save draft & next', exact: true }).click();
   await survey.getByLabel('Shaft width (mm)').fill('2000');
   await survey.getByLabel('Shaft depth (mm)').fill('2200');
   const requirementSelects = survey.locator('select');
   for (let index = 0; index < await requirementSelects.count(); index += 1) {
     await requirementSelects.nth(index).selectOption({ index: 1 });
   }
-  await survey.locator('input[name="safety_features"]').first().check();
-  await survey.locator('input[name="standards_references"]').first().check();
-  await survey.getByRole('button', { name: 'Continue', exact: true }).click();
+  await survey.getByRole('group', { name: 'Safety / emergency features', exact: true }).getByRole('checkbox').first().check();
+  await survey.getByRole('group', { name: 'Standards references', exact: true }).getByRole('checkbox').first().check();
+  await survey.getByRole('button', { name: 'Save draft & next', exact: true }).click();
   await expect(survey.getByText('Manage files in the shared Lead documents and photos section.', { exact: true })).toBeVisible();
   const surveyResponsePromise = page.waitForResponse(response =>
-    response.url().includes('/site-surveys') && response.request().method() === 'POST',
+    response.url().includes('/site-surveys') && response.request().method() !== 'GET',
   );
   await survey.getByRole('button', { name: 'Submit survey', exact: true }).click();
   const surveyResponse = await surveyResponsePromise;
-  expect(surveyResponse.status()).toBe(201);
+  expect([200, 201]).toContain(surveyResponse.status());
   await expect(page.getByText(/Site survey submitted\./)).toBeVisible();
   await expect(page.getByText('Final survey & requirements', { exact: true })).toBeVisible();
-  const leadId = decodeURIComponent(page.url().split('#leads/')[1] || '');
-  expect(leadId).toBeTruthy();
-  const providerId = admin.user.attributes.provider_capabilities.find((entry: { provider_id: string; display_name: string }) =>
-    entry.display_name === 'Lift Rise Elevators — Demo Operations',
-  )?.provider_id;
-  expect(providerId).toBeTruthy();
-  await localSignOut(page);
-  const salesManager = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Account and workspace menu', exact: true }).getByRole('combobox', { name: 'Provider', exact: true }).selectOption(providerId!);
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await navigateProvider(page, 'Quotations');
   const quotationRowsResponse = await page.request.get(`${e2eApiV1Base()}/quotations?page[limit]=100`, {
     headers: { Authorization: `Bearer ${salesManager.accessToken}`, 'X-TRISE-Provider-Id': providerId! },

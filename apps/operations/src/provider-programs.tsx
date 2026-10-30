@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Button, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import {
   DEFAULT_PAGE_SIZE,
   operationsData,
@@ -10,12 +10,12 @@ import {
   type Resource,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
-import { EmptyState, ProviderActionMenu } from "./operations-shared";
+import { EmptyState } from "./operations-shared";
 import { OperationsDialog } from "./operations-dialog";
 import { formatIndiaDate, formatIndiaDateTime } from "./subscription-support";
 import { WorkflowFollowUpAction, WorkflowFollowUpDialog } from "./workflow-follow-ups";
 import {
-  JourneyTimelineDialog,
+  JourneyTimelineAccordion,
   WorkflowChainAction,
 } from "./provider-journey-timeline";
 import { SvgIcon } from "./icons";
@@ -130,22 +130,21 @@ function ProviderAmcBilling({ providerId, contractId, canManage }: { providerId:
       <section className="detail-card"><div className="section-heading"><div><h4>Contract billing history</h4><p>Issued and draft invoices stay linked to this AMC contract.</p></div><span>{invoices?.data.length || 0} records</span></div>{invoices?.data.length ? <div className="amc-invoice-list">{invoices.data.map((invoice) => <button type="button" key={invoice.id} className={`amc-invoice-row ${selected?.id === invoice.id ? "is-selected" : ""}`} onClick={() => void operationsData.providerCustomerInvoice(providerId, invoice.id).then(setSelected).catch((cause) => setError(fail(cause)))}><span><strong>{String(invoice.attributes.invoice_number || invoice.id.slice(0, 8))}</strong><small>{invoiceDate(invoice.attributes.billing_period_start)} → {invoiceDate(invoice.attributes.billing_period_end)}</small></span><span><Status>{String(invoice.attributes.status || "DRAFT")}</Status><strong>{money(invoice.attributes.total_amount, String(invoice.attributes.currency_code || "INR"))}</strong></span></button>)}</div> : <EmptyState title="No AMC invoices yet" description="Create a draft after the contract has been activated and its elevator plan snapshots are ready." />}</section>
       <section className="detail-card amc-invoice-detail">{selected ? <><div className="section-heading"><div><Status>{String(selectedAttributes.status || "DRAFT")}</Status><h4>{String(selectedAttributes.invoice_number || "AMC invoice")}</h4><p>Due {invoiceDate(selectedAttributes.due_at)} · {String(selectedAttributes.collection_state || "CURRENT")}</p></div><strong className="amc-invoice-total">{money(selectedAttributes.total_amount, String(selectedAttributes.currency_code || "INR"))}</strong></div><div className="amc-invoice-kpis"><span>Subtotal <strong>{money(selectedAttributes.subtotal_amount)}</strong></span><span>Tax <strong>{money(selectedAttributes.tax_amount)}</strong></span><span>Paid <strong>{money(selectedAttributes.amount_paid)}</strong></span><span>Balance <strong>{money(selectedAttributes.outstanding_amount)}</strong></span></div><div className="amc-invoice-actions">{canManage && String(selectedAttributes.status) === "DRAFT" && <Button disabled={busy} onClick={() => void issueInvoice(selected)}>Issue invoice</Button>}{canManage && ["ISSUED", "PARTIALLY_PAID", "OVERDUE"].includes(String(selectedAttributes.status)) && <Button variant="secondary" disabled={busy} onClick={() => setPaymentOpen(true)}>Record payment</Button>}</div><div className="amc-invoice-lines"><h5>Elevator plan lines</h5>{lines.length ? lines.map((line, index) => <article key={String(line.contract_asset_scope_id || index)}><div><strong>{String(line.asset_display_name || `Elevator ${index + 1}`)}</strong><span>{String(line.plan_name || line.plan_code || "AMC plan")} · v{String(line.plan_version || "—")}</span></div><strong>{money(line.line_total, String(line.currency_code || "INR"))}</strong></article>) : <p className="notice">No line snapshot was returned.</p>}</div><div className="amc-invoice-payments"><h5>Payment evidence</h5>{payments.length ? payments.map((payment) => <article key={payment.id}><div><Status>{String(payment.attributes.status || "RECEIVED")}</Status><strong>{String(payment.attributes.payment_reference || "Payment")}</strong><span>{String(payment.attributes.method || "—").replaceAll("_", " ")}</span></div><div><strong>{money(payment.attributes.amount, String(payment.attributes.currency_code || "INR"))}</strong>{canManage && ["RECEIVED", "PENDING_VERIFICATION"].includes(String(payment.attributes.status)) && <Button variant="quiet" disabled={busy} onClick={() => void transitionPayment(payment, "SETTLED")}>Verify settlement</Button>}</div></article>) : <p className="notice">No payment evidence recorded.</p>}</div></> : <EmptyState title="Select an invoice" description="The detail panel shows the frozen community elevator lines, tax snapshot and payment evidence." />}</section>
     </div>
-    {createOpen && <OperationsDialog title="Create AMC invoice draft" busy={busy} onClose={() => setCreateOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void createInvoice(event)}><p className="notice">The server reads the active contract elevator scopes and generates one line per elevator. Repeating the same period returns the existing invoice.</p><label>Billing period start *<input name="billing_period_start" type="date" required /></label><label>Billing period end *<input name="billing_period_end" type="date" required /></label><label>Due date *<input name="due_at" type="date" required /></label><label>Period months<SortedSelect name="period_months" defaultValue="12"><option value="12">12 months</option><option value="6">6 months</option><option value="3">3 months</option><option value="1">1 month</option></SortedSelect></label><label>Tax rate %<input name="tax_rate_percent" type="number" min="0" max="100" step="0.01" defaultValue="0" /></label><label>Tax label<input name="tax_label" defaultValue="GST" /></label><label>Notes<textarea name="notes" maxLength={2000} /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create draft</Button></div></form></OperationsDialog>}
+    {createOpen && <OperationsDialog title="Create AMC invoice draft" titleInfo={<InfoNotice>The server reads the active contract elevator scopes and generates one line per elevator. Repeating the same period returns the existing invoice.</InfoNotice>} busy={busy} onClose={() => setCreateOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void createInvoice(event)}><label>Billing period start *<input name="billing_period_start" type="date" required /></label><label>Billing period end *<input name="billing_period_end" type="date" required /></label><label>Due date *<input name="due_at" type="date" required /></label><label>Period months<SortedSelect name="period_months" defaultValue="12"><option value="12">12 months</option><option value="6">6 months</option><option value="3">3 months</option><option value="1">1 month</option></SortedSelect></label><label>Tax rate %<input name="tax_rate_percent" type="number" min="0" max="100" step="0.01" defaultValue="0" /></label><label>Tax label<input name="tax_label" defaultValue="GST" /></label><label>Notes<textarea name="notes" maxLength={2000} /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create draft</Button></div></form></OperationsDialog>}
     {paymentOpen && selected && <OperationsDialog title={`Record payment · ${String(selectedAttributes.invoice_number || "AMC invoice")}`} busy={busy} onClose={() => setPaymentOpen(false)}><form className="quotation-modal-form" onSubmit={(event) => void recordPayment(event)}><label>Amount *<input name="amount" type="number" min="0.01" step="0.01" max={String(selectedAttributes.outstanding_amount || "")} required /></label><label>Payment reference *<input name="payment_reference" required /></label><label>Method<SortedSelect name="method" defaultValue="BANK_TRANSFER"><option value="BANK_TRANSFER">Bank transfer</option><option value="UPI">UPI</option><option value="ONLINE">Online</option><option value="CHEQUE">Cheque</option><option value="CASH">Cash</option></SortedSelect></label><label>Instrument reference<input name="instrument_reference" /></label><div className="provider-form-actions"><Button type="button" variant="secondary" onClick={() => setPaymentOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Record evidence</Button></div></form></OperationsDialog>}
   </section>;
 }
 
 // This workspace is mounted only when the server-projected provider `projects`
 // capability grants access. Every mutating request is still authorized server-side.
-export function ProviderPrograms({ providerId, canManage = true, canConfigure = false, route }: { providerId: string; canManage?: boolean; canConfigure?: boolean; route?: { id?: string } }) {
+export function ProviderPrograms({ providerId, canManage = true, canConfigure = false, canCreateQuotation = false, route }: { providerId: string; canManage?: boolean; canConfigure?: boolean; canCreateQuotation?: boolean; route?: { id?: string } }) {
   type ContractPage = Collection<GenericAttributes> & { summary?: { active_contracts: number; preventive_visits_due: number; renewals_due_this_month: number; covered_assets: number } };
-  type ContractTab = "coverage" | "schedule" | "visits" | "renewals" | "billing";
+  type ContractTab = "coverage" | "schedule" | "visits" | "renewals" | "billing" | "journey";
   const [contracts, setContracts] = useState<ContractPage | null>(null);
   const [selected, setSelected] = useState<Resource<GenericAttributes> | null>(
     null,
   );
   const [followUpOpen, setFollowUpOpen] = useState(false);
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const [journey, setJourney] = useState<ProviderWorkJourney | null>(null);
   const [journeyLoading, setJourneyLoading] = useState(false);
   const [journeyError, setJourneyError] = useState("");
@@ -238,7 +237,27 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
           : Promise.resolve(null),
       ]);
       setIterations(nextIterations);
-      setScopes(nextScopes);
+      // The API serializes collection relationships as JSON:API { data: [] }.
+      // Older cached resources may expose the links directly as an array, so
+      // accept both shapes when recovering scopes from their relationship IDs.
+      const assetScopeRelationship = contract.relationships?.asset_scopes;
+      const assetScopeLinks = Array.isArray(assetScopeRelationship)
+        ? assetScopeRelationship
+        : Array.isArray(objectRecord(assetScopeRelationship).data)
+          ? objectRecord(assetScopeRelationship).data as Array<unknown>
+          : assetScopeRelationship ? [assetScopeRelationship] : [];
+      const linkedScopeIds = assetScopeLinks
+        .map((link) => objectRecord(link).id)
+        .filter((id): id is string => typeof id === "string" && Boolean(id));
+      const scopesWithFallback = nextScopes.data.length || !linkedScopeIds.length
+        ? nextScopes
+        : {
+            ...nextScopes,
+            data: (await Promise.allSettled(linkedScopeIds.map((scopeId) =>
+              operationsData.maintenanceContractAssetScope(providerId, contract.id, scopeId),
+            ))).flatMap((result) => result.status === "fulfilled" ? [result.value] : []),
+          };
+      setScopes(scopesWithFallback);
       setAssets(nextAssets);
       setCoverageRules(nextRules);
       setVersions(nextVersions);
@@ -365,20 +384,31 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
     scopes?.data.filter(
       (scope) => String(scope.attributes.status || "ACTIVE").toUpperCase() === "ACTIVE",
     ) || [];
+  const displayedScopes = scopes?.data || [];
   const activeAssetIds = new Set(
     activeScopes.map((scope) => relationshipId(scope.relationships?.asset)).filter(Boolean),
   );
   const assetLabel = (scope: Resource<GenericAttributes>) => {
     const id = relationshipId(scope.relationships?.asset);
     const asset = assets?.data.find((row) => row.id === id);
-    return asset ? label(asset.attributes) : `Asset ${id.slice(0, 8) || scope.id.slice(0, 8)}`;
+    return String(scope.attributes.asset_display_name || (asset ? label(asset.attributes) : "") || `Asset ${id.slice(0, 8) || scope.id.slice(0, 8)}`);
   };
   const summary = contracts?.summary;
   const date = (value: unknown) => value ? formatIndiaDate(String(value)) : "—";
+  const canRenew = (contract: Resource<GenericAttributes>) => canCreateQuotation && ["ACTIVE", "APPROVED"].includes(String(contract.attributes.status || "").toUpperCase());
+  const createRenewalQuotation = (contract: Resource<GenericAttributes>) => { window.location.hash = `quotations/new/CONTRACT_RENEWAL?predecessor_contract_id=${encodeURIComponent(contract.id)}`; };
+  const daysUntilExpiry = (contract: Resource<GenericAttributes>) => {
+    const expiry = contract.attributes.effective_to;
+    if (!expiry) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const end = new Date(String(expiry)); end.setHours(0, 0, 0, 0);
+    return Math.ceil((end.getTime() - today.getTime()) / 86400000);
+  };
   const contractStatus = selected ? String(selected.attributes.status || "").toUpperCase() : "";
   const contractAbandoned = ["CANCELLED", "TERMINATED"].includes(contractStatus);
   const contractExpired = contractStatus === "EXPIRED";
   const contractConcluded = ["CANCELLED", "TERMINATED", "EXPIRED", "COMPLETED", "CLOSED"].includes(contractStatus);
+  const selectedExpiryDays = selected ? daysUntilExpiry(selected) : null;
   return (
     <section className="content feature-page">
       <PageHeader
@@ -416,37 +446,52 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
           <div className="amc-workspace amc-workspace--full">
           <div className="amc-register-panel">
             <div className="section-heading"><div><h3>AMC contracts</h3><p>Provider-scoped contract register · filters are applied by the API.</p></div></div>
-            {contracts.data.length ? <div className="amc-table-wrap"><table className="amc-contract-table" aria-label="AMC contracts"><thead><tr><th>Contract No.</th><th>Customer</th><th>Assets</th><th>Plan</th><th>Expiry date</th><th>Status</th><th>Renewal</th><th>Actions</th></tr></thead><tbody>{contracts.data.map((contract) => { const expiry = contract.attributes.effective_to; const remaining = expiry ? Math.ceil((new Date(String(expiry)).getTime() - Date.now()) / 86400000) : null; return <tr key={contract.id} aria-current={selected?.id === contract.id ? "true" : undefined}><td><strong>{String(contract.attributes.contract_number || label(contract.attributes))}</strong></td><td>{String(contract.attributes.customer_name || "Authorized customer")}</td><td>{String(contract.attributes.asset_count ?? "—")}</td><td>{String(contract.attributes.plan_code || "Service plan")}</td><td>{date(expiry)}</td><td><Status>{String(contract.attributes.status || "VISIBLE")}</Status></td><td>{remaining !== null && remaining <= 90 ? remaining <= 0 ? "Expired" : `${remaining} days` : "Not due"}</td><td><ProviderActionMenu label={`Actions for contract ${String(contract.attributes.contract_number || contract.id.slice(0, 8))}`} actions={[{ id: 'view', label: 'View', onSelect: () => void open(contract) }]} /></td></tr>; })}</tbody></table></div> : <EmptyState title={loading ? "Loading contracts" : "No maintenance contracts"} description={loading ? "Loading the selected provider's authorized contracts." : "No contracts match these server-side filters. New AMC creation remains governed by quotation conversion."} />}
+            {contracts.data.length ? (
+              <div className="amc-table-wrap">
+                <table className="amc-contract-table" aria-label="AMC contracts">
+                  <thead><tr><th>Contract No.</th><th>Customer</th><th>Assets</th><th>Plan</th><th>Expiry date</th><th>Status</th><th>Renewal</th><th>Actions</th></tr></thead>
+                  <tbody>{contracts.data.map((contract) => {
+                    const remaining = daysUntilExpiry(contract);
+                    const nearExpiry = remaining !== null && remaining >= 0 && remaining <= 90;
+                    const renewalLabel = remaining === null ? "No expiry set" : remaining < 0 ? "Expired" : remaining === 0 ? "Expires today" : remaining <= 30 ? `Expires in ${remaining} days` : remaining <= 90 ? `Due in ${remaining} days` : "Not due";
+                    return <tr key={contract.id} aria-current={selected?.id === contract.id ? "true" : undefined} className={nearExpiry ? "amc-contract-row--renewal-due" : undefined}>
+                      <td><strong>{String(contract.attributes.contract_number || label(contract.attributes))}</strong></td>
+                      <td>{String(contract.attributes.customer_name || "Authorized customer")}</td>
+                      <td>{String(contract.attributes.asset_count ?? "—")}</td>
+                      <td>{String(contract.attributes.plan_code || "Service plan")}</td>
+                      <td>{date(contract.attributes.effective_to)}</td>
+                      <td><Status>{String(contract.attributes.status || "VISIBLE")}</Status></td>
+                      <td><span className={`amc-renewal-due${nearExpiry ? remaining !== null && remaining <= 30 ? " is-urgent" : " is-due" : ""}`}>{renewalLabel}</span></td>
+                      <td><div className="amc-contract-row-actions"><Button type="button" variant="secondary" onClick={() => void open(contract)}><SvgIcon name="eye" size={14} />View</Button></div></td>
+                    </tr>;
+                  })}</tbody>
+                </table>
+              </div>
+            ) : <EmptyState title={loading ? "Loading contracts" : "No maintenance contracts"} description={loading ? "Loading the selected provider's authorized contracts." : "No contracts match these server-side filters. New AMC creation remains governed by quotation conversion."} />}
             <div className="server-pagination"><span>Showing {contracts.data.length} records · {limit} per page</span><div><Button variant="secondary" disabled={!contracts.page?.previous || loading} onClick={() => { setAfter(""); setBefore(contracts.page?.previous || ""); }}>Previous</Button><Button variant="secondary" disabled={!contracts.page?.next || loading} onClick={() => { setBefore(""); setAfter(contracts.page?.next || ""); }}>Next</Button></div></div>
           </div>
       
       {selected && (
-        <OperationsDialog title={String(selected.attributes.contract_number || label(selected.attributes))} onClose={() => setSelected(null)} className="amc-detail-dialog">
+        <OperationsDialog title="AMC contract details" onClose={() => setSelected(null)} className="amc-detail-dialog">
         <section className="amc-detail-panel">
-          <div className="amc-detail-heading"><div><Status>{String(selected.attributes.status || "VISIBLE")}</Status><h2>{String(selected.attributes.contract_number || label(selected.attributes))}</h2><p>{String(selected.attributes.customer_name || "Authorized customer")} · Revision {String(selected.attributes.revision || "server-managed")}</p></div><div className="amc-detail-dates"><span>Effective {date(selected.attributes.effective_from)}</span><strong>Expires {date(selected.attributes.effective_to)}</strong></div>{contractConcluded && <div className={`workflow-concluded-inline${contractAbandoned ? ' workflow-concluded-inline--abandoned' : ''}${contractExpired ? ' workflow-concluded-inline--expired' : ''}`} role="status"><span className="workflow-concluded-inline-icon" aria-hidden="true"><SvgIcon name={contractAbandoned ? 'x' : 'shield'} size={14} /></span><span className="workflow-concluded-inline-copy"><strong>{contractAbandoned ? 'Journey abandoned — read-only' : contractExpired ? 'Contract expired — read-only' : 'Workflow concluded — read-only'}</strong><small>{contractAbandoned ? 'No further updates or downstream actions are allowed.' : contractExpired ? 'Contract expired and is retained for history.' : 'Contract is concluded and retained for history.'}</small></span></div>}</div>
-          <div className="amc-detail-stats"><div><strong>{String(selected.attributes.asset_count ?? activeScopes.length)}</strong><span>Covered assets</span></div><div><strong>{String(selected.attributes.plan_code || "—")}</strong><span>Service plan</span></div><div><strong>v{String(selected.attributes.version || 1)}</strong><span>Contract version</span></div><div><strong>{String(iterations?.data.length ?? "—")}</strong><span>Maintenance iterations</span></div></div>
+          <div className="amc-detail-heading"><div className="amc-detail-heading-primary"><Status>{String(selected.attributes.status || "VISIBLE")}</Status><h2>{String(selected.attributes.contract_number || label(selected.attributes))}</h2><p>{String(selected.attributes.customer_name || "Authorized customer")} · Revision {String(selected.attributes.revision || "server-managed")}</p><div className="amc-detail-stats"><div><strong>{String(scopes ? activeScopes.length : selected.attributes.asset_count ?? "—")}</strong><span>Active covered lifts</span></div><div><strong>{String(selected.attributes.plan_code || "—")}</strong><span>Service plan</span></div><div><strong>v{String(selected.attributes.version || 1)}</strong><span>Contract version</span></div></div></div><div className="amc-detail-dates"><span>Effective {date(selected.attributes.effective_from)}</span><strong>Expires {date(selected.attributes.effective_to)}</strong></div>{contractConcluded && <div className={`workflow-concluded-inline${contractAbandoned ? ' workflow-concluded-inline--abandoned' : ''}${contractExpired ? ' workflow-concluded-inline--expired' : ''}`} role="status"><span className="workflow-concluded-inline-icon" aria-hidden="true"><SvgIcon name={contractAbandoned ? 'x' : 'shield'} size={14} /></span><span className="workflow-concluded-inline-copy"><strong>{contractAbandoned ? 'Journey abandoned — read-only' : contractExpired ? 'Contract expired — read-only' : 'Workflow concluded — read-only'}</strong><small>{contractAbandoned ? 'No further updates or downstream actions are allowed.' : contractExpired ? 'Contract expired and is retained for history.' : 'Contract is concluded and retained for history.'}</small></span></div>}</div>
           <div className="provider-form-actions amc-actions">
-            <WorkflowFollowUpAction providerId={providerId} targetResourceKind="MaintenanceContract" targetResourceId={selected.id} onClick={() => setFollowUpOpen(true)} />
-            <Button variant="secondary" className="workflow-timeline-action" onClick={() => setTimelineOpen(true)} title="View timeline and audit history"><SvgIcon name="activity" size={15} /> Timeline</Button>
-            <WorkflowChainAction journey={journey} loading={journeyLoading} currentResourceKind="MaintenanceContract" currentResourceId={selected.id} />
-          {canManage && <>
-            <Button variant="secondary" onClick={() => setAction("renew")}>
-              Renew contract
-            </Button>
-            <Button variant="secondary" onClick={() => setAction("amend")}>
-              Create amendment
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => setAction("iteration")}
-              disabled={!activeScopes.length}
-            >
-              Plan preventive visit
-            </Button>
-          </>}
+            <div className="amc-action-group amc-action-group--context">
+              <WorkflowFollowUpAction providerId={providerId} targetResourceKind="MaintenanceContract" targetResourceId={selected.id} onClick={() => setFollowUpOpen(true)} />
+              <Button variant="secondary" className="workflow-timeline-action" onClick={() => setTab("journey")} title="View journey history in this contract"><SvgIcon name="activity" size={15} />Journey history</Button>
+              <WorkflowChainAction journey={journey} loading={journeyLoading} currentResourceKind="MaintenanceContract" currentResourceId={selected.id} />
+            </div>
+            <div className="amc-action-group amc-action-group--primary">
+              {canRenew(selected) && selectedExpiryDays !== null && selectedExpiryDays >= 0 && selectedExpiryDays <= 90 && <span className={`amc-renewal-detail-cue${selectedExpiryDays <= 30 ? " is-urgent" : ""}`} role="status">{selectedExpiryDays === 0 ? "Expires today" : `Expires in ${selectedExpiryDays} days`}</span>}
+              {canRenew(selected) && <Button onClick={() => createRenewalQuotation(selected)}><SvgIcon name="calendar" size={15} />Create renewal quotation</Button>}
+              {canManage && <>
+                <Button variant="secondary" onClick={() => setAction("amend")}>Create amendment</Button>
+                <Button variant="secondary" onClick={() => setAction("iteration")} disabled={!activeScopes.length}>Plan preventive visit</Button>
+              </>}
+            </div>
           </div>
-          <div className="lifecycle-tabs amc-tabs workflow-detail-tabs" role="tablist" aria-label="AMC contract detail sections">{(["coverage", "schedule", "visits", "renewals", "billing"] as ContractTab[]).map((item) => <button type="button" role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
-          {tab === "coverage" && <div className="amc-detail-grid"><section className="detail-card"><h3>Included coverage rules</h3>{coverageRules?.data.length ? coverageRules.data.map((rule) => <article className="amc-rule-row" key={rule.id}><Status>{String(rule.attributes.status || "ACTIVE")}</Status><strong>{String(rule.attributes.code || rule.attributes.coverage_kind || "Coverage rule")}</strong><span>{String(rule.attributes.description || rule.attributes.coverage_kind || "Contract-defined coverage")}</span></article>) : <p className="notice">No coverage rules were returned for this contract version.</p>}</section><section className="detail-card"><h3>Covered assets</h3>{activeScopes.length ? activeScopes.map((scope) => <article className="amc-rule-row" key={scope.id}><strong>{assetLabel(scope)}</strong><span>Effective {date(scope.attributes.effective_from)}{scope.attributes.effective_to ? ` · through ${date(scope.attributes.effective_to)}` : " · active"}</span></article>) : <p className="notice">No active asset scopes are linked to this contract.</p>}</section></div>}
+          <div className="workflow-detail-tabs" role="tablist" aria-label="AMC contract detail sections">{(["coverage", "schedule", "visits", "renewals", "billing", "journey"] as ContractTab[]).map((item) => <button type="button" role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item === "journey" ? "Journey history" : item[0].toUpperCase() + item.slice(1)}</button>)}</div>
+          {tab === "coverage" && <div className={`amc-detail-grid${coverageRules?.data.length ? " amc-detail-grid--rules" : ""}`}>{Boolean(coverageRules?.data.length) && <section className="detail-card"><h3>Included coverage rules</h3>{coverageRules?.data.map((rule) => <article className="amc-rule-row" key={rule.id}><Status>{String(rule.attributes.status || "ACTIVE")}</Status><strong>{String(rule.attributes.code || rule.attributes.coverage_kind || "Coverage rule")}</strong><span>{String(rule.attributes.description || rule.attributes.coverage_kind || "Contract-defined coverage")}</span></article>)}</section>}<section className="detail-card amc-asset-coverage-card"><h3>Covered lifts <span>{scopes ? displayedScopes.length : String(selected.attributes.asset_count ?? "—")}</span></h3>{displayedScopes.length ? displayedScopes.map((scope) => { const scopeStatus = String(scope.attributes.status || "ACTIVE").toUpperCase(); return <article className="amc-rule-row" key={scope.id}><Status>{scopeStatus}</Status><strong>{assetLabel(scope)}</strong><span>Effective {date(scope.attributes.effective_from)}{scope.attributes.effective_to ? ` · through ${date(scope.attributes.effective_to)}` : " · active"}</span></article>; }) : <p className="notice">{scopes ? "No asset scopes are linked to this contract." : "Loading covered lifts…"}</p>}{displayedScopes.length > 0 && activeScopes.length === 0 && <p className="notice">This contract has no currently active asset coverage. The rows above show the linked historical scopes.</p>}</section></div>}
           {(tab === "schedule" || tab === "visits") && <><div className="section-heading"><div><h3>{tab === "schedule" ? "Preventive maintenance schedule" : "Visit history"}</h3><p>Persisted iterations and their current lifecycle states.</p></div></div>{iterations?.data.length ? (
             iterations.data.map((iteration) => (
               <article className="amc-iteration-row" key={iteration.id}>
@@ -493,20 +538,16 @@ export function ProviderPrograms({ providerId, canManage = true, canConfigure = 
           )}</>}
           {tab === "renewals" && <div className="detail-card"><h3>Renewal and amendment history</h3>{amendments?.data.length ? amendments.data.map((item) => <article className="amc-rule-row" key={item.id}><strong>Amendment · version {String(item.attributes.version || "—")}</strong><span>{String(item.attributes.reason || "Commercial successor version recorded")}</span><small>{date(item.attributes.effective_from)}</small></article>) : <p className="notice">No amendments are recorded. Renewals create a separate successor contract and do not overwrite this history.</p>}{versions?.data.length ? <p className="notice">{versions.data.length} immutable version record(s) are available for this contract.</p> : null}</div>}
           {tab === "billing" && <><ProviderAmcBilling providerId={providerId} contractId={selected.id} canManage={canManage} /><div className="detail-card"><h3>Service plan and commercial terms</h3><dl className="amc-definition-list"><dt>Plan reference</dt><dd>{selected.relationships?.service_plan ? "Linked service plan" : selected.attributes.amc_plan_count ? `${String(selected.attributes.amc_plan_count)} published AMC plan version(s)` : "Not linked"}</dd><dt>Source quotation</dt><dd>{String(selected.attributes.source_quotation_id || "Not supplied")}</dd><dt>Paid renewal</dt><dd>{selected.attributes.paid_renewal === true ? "Yes" : "No / not marked paid"}</dd><dt>Commercial snapshot</dt><dd>{selected.attributes.commercial_party_snapshot_present === true ? "Captured at activation" : "Not captured"}</dd></dl>{servicePlan && <p className="notice">Service plan details loaded from the authorized API.</p>}</div></>}
-          {timelineOpen && <JourneyTimelineDialog journey={journey} loading={journeyLoading} error={journeyError} emptyLabel="No journey events are available for this AMC contract." onClose={() => setTimelineOpen(false)} />}
+          {tab === "journey" && <div className="amc-journey-panel"><JourneyTimelineAccordion journey={journey} loading={journeyLoading} error={journeyError} emptyLabel="No journey events are available for this AMC contract." showHeading={false} /></div>}
           <WorkflowFollowUpDialog open={followUpOpen} onClose={() => setFollowUpOpen(false)} providerId={providerId} targetResourceKind="MaintenanceContract" targetResourceId={selected.id} stage="AMC" readOnly={['CANCELLED', 'TERMINATED', 'EXPIRED'].includes(String(selected.attributes.status || '').toUpperCase())} title="AMC journey follow-ups" />
-          <p className="notice">
-            Historical contract versions are immutable. Renewal and amendment
-            use server-created successor versions.
-          </p>
           {action && canManage && (
             <OperationsDialog
               title={action === "renew" ? "Renew AMC contract" : action === "amend" ? "Create AMC amendment" : "Plan preventive maintenance"}
+              titleInfo={<InfoNotice>{action === "renew" ? "A successor contract draft is created; the current contract remains unchanged." : action === "amend" ? "Amendments create versioned successor records. Existing coverage history is preserved." : "Plan a visit only for an asset currently covered by this contract."}</InfoNotice>}
               busy={busy}
               onClose={() => setAction(null)}
             >
               <div className="amc-action-dialog-content">
-                <p className="notice">{action === "renew" ? "A successor contract draft is created; the current contract remains unchanged." : action === "amend" ? "Amendments create versioned successor records. Existing coverage history is preserved." : "Plan a visit only for an asset currently covered by this contract."}</p>
                 <form className="quotation-modal-form" onSubmit={(event) => void submit(event)}>
                 {action === "renew" && (
                   <>
@@ -897,11 +938,11 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
               </div>
               <div className="reports-overview-grid">
                 <section className="detail-card reports-panel">
-                  <h3>Stage payment activity</h3><p className="notice">Project payment obligations from the authorized provider dashboard.</p>
+                  <div className="trise-info-heading-row"><h3>Stage payment activity</h3><InfoNotice>Project payment obligations from the authorized provider dashboard.</InfoNotice></div>
                   {dashboard.attributes.payment_stage_rows.length ? <div className="reports-table-wrap"><table className="reports-table"><thead><tr><th>Project / stage</th><th>Due</th><th>Status</th></tr></thead><tbody>{dashboard.attributes.payment_stage_rows.slice(0, 6).map((stage) => <tr key={stage.id}><td><strong>{stage.project_title || stage.milestone_code}</strong><small>{stage.description}</small></td><td>{stage.currency_code} {stage.amount}</td><td><Status>{stage.status}</Status></td></tr>)}</tbody></table></div> : <EmptyState title="No payment stages returned" description="Stage obligations will appear when available in the authorized dashboard data." />}
                 </section>
                 <section className="detail-card reports-panel">
-                  <h3>Operational outcome</h3><p className="notice">Live workload indicators; not modeled as historical trend data.</p>
+                  <div className="trise-info-heading-row"><h3>Operational outcome</h3><InfoNotice>Live workload indicators; not modeled as historical trend data.</InfoNotice></div>
                   <div className="reports-health-list">
                     <div><span>Technicians available</span><strong>{dashboard.attributes.technician_availability.available} / {dashboard.attributes.technician_availability.total}</strong></div>
                     <div><span>On-site</span><strong>{dashboard.attributes.technician_availability.on_site}</strong></div>
@@ -942,8 +983,7 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
       )}
       {tab === "schedules" && (
         <section className="detail-card reports-panel">
-          <div className="reports-section-heading"><div><h3>Scheduled reports</h3><p>Manage recurring provider-scoped exports and delivery history.</p></div><Button disabled={!reports.length} onClick={() => { setSelected(reports[0] || null); setScheduleEditorOpen(true); }}>New schedule</Button></div>
-          {!reports.length && <p className="notice">Create a report definition before scheduling delivery.</p>}
+          <div className="reports-section-heading"><div><div className="trise-info-heading-row"><h3>Scheduled reports</h3>{!reports.length && <InfoNotice>Create a report definition before scheduling delivery.</InfoNotice>}</div><p>Manage recurring provider-scoped exports and delivery history.</p></div><Button disabled={!reports.length} onClick={() => { setSelected(reports[0] || null); setScheduleEditorOpen(true); }}>New schedule</Button></div>
           {schedules.map((schedule) => (
             <article className="record-card" key={schedule.id}>
               <Status>{read(schedule, "status")}</Status>
@@ -1007,9 +1047,8 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
           )}
         </section>
       )}
-      {reportEditorOpen && <OperationsDialog title={selected ? "Edit report definition" : "Create report definition"} busy={busy} onClose={() => setReportEditorOpen(false)}>
+      {reportEditorOpen && <OperationsDialog title={selected ? "Edit report definition" : "Create report definition"} titleInfo={<InfoNotice>Only server-allowlisted dimensions and measures are accepted.</InfoNotice>} busy={busy} onClose={() => setReportEditorOpen(false)}>
         <form className="reports-editor-form" onSubmit={(event) => void saveReport(event)}>
-          <p className="notice">Only server-allowlisted dimensions and measures are accepted.</p>
           <label>Report name *<input name="name" required defaultValue={read(selected, "name")} /></label>
           <label>Category *<SortedSelect name="category" defaultValue={read(selected, "category", "PROJECTS")}><option>LEADS</option><option>PROJECTS</option><option>PAYMENTS</option><option>MATERIALS</option><option>SERVICE_REQUESTS</option><option>JOBS</option><option>WORKFORCE</option><option>ASSETS</option><option>AMC</option></SortedSelect></label>
           <fieldset className="report-allowlist-picker" aria-label="Dimensions"><legend>Dimensions</legend>{[["status", "Status"], ["provider_created_at", "Created date"], ["customer", "Customer"], ["project", "Project"], ["stage", "Stage"], ["technician", "Technician"]].map(([value, title]) => <label key={value}><input type="checkbox" name="dimensions" value={value} defaultChecked={Array.isArray(selected?.attributes.dimensions) ? (selected!.attributes.dimensions as string[]).includes(value) : value === "status" || value === "project"} />{title}</label>)}</fieldset>
@@ -1023,8 +1062,7 @@ export function ReportsWorkspace({ providerId }: { providerId: string }) {
           <label>Saved report *<SortedSelect value={selected?.id || ""} required onChange={(event) => setSelected(reports.find((report) => report.id === event.target.value) || null)}><option value="">Select a saved report</option>{reports.map((report) => <option key={report.id} value={report.id}>{read(report, "name")}</option>)}</SortedSelect></label>
           <label>Frequency<SortedSelect name="frequency" defaultValue="WEEKLY"><option>DAILY</option><option>WEEKLY</option><option>MONTHLY</option></SortedSelect></label>
           <label>Format<SortedSelect name="format" defaultValue="CSV"><option>CSV</option><option>XLSX</option><option>PDF</option></SortedSelect></label>
-          <label>Authorized recipients *<input name="recipients" required placeholder="recipient@example.test" /></label>
-          <p className="notice">Recipients must be authorized for this provider. Delivery uses an expiring private download link.</p>
+          <label className="info-label"> <span className="info-label-heading"><span>Authorized recipients *</span><InfoNotice>Recipients must be authorized for this provider. Delivery uses an expiring private download link.</InfoNotice></span><input name="recipients" required placeholder="recipient@example.test" /></label>
           <div className="reports-actions"><Button type="button" variant="quiet" onClick={() => setScheduleEditorOpen(false)}>Cancel</Button><Button type="submit" busy={busy}>Create schedule</Button></div>
         </form>
       </OperationsDialog>}

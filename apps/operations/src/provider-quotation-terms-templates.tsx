@@ -9,6 +9,7 @@ import {
   type PlatformLogo,
   type ProviderBusinessProfile,
   type QuotationTermsTemplateAttributes,
+  type QuotationTaxRule,
   type Resource,
 } from "./data";
 import {
@@ -471,6 +472,15 @@ function QuotationTermsTemplateForm({
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileMessage, setProfileMessage] = useState("");
   const [letterheadTouched, setLetterheadTouched] = useState(Boolean(source));
+  const [taxRules, setTaxRules] = useState<QuotationTaxRule[]>([]);
+  const [defaultTaxRuleId, setDefaultTaxRuleId] = useState(String(source?.attributes.terms.default_tax_rule_id || ""));
+  const [defaultTaxPricingMode, setDefaultTaxPricingMode] = useState(String(source?.attributes.terms.default_tax_pricing_mode || "EXCLUSIVE"));
+
+  useEffect(() => {
+    let active = true;
+    void operationsData.quotationTaxRules(providerId).then((result) => { if (active) setTaxRules(result.data.filter((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED")); }).catch(() => { if (active) setTaxRules([]); });
+    return () => { active = false; };
+  }, [providerId]);
 
   useEffect(() => {
     let active = true;
@@ -544,6 +554,16 @@ function QuotationTermsTemplateForm({
         help="Add the reusable explanation for when these terms apply. Use headings, emphasis and lists; unsafe markup is removed by the server."
       />
       <input type="hidden" name="description" value={description} readOnly />
+      <fieldset className="quotation-letterhead-editor">
+        <legend>Default quotation tax</legend>
+        <p className="quotation-letterhead-help">A template can preselect a published platform tax rule and price treatment. The quotation still validates and calculates the tax from the selected rule.</p>
+        <div className="form-grid quotation-letterhead-grid">
+          <label>Published tax rule<SortedSelect value={defaultTaxRuleId} onChange={(event) => setDefaultTaxRuleId(event.target.value)}><option value="">No default tax rule</option>{taxRules.map((rule) => <option key={rule.id} value={rule.id}>{rule.attributes.rule_code} · {rule.attributes.tax_treatment.replaceAll("_", " ")} · {rule.attributes.total_rate_percent}%</option>)}</SortedSelect></label>
+          <label>Price treatment<SortedSelect value={defaultTaxPricingMode} disabled={!defaultTaxRuleId} onChange={(event) => setDefaultTaxPricingMode(event.target.value)}><option value="EXCLUSIVE">Tax extra</option><option value="INCLUSIVE">Tax included in price</option></SortedSelect></label>
+        </div>
+        <input type="hidden" name="default_tax_rule_id" value={defaultTaxRuleId} readOnly />
+        <input type="hidden" name="default_tax_pricing_mode" value={defaultTaxPricingMode} readOnly />
+      </fieldset>
       <fieldset className="quotation-letterhead-editor">
         <legend>PDF letterhead</legend>
         <p className="quotation-letterhead-help">Bind the provider&apos;s approved logo and business address to this template. The selected logo version and address are copied into each quotation revision; changing the business profile later does not rewrite historical PDFs.</p>
@@ -723,6 +743,12 @@ export function ProviderQuotationTermsTemplatesAdmin({
     setMessage("");
     try {
       const terms = quotationTermsForApi(undefined, quotationTermSelectionFromForm(form));
+      const defaultTaxRuleId = String(form.get("default_tax_rule_id") || "").trim();
+      const defaultTaxPricingMode = String(form.get("default_tax_pricing_mode") || "EXCLUSIVE").toUpperCase();
+      if (defaultTaxRuleId) {
+        terms.default_tax_rule_id = defaultTaxRuleId;
+        terms.default_tax_pricing_mode = defaultTaxPricingMode === "INCLUSIVE" ? "INCLUSIVE" : "EXCLUSIVE";
+      }
       const letterheadValue = String(form.get("letterhead_json") || "");
       if (letterheadValue) {
         try { terms.letterhead = JSON.parse(letterheadValue); } catch { throw new Error("PDF letterhead configuration could not be read. Please review it and try again."); }

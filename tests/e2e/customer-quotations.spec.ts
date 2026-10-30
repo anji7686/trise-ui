@@ -22,28 +22,95 @@ test('customer reviews the current elevator quotation without submitting a decis
   await pending.first().getByRole('button', { name: 'Review details', exact: true }).click();
 
   await expect(page).toHaveURL(/#\/quotation\//);
-  await expect(page.getByRole('heading', { name: 'A clear plan. Your call.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Review the exact offer', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Scope and specifications', exact: true })).toBeVisible();
   await expect(page.locator('.quote-line').first()).toBeVisible();
-  await expect(page.locator('.quote-review-title .quote-total')).toContainText('Quotation total');
-  await expect(page.getByRole('heading', { name: 'Price and payment schedule', exact: true })).toBeVisible();
-  await expect(page.locator('.quote-payment-list > div').first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Warranty, AMC and conditions', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Review record', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Conversation with your provider', exact: true })).toBeVisible();
+  const firstScopeLine = await page.locator('.quote-line').first().evaluate((element) => {
+    const list = element.parentElement!;
+    const line = element.getBoundingClientRect();
+    const container = list.getBoundingClientRect();
+    return { lineWidth: line.width, containerWidth: container.width, lineBottom: line.bottom, viewportHeight: window.innerHeight };
+  });
+  const lineWidthRatio = (info.project.use.viewport?.width ?? 1440) >= 1200 || (info.project.use.viewport?.width ?? 1440) <= 700 ? 0.95 : 0.45;
+  expect(firstScopeLine.lineWidth).toBeGreaterThanOrEqual(firstScopeLine.containerWidth * lineWidthRatio);
+  if ((info.project.use.viewport?.width ?? 1440) >= 1100) {
+    expect(firstScopeLine.lineBottom).toBeLessThan(firstScopeLine.viewportHeight - 36);
+    const sidebarPosition = await page.locator('.customer-sidebar').evaluate((element) => getComputedStyle(element).position);
+    expect(sidebarPosition).toBe('fixed');
+    await page.evaluate(() => window.scrollTo(0, 260));
+    const sidebarTop = await page.locator('.customer-sidebar').evaluate((element) => element.getBoundingClientRect().top);
+    expect(sidebarTop).toBe(76);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
+  const customerContext = page.locator('.quote-customer-context');
+  await expect(customerContext.locator('.quote-context-total')).toContainText('Quotation total');
+  await expect(page.locator('.quote-customer-context > div').last()).toContainText('Quotation total');
+  await expect(page.locator('.quote-review-title .quote-total')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Ready to respond?', exact: true })).toBeVisible();
+  const decisionButtonGap = await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll<HTMLElement>('.quote-decision-actions > .button'));
+    return buttons.length < 2 ? null : buttons[1].getBoundingClientRect().top - buttons[0].getBoundingClientRect().bottom;
+  });
+  expect(decisionButtonGap).not.toBeNull();
+  expect(decisionButtonGap).toBeGreaterThanOrEqual(8);
+
+  const sectionNav = page.getByRole('tablist', { name: 'Quotation sections', exact: true });
+  const isPhone = (info.project.use.viewport?.width ?? 1440) <= 700;
+  const isDevice = (info.project.use.viewport?.width ?? 1440) <= 980;
+  if (isDevice) {
+    const mobileSeparation = await page.evaluate(() => {
+      const navigation = document.querySelector('.quote-section-nav')?.getBoundingClientRect();
+      const panel = document.querySelector('[role="tabpanel"]')?.getBoundingClientRect();
+      const decision = document.querySelector('.quote-respond')?.getBoundingClientRect();
+      return navigation && panel && decision ? { panelGap: panel.top - navigation.bottom, decisionGap: decision.top - panel.bottom } : null;
+    });
+    expect(mobileSeparation).not.toBeNull();
+    expect(mobileSeparation!.panelGap).toBeGreaterThanOrEqual(8);
+    expect(mobileSeparation!.decisionGap).toBeGreaterThanOrEqual(8);
+    await expect(page.locator('.customer-mobile-navigation')).toBeVisible();
+    await expect(page.locator('.customer-navigation')).toBeHidden();
+    await page.screenshot({ path: info.outputPath(isPhone ? 'customer-quotation-mobile-tabs-decision.png' : 'customer-quotation-tablet-tabs-decision.png') });
+  }
+  for (const [label, sectionId] of [
+    ['Scope & pricing', '#quote-scope'],
+    ['Payment & terms', '#quote-payment'],
+    ['Revisions & activity', '#quote-history'],
+    ['Messages', '#quotation-conversation'],
+  ]) {
+    const tab = sectionNav.getByRole('tab', { name: label, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(sectionNav).toBeInViewport();
+    await expect(page.locator(`${sectionId}-panel`)).toBeVisible();
+    await expect(page.getByRole('tabpanel')).toHaveCount(1);
+    await expect(page.locator(sectionId)).toBeVisible();
+    if (sectionId !== '#quote-scope') await expect(page.locator('#quote-scope')).toHaveCount(0);
+    const navigationGeometry = await page.evaluate((targetId) => {
+      const nav = document.querySelector('.quote-section-nav');
+      const header = document.querySelector('.quotation-app-header');
+      const section = document.querySelector(`${targetId}-panel`);
+      return {
+        position: nav ? getComputedStyle(nav).position : '',
+        navTop: nav?.getBoundingClientRect().top ?? 0,
+        navBottom: nav?.getBoundingClientRect().bottom ?? 0,
+        headerBottom: header?.getBoundingClientRect().bottom ?? 0,
+        sectionTop: section?.getBoundingClientRect().top ?? 0,
+      };
+    }, sectionId);
+    expect(navigationGeometry.position).toBe(isPhone ? 'static' : 'sticky');
+    expect(navigationGeometry.navTop).toBeGreaterThanOrEqual(Math.min(navigationGeometry.headerBottom, 76) - 1);
+    expect(navigationGeometry.sectionTop).toBeGreaterThanOrEqual(navigationGeometry.navBottom - 1);
+  }
+  const messagesTab = sectionNav.getByRole('tab', { name: 'Messages', exact: true });
+  await messagesTab.press('ArrowLeft');
+  await expect(sectionNav.getByRole('tab', { name: 'Revisions & activity', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Revisions & activity', exact: true }).press('Home');
+  await expect(sectionNav.getByRole('tab', { name: 'Scope & pricing', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await sectionNav.getByRole('tab', { name: 'Messages', exact: true }).click();
+  await expect(sectionNav.getByRole('tab', { name: 'Messages', exact: true })).toHaveAttribute('aria-selected', 'true');
 
   const accept = page.getByRole('button', { name: 'Accept quotation', exact: true });
-  const checks = page.locator('.quote-checklist input[type="checkbox"]');
-  await expect(checks).toHaveCount(3);
-  await expect(accept).toBeDisabled();
-  await checks.nth(0).check();
-  await checks.nth(1).check();
-  await checks.nth(2).check();
   await expect(accept).toBeEnabled();
-  await checks.nth(1).uncheck();
-  await expect(accept).toBeDisabled();
-  await checks.nth(1).check();
   await accept.click();
 
   const confirmation = page.getByRole('dialog', { name: /Accept revision/ });
@@ -71,15 +138,58 @@ test('customer reviews the current elevator quotation without submitting a decis
   if (info.project.name === 'customer-mobile') {
     const mobileClearance = await page.evaluate(() => {
       const navigation = document.querySelector('.customer-mobile-navigation');
-      const conversation = document.querySelector('.quote-conversation');
-      return navigation && conversation ? navigation.getBoundingClientRect().top - conversation.getBoundingClientRect().bottom : null;
+      const decision = document.querySelector('.quote-respond');
+      return navigation && decision ? navigation.getBoundingClientRect().top - decision.getBoundingClientRect().bottom : null;
     });
-    if (mobileClearance === null) throw new Error('The conversation panel or fixed mobile navigation was not rendered.');
+    if (mobileClearance === null) throw new Error('The decision panel or fixed mobile navigation was not rendered.');
     expect(mobileClearance).toBeGreaterThanOrEqual(0);
     expect(mobileClearance).toBeLessThanOrEqual(36);
   }
   await page.screenshot({ path: info.outputPath('customer-quotation-review-bottom-dark.png') });
   expect(mutationRequests).toEqual([]);
+});
+
+test('customer requests a quotation revision through a focused, revision-bound form', async ({ page }, info) => {
+  test.skip(!info.project.name.startsWith('customer'), 'Customer application only');
+  test.setTimeout(75_000);
+  await localSignIn(page, configuredAccount('CUSTOMER'));
+  await page.goto('/#/quotations');
+  await expect(page.getByRole('heading', { name: 'Your approvals', exact: true })).toBeVisible();
+  const pending = page.locator('.quote-list-card').first();
+  await expect(pending).toBeVisible();
+
+  let submitted: Record<string, unknown> | undefined;
+  await page.route(/\/api\/v1\/quotations\/[^/?]+\/communications(?:\?.*)?$/, async (route) => {
+    if (route.request().method() !== 'POST') { await route.continue(); return; }
+    submitted = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
+      id: 'customer-revision-request-e2e', type: 'quotation-communications', relationships: {},
+      attributes: { quotation_revision: Number(submitted.expected_revision), author_side: 'customer', message_type: 'change_request', body: String(submitted.body), created_at: '2026-10-30T10:00:00Z', author_name: 'Demo Customer' },
+    }) });
+  });
+  await pending.getByRole('button', { name: 'Review details', exact: true }).click();
+  const requestButton = page.getByRole('button', { name: 'Request a revision', exact: true });
+  await expect(requestButton).toBeVisible();
+  await requestButton.click();
+  const dialog = page.getByRole('dialog', { name: 'What should your provider change?', exact: true });
+  await expect(dialog).toBeVisible();
+  const submit = dialog.getByRole('button', { name: 'Send revision request', exact: true });
+  await expect(submit).toBeDisabled();
+  await dialog.getByLabel('What needs to change?').selectOption({ label: 'Price or taxes' });
+  await dialog.getByLabel('Details').fill('Please explain the GST components and confirm the tax-inclusive total.');
+  await expect(submit).toBeEnabled();
+  await submit.click();
+  await expect(page.getByRole('tab', { name: 'Messages', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.quote-message-customer')).toContainText('Price or taxes: Please explain the GST components');
+  await expect(page.getByRole('heading', { name: 'Revision requested', exact: true })).toBeVisible();
+  await expect(page.getByText(/current revision stays unchanged/)).toBeVisible();
+  expect(submitted?.message_type).toBe('CHANGE_REQUEST');
+  expect(Number(submitted?.expected_revision)).toBeGreaterThan(0);
+  expect(submitted?.body).toContain('Price or taxes:');
+  await page.getByRole('tab', { name: 'Revisions & activity', exact: true }).click();
+  await expect(page.locator('.quote-history-row')).toContainText('Revision requested');
+  const layout = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, viewportWidth: document.documentElement.clientWidth }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.viewportWidth);
 });
 
 test('customer can compare an eight-lift quotation and inspect each material allocation', async ({ page }, info) => {

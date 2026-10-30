@@ -11882,6 +11882,37 @@ export interface components {
             tax?: {
                 [key: string]: unknown;
             } | null;
+            /** @description Customer-safe immutable tax presentation for a line when the quotation terms enable tax disclosure. */
+            tax_details?: {
+                rule_code?: string;
+                rule_version?: number;
+                total_rate_percent?: string;
+                /** @enum {string} */
+                tax_treatment?: "TAXABLE" | "EXEMPT" | "NIL_RATED" | "ZERO_RATED" | "OUT_OF_SCOPE" | "REVERSE_CHARGE";
+                /** @enum {string} */
+                pricing_mode?: "EXCLUSIVE" | "INCLUSIVE";
+                taxable_amount?: string;
+                components?: {
+                    code: string;
+                    name: string;
+                    rate_percent: string;
+                    amount: string;
+                }[];
+            };
+            /** @description AMC plan snapshot for provider users and customer-safe plan/checklist summary for the linked customer. */
+            amc?: {
+                plan_name?: string;
+                plan_code?: string;
+                plan_version?: number;
+                checklist_templates?: {
+                    code: string;
+                    name: string;
+                    version: number;
+                    item_count: number;
+                }[];
+            } & {
+                [key: string]: unknown;
+            };
             /** @description Authorized discount amount; the provider terms policy bounds the permitted percentage. */
             discount_amount?: string;
         };
@@ -13735,6 +13766,12 @@ export interface components {
             preventive_frequency?: string;
             scheduled_visits?: number;
             service_priority?: string;
+            maintenance_checklists?: {
+                code: string;
+                name: string;
+                version: number;
+                item_count: number;
+            }[];
         };
         /** @description ADR-014: activated versions immutable except lifecycle; amendments/successor renewals preserve all history. */
         MaintenanceContract: {
@@ -14013,14 +14050,23 @@ export interface components {
             /** Format: email */
             email: string;
         };
-        /** @description Server-calculated component totals grouped by central tax component. */
+        /** @description Server-calculated component amounts grouped by component code and rate, with immutable published rule snapshots. */
         QuotationTaxSummary: {
             /** @enum {string} */
             status: "NOT_CONFIGURED" | "PARTIAL" | "CALCULATED";
             tax_total: string;
             components: {
                 code: string;
+                name: string;
+                rate_percent: string;
                 amount: string;
+            }[];
+            rules?: {
+                rule_code: string;
+                rule_version: number;
+                total_rate_percent: string;
+                /** @enum {string} */
+                tax_treatment: "TAXABLE" | "EXEMPT" | "NIL_RATED" | "ZERO_RATED" | "OUT_OF_SCOPE" | "REVERSE_CHARGE";
             }[];
         };
         QuotationTaxRuleAttributes: {
@@ -16834,7 +16880,7 @@ export interface components {
             ends_at: string;
             expected_revision: components["schemas"]["Revision"];
         };
-        /** @description Canonical uppercase generated Asset Code. Exact component lengths are controlled by the active policy; the suffix is 4–8 characters. */
+        /** @description Canonical uppercase generated E-Code: two-digit state map, two-digit Business Operation map and six-character suffix; stored without the display separator. */
         AssetCode: string;
         /** @description Lookup input normalized by the active policy; canonical responses use AssetCode. */
         AssetCodeLookup: string;
@@ -16844,32 +16890,24 @@ export interface components {
             /** @constant */
             uniqueness_scope: "GLOBAL";
             /** @constant */
-            format: "region_location_asset_type_suffix";
-            region_component: {
+            format: "state_operation_numeric_suffix";
+            state_component: {
                 /** @enum {string} */
-                source: "state" | "region" | "country" | "provider_region" | "none";
-                code_definition_id?: components["schemas"]["Id"];
-                length: number;
+                source: "registered_service_location_state";
+                length: 2;
             };
-            location_component: {
+            operation_component: {
                 /** @enum {string} */
-                source: "location" | "city" | "postal_area" | "provider_zone" | "site" | "none";
-                code_definition_id?: components["schemas"]["Id"];
-                length: number;
+                source: "active_primary_business_operation";
+                length: 2;
             };
-            asset_type_component: {
-                /** @enum {string} */
-                source: "asset_type" | "asset_definition" | "provider_type";
-                code_definition_id?: components["schemas"]["Id"];
-                length: number;
-            };
-            suffix_length: number;
+            suffix_length: 6;
             /** @constant */
             alphabet: "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
             /** @constant */
             case_policy: "uppercase";
             /** @constant */
-            normalization: "uppercase_remove_permitted_separators_and_spaces";
+            normalization: "uppercase_remove_spaces_and_hyphens";
             /** @constant */
             collision_policy: "retry_under_global_uniqueness_boundary";
             version: number;

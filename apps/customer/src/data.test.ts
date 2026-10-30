@@ -80,7 +80,7 @@ describe('customer booking contract', () => {
     expect(request[1]?.method).toBe('POST');
     expect(new Headers(request[1]?.headers).get('X-TRISE-Provider-Id')).toBe('provider-code');
     expect(new Headers(request[1]?.headers).get('Idempotency-Key')).toBe('identifier-lookup-1');
-    expect(JSON.parse(String(request[1]?.body))).toEqual({ identifier: 'AST-0084', resource_hint: 'auto', provider_context_id: 'provider-code' });
+    expect(JSON.parse(String(request[1]?.body))).toEqual({ identifier: 'AST-0084', resource_hint: 'asset', provider_context_id: 'provider-code' });
   });
 });
 

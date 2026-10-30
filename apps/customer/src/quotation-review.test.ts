@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { QuotationListLoadFailure, quotationCommunicationFailure, quotationConversationOpen, quotationNeedsCustomerDecision, quotationScopeSummary, quotationTaxComponents, quotationUnitAssignment } from './quotation-review';
+import { QuotationListLoadFailure, quotationCommunicationFailure, quotationConversationOpen, quotationNeedsCustomerDecision, quotationScopeSummary, quotationShowsTaxDetails, quotationTaxComponents, quotationTaxPresentation, quotationTaxRules, quotationUnitAssignment } from './quotation-review';
 import type { QuotationAttributes } from './data';
 
 const quotation = (overrides: Partial<QuotationAttributes> = {}): QuotationAttributes => ({
@@ -48,9 +48,24 @@ describe('quotation approvals summary', () => {
 
 describe('quotation tax breakdown', () => {
   it('shows server-calculated tax components only when the summary is complete', () => {
-    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'CALCULATED', tax_total: '360.00', components: [{ code: 'CGST', amount: '180.00' }, { code: 'SGST', amount: '180.00' }] } }))).toEqual([{ code: 'CGST', amount: '180.00' }, { code: 'SGST', amount: '180.00' }]);
-    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'PARTIAL', tax_total: '180.00', components: [{ code: 'CGST', amount: '180.00' }] } }))).toEqual([]);
-    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'CALCULATED', tax_total: '360.00', components: [{ code: '', amount: '180.00' }, { code: 'SGST', amount: 'invalid' }] } }))).toEqual([]);
+    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'CALCULATED', tax_total: '360.00', components: [{ code: 'CGST', name: 'Central GST', rate_percent: '9', amount: '180.00' }, { code: 'SGST', name: 'State GST', rate_percent: '9', amount: '180.00' }] } }))).toEqual([{ code: 'CGST', name: 'Central GST', rate_percent: '9', amount: '180.00' }, { code: 'SGST', name: 'State GST', rate_percent: '9', amount: '180.00' }]);
+    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'PARTIAL', tax_total: '180.00', components: [{ code: 'CGST', name: 'Central GST', rate_percent: '9', amount: '180.00' }] } }))).toEqual([]);
+    expect(quotationTaxComponents(quotation({ tax_summary: { status: 'CALCULATED', tax_total: '360.00', components: [{ code: '', name: 'Missing', rate_percent: '9', amount: '180.00' }, { code: 'SGST', name: 'State GST', rate_percent: '9', amount: 'invalid' }] } }))).toEqual([]);
+  });
+
+  it('reads published rules and honors the saved customer tax visibility setting', () => {
+    const quote = quotation({ tax_summary: { status: 'CALCULATED', tax_total: '360.00', rules: [{ rule_code: 'GST-18', rule_version: 2, total_rate_percent: '18', tax_treatment: 'TAXABLE' }], components: [] } });
+    expect(quotationTaxRules(quote)).toEqual([{ rule_code: 'GST-18', rule_version: 2, total_rate_percent: '18', tax_treatment: 'TAXABLE' }]);
+    expect(quotationShowsTaxDetails(quote)).toBe(true);
+    expect(quotationShowsTaxDetails(quotation({ terms: { show_tax_details: false } }))).toBe(false);
+    const hiddenQuote = quotation({ terms: { show_tax_details: false }, tax_summary: quote.tax_summary });
+    expect(quotationTaxPresentation(hiddenQuote)).toEqual({ visible: false, rules: [], components: [] });
+    expect(quotationTaxPresentation(quote).components).toHaveLength(0);
+  });
+
+  it('derives the rule and combined rate from immutable line tax snapshots for older quotations', () => {
+    const quote = quotation({ lines: [{ description: 'Lift package', quantity: '1', unit_price: '125000', amount: '147500', tax_details: { rule_code: 'GST-18', components: [{ code: 'CGST', name: 'Central GST', rate_percent: '9', amount: '11250' }, { code: 'SGST', name: 'State GST', rate_percent: '9', amount: '11250' }] } }] });
+    expect(quotationTaxRules(quote)).toEqual([{ rule_code: 'GST-18', total_rate_percent: '18' }]);
   });
 });
 

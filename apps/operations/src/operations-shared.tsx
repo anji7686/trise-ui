@@ -3,7 +3,7 @@ import { Button } from '@trise/ui';
 
 export type WorkspaceTab = { id: string; label: string; disabled?: boolean };
 
-export type ProviderAction = { id: string; label: string; onSelect: () => void; disabled?: boolean; tone?: 'default' | 'danger' };
+export type ProviderAction = { id: string; label: string; onSelect: () => void; disabled?: boolean; tone?: 'default' | 'danger'; icon?: ReactNode };
 
 const INTERNAL_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DISPLAY_ACRONYMS = new Set(['AMC', 'API', 'CGST', 'GSTIN', 'INR', 'MRL', 'PAN', 'PDF', 'QA', 'SGST', 'SMS', 'UPI', 'XLS']);
@@ -39,18 +39,18 @@ export function ProviderActionMenu({ label = 'Actions', actions }: { label?: str
   if (!actions.length) return null;
   if (actions.length === 1) {
     const action = actions[0];
-    return <Button type="button" variant={action.tone === 'danger' ? 'danger' : 'secondary'} disabled={action.disabled} onClick={action.onSelect}>{action.label}</Button>;
+    return <Button type="button" variant={action.tone === 'danger' ? 'danger' : 'secondary'} disabled={action.disabled} onClick={action.onSelect}>{action.icon && <span className="provider-action-icon" aria-hidden="true">{action.icon}</span>}{action.label}</Button>;
   }
   const primary = actions[0];
   return <div className="provider-action-menu" ref={root}>
     <div className="provider-action-menu-group">
-      <Button type="button" variant={primary.tone === 'danger' ? 'danger' : 'secondary'} disabled={primary.disabled} onClick={primary.onSelect}>{primary.label}</Button>
+      <Button type="button" variant={primary.tone === 'danger' ? 'danger' : 'secondary'} disabled={primary.disabled} onClick={primary.onSelect}>{primary.icon && <span className="provider-action-icon" aria-hidden="true">{primary.icon}</span>}{primary.label}</Button>
       <button type="button" className="provider-action-menu-trigger" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <span aria-hidden="true">⋯</span>
       </button>
     </div>
     {open && <div className="provider-action-menu-list" role="menu" aria-label={label}>
-      {actions.slice(1).map((action) => <button key={action.id} type="button" role="menuitem" className={action.tone === 'danger' ? 'is-danger' : undefined} disabled={action.disabled} onClick={() => { setOpen(false); action.onSelect(); }}>{action.label}</button>)}
+      {actions.slice(1).map((action) => <button key={action.id} type="button" role="menuitem" className={action.tone === 'danger' ? 'is-danger' : undefined} disabled={action.disabled} onClick={() => { setOpen(false); action.onSelect(); }}>{action.icon && <span className="provider-action-icon" aria-hidden="true">{action.icon}</span>}{action.label}</button>)}
     </div>}
   </div>;
 }

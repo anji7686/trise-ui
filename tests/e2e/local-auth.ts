@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { expect, type Page } from 'playwright/test';
 import { e2eEnv } from './e2e-config';
 
-export type E2EPersona = 'GLOBAL_ADMIN' | 'PLATFORM_REVIEWER' | 'PROVIDER_ADMIN' | 'PROVIDER_REVIEWER' | 'OPERATOR' | 'CUSTOMER' | 'AGENT' | 'MARKETING_EXECUTIVE' | 'MARKETING_MANAGER' | 'ASSET_ADMINISTRATOR';
+export type E2EPersona = 'GLOBAL_ADMIN' | 'PLATFORM_REVIEWER' | 'PROVIDER_ADMIN' | 'PROVIDER_REVIEWER' | 'OPERATOR' | 'CUSTOMER' | 'CUSTOMER_2' | 'AGENT' | 'MARKETING_EXECUTIVE' | 'MARKETING_MANAGER' | 'ASSET_ADMINISTRATOR';
 
 export function configuredAccount(persona: E2EPersona) {
   const variable = `TRISE_E2E_${persona}_EMAIL`;
@@ -31,10 +31,10 @@ export async function paceLocalSignIn() {
   await new Promise(resolve => setTimeout(resolve, 15_000));
 }
 
-export async function localSignIn(page: Page, email: string) {
+export async function localSignIn(page: Page, email: string, entryUrl = '/') {
   const account = approvedLocalAccounts().find(item => item.email === email);
   if (!account) throw new Error('Account is not on the approved local list');
-  await page.goto('/');
+  await page.goto(entryUrl);
   const localSignInSummary = page.locator('details.development-sign-in > summary');
   await localSignInSummary.waitFor({ state: 'visible', timeout: 15_000 });
   const localSignInDetails = page.locator('details.development-sign-in');
@@ -45,7 +45,11 @@ export async function localSignIn(page: Page, email: string) {
   await Promise.any([quickEmail.waitFor({ state: 'visible' }), credentialEmail.waitFor({ state: 'visible' })]);
   const quickMode = await quickEmail.isVisible().catch(() => false);
   if (quickMode) {
-    await quickEmail.selectOption(email);
+    const optionValues = await quickEmail.locator('option').evaluateAll(options => options.map(option => (option as HTMLOptionElement).value));
+    const matchingEmail = optionValues.find(value => value.trim().toLowerCase() === email.trim().toLowerCase());
+    if (!matchingEmail) throw new Error('Approved development account is not present in the sign-in list.');
+    await quickEmail.selectOption(matchingEmail);
+    await expect(quickEmail).toHaveValue(matchingEmail);
   } else {
     await credentialEmail.fill(email);
     await page.locator('input[name="secret"]').fill(account.secret);
@@ -56,7 +60,10 @@ export async function localSignIn(page: Page, email: string) {
   const response = await signedIn;
   expect(response.status()).toBe(200);
   const { user, access_token: accessToken } = await response.json();
-  await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole('complementary', { name: 'Operations navigation', exact: true })
+      .or(page.locator('.app-shell')),
+  ).toBeVisible({ timeout: 15_000 });
   return { user, accessToken: accessToken as string };
 }
 

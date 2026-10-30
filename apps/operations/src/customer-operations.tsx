@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import { OperationsDialog } from "./operations-dialog";
 import {
   DEFAULT_PAGE_SIZE,
   operationsData,
   type Collection,
   type GenericAttributes,
+  type ProviderOperation,
   type Resource,
 } from "./data";
 import { OperationsStatus as Status } from "./operations-status";
@@ -134,6 +135,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
   const [assets, setAssets] = useState<Collection<GenericAttributes>>({
     data: [],
   });
+  const [providerOperations, setProviderOperations] = useState<ProviderOperation[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerPhoneQuery, setCustomerPhoneQuery] = useState("");
   const [customerEmailQuery, setCustomerEmailQuery] = useState("");
@@ -158,6 +160,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [selectedDefinitionId, setSelectedDefinitionId] = useState("");
+  const [selectedBusinessOperationId, setSelectedBusinessOperationId] = useState("");
   const [mode, setMode] = useState<"customer" | "location" | "asset" | null>(
     null,
   );
@@ -209,12 +212,13 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
         setAssets({ data: [] });
         return;
       }
-      const [f, t, d, ad, a] = await Promise.all([
+      const [f, t, d, ad, a, operations] = await Promise.all([
         operationsData.assetFamilies(providerId),
         operationsData.assetTypes(providerId),
         operationsData.assetDefinitions(providerId),
         operationsData.attributeDefinitions(providerId),
         operationsData.assets(providerId, { query: debouncedQueries.asset, ...assetPage, limit: pageLimit, customerRelationshipId: selectedRelationshipId || undefined, locationId: selectedLocationId || undefined }),
+        operationsData.providerOperations(providerId),
       ]);
       if (generation !== loadGeneration.current) return;
       setAssetFamilies(f);
@@ -222,6 +226,9 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
       setDefinitions(d);
       setAttributeDefinitions(ad);
       setAssets(a);
+      const activeOperations = operations.data.filter((row) => String(row.attributes.status).toUpperCase() === "ACTIVE");
+      setProviderOperations(activeOperations);
+      if (activeOperations.length === 1) setSelectedBusinessOperationId(activeOperations[0].attributes.business_operation.id);
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }
@@ -300,6 +307,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
     };
   }, [customerContactForm.email, customerContactForm.phone, editing?.id, editingKind, mode, providerId]);
   const selectedDefinition = definitions.data.find((row) => row.id === selectedDefinitionId);
+  const selectedDefinitionUsesGeneratedCode = selectedDefinition ? String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "GENERATED" : false;
   const definitionAttributeIds = selectedDefinition?.relationships.attributes;
   const selectedAttributeIds = Array.isArray(definitionAttributeIds) ? definitionAttributeIds.map((link) => link.id) : definitionAttributeIds ? [definitionAttributeIds.id] : [];
   const selectedAttributes = attributeDefinitions.data.filter((row) => selectedAttributeIds.includes(row.id));
@@ -500,13 +508,16 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
         const definitionAttrs = attrs(selectedDefinition);
         const identifierTypeId = String(definitionAttrs.primary_identifier_type_id || definitionAttrs.identifier_policy_id || "");
         const identifierValue = String(form.get("primary_identifier") || "").trim();
-        const identifiersRequired = String(definitionAttrs.primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED";
+        const identifierStrategy = String(definitionAttrs.primary_identifier_strategy || "OPTIONAL").toUpperCase();
+        const identifiersRequired = identifierStrategy === "REQUIRED";
+        if (identifierStrategy === "GENERATED" && !selectedBusinessOperationId) throw new Error("Choose the Business Operation for this asset before generating its E-Code.");
         if (identifiersRequired && (!identifierTypeId || !identifierValue)) throw new Error("This asset definition requires its configured primary identifier.");
-        await operationsData.createAsset(
+        const createdAsset = await operationsData.createAsset(
           providerId,
           {
             name: form.get("name"),
             asset_definition_id: form.get("asset_definition_id"),
+            business_operation_type_id: identifierStrategy === "GENERATED" ? selectedBusinessOperationId : undefined,
             definition_version: definitionAttrs.version,
             customer_relationship_id: form.get("customer_relationship_id"),
             owner_party_id: ownerPartyId,
@@ -517,6 +528,11 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
           },
           crypto.randomUUID(),
         );
+        const generatedCode = identifierStrategy === "GENERATED" ? equipmentCodeOf(createdAsset) : "";
+        setMessage(generatedCode ? `Asset saved. E-Code: ${generatedCode}` : "Asset saved.");
+        setMode(null);
+        await load();
+        return;
       }
       setMessage("Record saved.");
       setMode(null);
@@ -732,7 +748,7 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
       {message && <ActionNotification title="Customer and asset update completed" onClose={() => setMessage("")}>{message}</ActionNotification>}
       {canManage && view !== "customers" && <div className="action-footer customer-workspace-actions">
         {view === "sites" && <Button onClick={() => { setLocationForm({ address: "", city: "", cityCode: "", district: "", districtCode: "", state: "", stateCode: "", pin_code: "" }); setMode("location"); }} disabled={!relationships.data.length}>Add site</Button>}
-        {view === "assets" && <Button onClick={() => setMode("asset")} disabled={!relationships.data.length || !definitions.data.length}>Register asset</Button>}
+        {view === "assets" && <Button onClick={() => { setSelectedBusinessOperationId(providerOperations.length === 1 ? providerOperations[0].attributes.business_operation.id : ""); setMode("asset"); }} disabled={!relationships.data.length || !definitions.data.length}>Register asset</Button>}
       </div>}
       {mode && (
         <OperationsDialog busy={busy} onClose={() => { setMode(null); setError(""); }} title={
@@ -833,6 +849,16 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
                   Asset name *
                   <input name="name" required />
                 </label>
+                {selectedDefinitionUsesGeneratedCode && (
+                  <label>
+                    Business Operation for this asset *
+                    <SortedSelect required value={selectedBusinessOperationId} onChange={(event) => setSelectedBusinessOperationId(event.target.value)} disabled={providerOperations.length === 0}>
+                      <option value="">{providerOperations.length ? "Select Business Operation" : "No active Business Operations"}</option>
+                      {providerOperations.map((operation) => <option key={operation.id} value={operation.attributes.business_operation.id}>{operation.attributes.business_operation.name} ({operation.attributes.business_operation.code}){operation.attributes.is_primary ? " · Primary" : ""}</option>)}
+                    </SortedSelect>
+                    <small className="form-help">The E-Code permanently records this operation and the state from the selected service location.</small>
+                  </label>
+                )}
                 {selectedAttributes.map((definition) => {
                   const definitionAttrs = attrs(definition);
                   const valueType = String(definitionAttrs.value_type || "STRING").toUpperCase();
@@ -843,7 +869,8 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
                   const textConstraints = { minLength: typeof validation.minLength === "number" ? validation.minLength : undefined, maxLength: typeof validation.maxLength === "number" ? validation.maxLength : undefined, min: typeof validation.minimum === "number" ? validation.minimum : undefined, max: typeof validation.maximum === "number" ? validation.maximum : undefined, pattern: typeof validation.pattern === "string" ? validation.pattern : undefined };
                   return <label key={definition.id}>{label}{definitionAttrs.unit ? ` (${String(definitionAttrs.unit)})` : ""}{definitionAttrs.required ? " *" : ""}{enumValues.length ? <SortedSelect {...common}><option value="">Select {label.toLowerCase()}</option>{enumValues.map((option) => <option key={String(option)} value={String(option)}>{String(option)}</option>)}</SortedSelect> : ["BOOLEAN", "BOOL"].includes(valueType) ? <input type="checkbox" name={`attribute:${definition.id}`} /> : ["JSON", "OBJECT", "ARRAY"].includes(valueType) ? <textarea {...common} {...textConstraints} placeholder="Enter the configured JSON value" /> : <input {...common} {...textConstraints} type={["INTEGER", "DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "number" : valueType === "DATE" ? "date" : "text"} step={["DECIMAL", "NUMBER", "NUMERIC", "FLOAT"].includes(valueType) ? "any" : undefined} />}</label>;
                 })}
-                {selectedDefinition && String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() !== "NONE" && (attrs(selectedDefinition).primary_identifier_type_id || attrs(selectedDefinition).identifier_policy_id || String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED") && <label>E-Code / primary identifier{String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED" ? " *" : " (optional)"}<input name="primary_identifier" required={String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED"} placeholder="For example KAB123A" /><small className="form-help">For elevator, lift and escalator equipment, use the E-Code assigned by your existing system. It is normalized for search and must be unique.</small></label>}
+                {selectedDefinitionUsesGeneratedCode && <p className="form-help">TRISE generates a permanent E-Code from the selected service location’s state and this asset’s Business Operation. The database stores the normalized code; the interface groups it for readability.</p>}
+                {selectedDefinition && String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() !== "NONE" && String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() !== "GENERATED" && (attrs(selectedDefinition).primary_identifier_type_id || attrs(selectedDefinition).identifier_policy_id || String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED") && <label>E-Code / primary identifier{String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED" ? " *" : " (optional)"}<input name="primary_identifier" required={String(attrs(selectedDefinition).primary_identifier_strategy || "OPTIONAL").toUpperCase() === "REQUIRED"} placeholder="For example KAB123A" /><small className="form-help">Use the equipment code already assigned by the manufacturer or existing system. It is normalized for search and must be unique within its policy scope.</small></label>}
                 {selectedDefinition && selectedAttributes.length === 0 && <p className="notice">This definition has no additional configured attributes.</p>}
               </>
             )}
@@ -983,9 +1010,8 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
               <div><span>Linked assets</span><strong>{linkedPreview(attrs(customerToView).linked_assets, "asset")}</strong></div>
               <div className="customer-view-address"><span>Billing address</span><strong>{(() => { const address = (attrs(customerToView).billing_address || {}) as Record<string, unknown>; return [address.address_line, address.address_line_2, address.locality, address.city, address.district, address.state, address.pin_code].filter(Boolean).map(String).join(", ") || "Not recorded"; })()}</strong></div>
             </div>
-            <p className="notice">For a paid AMC, continue with this customer’s linked elevator assets and a published plan. Existing equipment and coverage history stay attached to their current records.</p>
             <div className="provider-form-actions customer-view-actions">
-              {canPrepareAmcOffer && <Button onClick={() => { const relationshipId = customerViewRelationshipId; if (!relationshipId) return; setCustomerToView(null); window.location.hash = `quotations/new/MAINTENANCE_CONTRACT?relationship_id=${encodeURIComponent(relationshipId)}&return_to=customers`; }}>Prepare AMC offer</Button>}
+              {canPrepareAmcOffer && <div className="customer-view-amc-action"><Button onClick={() => { const relationshipId = customerViewRelationshipId; if (!relationshipId) return; setCustomerToView(null); window.location.hash = `quotations/new/MAINTENANCE_CONTRACT?relationship_id=${encodeURIComponent(relationshipId)}&relationship_label=${encodeURIComponent(titleOf(customerToView))}&return_to=customers`; }}>Prepare AMC offer</Button><InfoNotice>Use this customer’s linked elevator assets and a published plan. Existing equipment and coverage history stay attached to their current records.</InfoNotice></div>}
               {canManage && <Button variant="secondary" onClick={() => { setCustomerToView(null); openEditor(customerToView, "customer"); }}>Edit customer</Button>}
               <Button type="button" variant="secondary" onClick={() => setCustomerToView(null)}>Close</Button>
             </div>
@@ -1182,6 +1208,12 @@ export function CustomerOperations({ providerId, canManage = false, view = "cust
               <dt>Building / community</dt><dd>{serviceLocationHierarchyOf(selectedAsset).map((item) => String(item.name || "")).filter(Boolean).join(" / ") || "Not linked"}</dd>
               <dt>Site address</dt><dd>{Array.isArray(attrs(selectedAsset).service_location_address) ? (attrs(selectedAsset).service_location_address as unknown[]).map(String).join(", ") || "Not recorded" : "Not recorded"}</dd>
               <dt>E-Code</dt><dd>{equipmentCodeOf(selectedAsset) || "Not recorded"}</dd>
+              {Boolean(attrs(selectedAsset).asset_code_issuance) && (() => {
+                const issuance = attrs(selectedAsset).asset_code_issuance as Record<string, unknown>;
+                const operation = issuance.business_operation as Record<string, unknown> | undefined;
+                const state = issuance.state as Record<string, unknown> | undefined;
+                return <><dt>E-Code operation</dt><dd>{operation ? `${String(operation.name || operation.code)} (${String(operation.code)})` : "Not recorded"}</dd><dt>E-Code state</dt><dd>{state ? `${String(state.name || state.code)} (${String(state.code)})` : "Not recorded"}</dd></>;
+              })()}
               <dt>Asset identifiers</dt><dd>{Array.isArray(attrs(selectedAsset).identifiers) ? (attrs(selectedAsset).identifiers as Array<Record<string, unknown>>).map((identifier) => String(identifier.value || "")).filter(Boolean).join(", ") || "Not recorded" : "Not recorded"}</dd>
               <dt>Configured attributes</dt><dd>{Array.isArray(attrs(selectedAsset).values) ? (attrs(selectedAsset).values as Array<{ definition_id?: string; value?: unknown }>).map((value) => { const definition = attributeDefinitions.data.find((candidate) => candidate.id === value.definition_id); return `${definition ? String(attrs(definition).label || attrs(definition).key) : "Attribute"}: ${String(value.value ?? "—")}`; }).join(" · ") || "None recorded" : "None recorded"}</dd>
               <dt>Site relationship roles</dt><dd>{Array.isArray(attrs(selectedAsset).site_relationship_roles) ? (attrs(selectedAsset).site_relationship_roles as unknown[]).map((role) => String(role).replaceAll("_", " ")).join(", ") || "Not specified" : "Not specified"}</dd>

@@ -5,7 +5,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Button, SortedSelect } from "@trise/ui";
+import { Button, SortedSelect, InfoNotice } from "@trise/ui";
 import { accessData } from "./access-data";
 import {
   operationsData,

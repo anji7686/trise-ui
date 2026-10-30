@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   amountInWordsFor,
   defaultQuotationTermSelection,
+  quotationAmcChecklistLabels,
   quotationPaymentScheduleForView,
   quotationMaterialsForApi,
   quotationTermSelectionFromTerms,
@@ -9,6 +10,7 @@ import {
   quotationTermsForApi,
   quotationTermsTextIncludesStructuredDetail,
 } from "./quotations";
+import { quotationPurposeLabels, supportedQuotationPurposes } from "./quotation-types";
 
 describe("quotation amount presentation", () => {
   it("formats INR totals using Indian number groups", () => {
@@ -18,6 +20,42 @@ describe("quotation amount presentation", () => {
   it("includes paise and omits words for non-INR currencies", () => {
     expect(amountInWordsFor(123.45, "INR")).toBe("Rupees One Hundred Twenty Three and Forty Five Paise Only");
     expect(amountInWordsFor(123.45, "USD")).toBe("");
+  });
+});
+
+describe("AMC quotation checklist snapshot summary", () => {
+  it("shows the pinned checklist name, version and item count from the published plan", () => {
+    expect(quotationAmcChecklistLabels({
+      attributes: {
+        current_version: {
+          plan: {
+            checklist_templates: [{
+              code: "PM-QTR",
+              name: "Quarterly safety check",
+              version: 2,
+              items: [{ label: "Door interlocks" }, { label: "Alarm" }],
+            }],
+          },
+        },
+      },
+    })).toEqual(["Quarterly safety check · v2 · 2 checks"]);
+  });
+
+  it("reports no configured checklist for plans without a pinned checklist", () => {
+    expect(quotationAmcChecklistLabels({ attributes: { current_version: { plan: {} } } })).toEqual([]);
+    expect(quotationAmcChecklistLabels(null)).toEqual([]);
+  });
+});
+
+describe("quotation purpose coverage", () => {
+  it("has a specific customer-facing label for every API quotation purpose", () => {
+    expect(Object.keys(quotationPurposeLabels).sort()).toEqual([
+      "CONTRACT_RENEWAL", "INSTALLATION", "MAINTENANCE_CONTRACT", "MODIFICATION",
+      "NEW_ASSET", "OTHER_CONTROLLED", "PARTS", "PROCUREMENT", "REPAIR", "SERVICE", "TAKEOVER",
+    ]);
+    expect(quotationPurposeLabels.REPAIR).toBe("Repair quotation");
+    expect(quotationPurposeLabels.SERVICE).toBe("Service quotation");
+    expect(supportedQuotationPurposes.slice().sort()).toEqual(Object.keys(quotationPurposeLabels).sort());
   });
 });
 

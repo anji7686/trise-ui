@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { CustomerRequestReview } from './customer-request-review';
 
 const props = {
-  assetName: 'Passenger lift A', serviceType: 'Lift breakdown repair', issue: 'Unusual noise', description: 'Door makes a grinding sound',
+  assetName: 'Passenger lift A', assetCode: '0703-7Q9M2X', assetLocation: 'Maple Heights · Tower A', serviceType: 'Lift breakdown repair', issue: 'Unusual noise', description: 'Door makes a grinding sound',
   details: 'The sound is strongest on level 3.', preferredDate: '2026-10-30', preferredWindow: '09:00–12:00',
   safetyConcern: true, providerName: 'Lift Rise Elevators', formatDate: () => '30 Oct 2026',
 };
@@ -12,11 +12,10 @@ describe('customer request review', () => {
   it('uses the prototype review hierarchy and preserves all entered request details', () => {
     const markup = renderToStaticMarkup(<CustomerRequestReview {...props} />);
     for (const value of [
-      'A quick check before sending.', 'Your request goes to Lift Rise Elevators.', 'Asset', 'Passenger lift A',
+      'A quick check before sending.', 'Your request goes to Lift Rise Elevators.', 'Asset', 'Passenger lift A', 'E-Code', '0703-7Q9M2X', 'Registered place', 'Maple Heights · Tower A',
       'Service type', 'Lift breakdown repair', 'Issue', 'Unusual noise', 'Description', 'Door makes a grinding sound', 'More details',
       'The sound is strongest on level 3.', 'Preferred date', '30 Oct 2026', 'Preferred window',
-      '09:00–12:00', 'Safety concern', 'Reported for assessment',
-      'Your provider will review coverage, priority and the requested window before confirming the next step.',
+      '09:00–12:00', 'Safety concern', 'Reported for assessment', 'aria-label="Show overview information"',
     ]) expect(markup).toContain(value);
   });
 

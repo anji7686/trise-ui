@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { InfoNotice } from '@trise/ui';
 
 export type CustomerRequestReviewProps = {
   assetName: string;
+  assetCode: string;
+  assetLocation: string;
   serviceType: string;
   issue: string;
   description: string;
@@ -13,12 +16,14 @@ export type CustomerRequestReviewProps = {
   formatDate: (value: string) => string;
 };
 
-export function CustomerRequestReview({ assetName, serviceType, issue, description, details, preferredDate, preferredWindow, safetyConcern, providerName, formatDate }: CustomerRequestReviewProps): ReactNode {
+export function CustomerRequestReview({ assetName, assetCode, assetLocation, serviceType, issue, description, details, preferredDate, preferredWindow, safetyConcern, providerName, formatDate }: CustomerRequestReviewProps): ReactNode {
   return <div className="customer-request-step">
-    <h3>A quick check before sending.</h3>
+    <div className="trise-info-heading-row"><h3>A quick check before sending.</h3><InfoNotice>Your provider will review coverage, priority and the requested window before confirming the next step.</InfoNotice></div>
     <p className="muted small">Your request goes to {providerName}.</p>
     <dl>
       <dt>Asset</dt><dd>{assetName}</dd>
+      <dt>E-Code</dt><dd>{assetCode || 'Not supplied'}</dd>
+      <dt>Registered place</dt><dd>{assetLocation || 'Not shared'}</dd>
       <dt>Service type</dt><dd>{serviceType}</dd>
       <dt>Issue</dt><dd>{issue}</dd>
       <dt>Description</dt><dd>{description}</dd>
@@ -27,6 +32,5 @@ export function CustomerRequestReview({ assetName, serviceType, issue, descripti
       <dt>Preferred window</dt><dd>{preferredWindow}</dd>
       <dt>Safety concern</dt><dd>{safetyConcern ? 'Reported for assessment' : 'Not reported'}</dd>
     </dl>
-    <p className="notice">Your provider will review coverage, priority and the requested window before confirming the next step.</p>
   </div>;
 }

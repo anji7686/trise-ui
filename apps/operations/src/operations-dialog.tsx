@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from '@trise/ui';
 
-export function OperationsDialog({ title, children, onClose, busy = false, className }: { title: string; children: ReactNode; onClose: () => void; busy?: boolean; className?: string }) {
+export function OperationsDialog({ title, titleInfo, children, onClose, busy = false, className }: { title: string; titleInfo?: ReactNode; children: ReactNode; onClose: () => void; busy?: boolean; className?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useId();
   const close = useRef(onClose); close.current = onClose;
@@ -18,7 +18,7 @@ export function OperationsDialog({ title, children, onClose, busy = false, class
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }} onCancel={event => { event.preventDefault(); if (!busy) close.current(); }}>
-    <header className="operations-dialog-heading"><h2 id={heading}>{title}</h2><Button type="button" variant="quiet" aria-label={`Close ${title}`} disabled={busy} onClick={onClose}>×</Button></header>
+    <header className="operations-dialog-heading"><div className="operations-dialog-title-row"><h2 id={heading}>{title}</h2>{titleInfo}</div><Button type="button" variant="quiet" aria-label={`Close ${title}`} disabled={busy} onClick={onClose}>×</Button></header>
     {children}
   </dialog>;
 }

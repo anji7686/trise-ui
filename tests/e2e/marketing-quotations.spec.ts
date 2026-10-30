@@ -130,32 +130,53 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await navigateProvider(page, 'Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
+  await page.getByRole('button', { name: /New installation/ }).click();
   await chooseSearchableOption(page, 'Lead', 'Browser quotation opportunity', new RegExp(`Browser quotation opportunity.*${reference}`));
   await chooseSearchableOption(page, 'Customer relationship', 'Browser quotation opportunity', new RegExp(`Quotation Browser Prospect.*Browser quotation opportunity.*${reference}`));
   const requirementUnitOptions = page.getByRole('group', { name: 'Units from latest submitted requirements', exact: true });
   if (await requirementUnitOptions.isVisible().catch(() => false)) {
     await expect(requirementUnitOptions.locator('input[type="checkbox"]')).toHaveCount(1);
   }
-  await page.getByLabel('Lift unit codes (comma separated)', { exact: true }).fill('Lift-A, Lift-B');
+  await page.getByLabel('Lift unit codes (comma separated)', { exact: true }).fill('Passenger lift, Service lift');
   await page.getByRole('button', { name: '+ Add material line', exact: true }).click();
   const liftScopedMaterial = page.locator('.quotation-material-editor-row').first();
-  await liftScopedMaterial.locator('textarea').nth(0).fill('Lift-B controller package');
+  await liftScopedMaterial.locator('textarea').nth(0).fill('UNIT-B controller package');
   await liftScopedMaterial.locator('input[type="number"]').nth(0).fill('1');
   await liftScopedMaterial.locator('input[type="number"]').nth(1).fill('85000');
   await liftScopedMaterial.locator('textarea').nth(1).fill('Controller model: MPS150\nStandards: IS 17900 PART 4 2025, IS 17900 PART 6 2022, NBC INDIA PART 8 SECTION 5');
+  await liftScopedMaterial.getByRole('checkbox', { name: 'Apply UNIT-B controller package to Service lift', exact: true }).check();
+  const secondMaterial = page.locator('.quotation-material-editor-row').nth(1);
+  await page.getByRole('button', { name: '+ Add material line', exact: true }).click();
+  await secondMaterial.locator('textarea').nth(0).fill('UNIT-A drive package');
+  await secondMaterial.locator('input[type="number"]').nth(0).fill('1');
+  await secondMaterial.locator('input[type="number"]').nth(1).fill('155000');
+  await secondMaterial.locator('textarea').nth(1).fill('Drive: Gearless traction\nCapacity: 1000 kg');
+  await secondMaterial.getByRole('checkbox', { name: 'Apply UNIT-A drive package to Passenger lift', exact: true }).check();
   const materialTemplateName = `Quotation E2E ${Date.now()}`;
   await page.getByLabel('Save these lines as a provider material scope template', { exact: true }).fill(materialTemplateName);
   await page.getByRole('button', { name: 'Save as template', exact: true }).click();
-  const templateScope = page.getByLabel('Template source', { exact: true });
-  await templateScope.selectOption('PROVIDER');
-  const materialTemplatePicker = page.getByLabel('Material scope template', { exact: true });
+  const templateScope = page.getByRole('combobox', { name: 'Template source', exact: true });
+  await expect(templateScope).toHaveValue('PROVIDER');
+  const materialTemplatePicker = page.getByRole('combobox', { name: 'Material scope template', exact: true });
   await expect(materialTemplatePicker.getByRole('option', { name: materialTemplateName, exact: true })).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.getByRole('region', { name: 'Material scope templates', exact: true }).getByText('Material template saved for this provider.', { exact: true })).toBeVisible();
   await materialTemplatePicker.selectOption({ label: materialTemplateName });
-  await page.getByRole('button', { name: 'Use selected template', exact: true }).click();
-  await expect(liftScopedMaterial.locator('textarea').nth(0)).toHaveValue('Lift-B controller package');
+  await page.getByRole('button', { name: 'Add selected template lines', exact: true }).click();
+  await expect(page.locator('.quotation-material-editor-row')).toHaveCount(4);
+  const templateCopyB = page.locator('.quotation-material-editor-row').nth(2);
+  await expect(templateCopyB.locator('textarea').nth(0)).toHaveValue('UNIT-B controller package');
+  await templateCopyB.getByRole('checkbox', { name: 'Apply UNIT-B controller package to Service lift', exact: true }).check();
+  const templateCopyA = page.locator('.quotation-material-editor-row').nth(3);
+  await expect(templateCopyA.locator('textarea').nth(0)).toHaveValue('UNIT-A drive package');
+  await templateCopyA.locator('summary').click();
+  await templateCopyA.getByRole('checkbox', { name: 'Apply UNIT-A drive package to Passenger lift', exact: true }).check();
+  for (const row of await page.locator('.quotation-material-editor-row').all()) {
+    if (!(await row.evaluate((element) => (element as HTMLDetailsElement).open))) await row.locator('summary').click();
+    await row.locator('label').filter({ hasText: 'Tax rule' }).locator('select').selectOption({ index: 1 });
+  }
+  await expect(liftScopedMaterial.locator('textarea').nth(0)).toHaveValue('UNIT-B controller package');
   await expect(liftScopedMaterial.locator('textarea').nth(1)).toHaveValue(/IS 17900 PART 4 2025/);
-  await liftScopedMaterial.getByRole('checkbox', { name: 'Apply Lift-B controller package to Lift-A', exact: true }).uncheck();
-  await expect(liftScopedMaterial).toContainText('Lift-B');
+  await expect(secondMaterial.locator('textarea').nth(0)).toHaveValue('UNIT-A drive package');
   const materialTemplatesResponse = await page.request.get(`${api}/provider-material-scope-templates`, {
     headers: { Authorization: `Bearer ${session.accessToken}`, 'X-TRISE-Provider-Id': providerId },
   });
@@ -176,7 +197,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
     },
   );
   expect(archiveMaterialTemplate.ok()).toBeTruthy();
-  await page.locator('input[name="amount"]').first().fill('450000');
+  await page.locator('input[name="amount"]').first().fill('480000');
   await page.screenshot({ path: info.outputPath('quotation-create-draft.png') });
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   await expect(actionMessage(page, 'Quotation draft saved.')).toBeVisible();
@@ -189,10 +210,11 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await expect(specificationOverview).toContainText('1500 kg');
   await specificationOverview.getByText('View full value', { exact: true }).click();
   await expect(specificationOverview).toContainText('IS 17900 PART 4 2025');
+  await page.locator('summary[aria-label="More actions"]').click();
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const customerPreview = page.getByRole('dialog', { name: 'Customer quotation preview', exact: true });
   await expect(customerPreview).toContainText('Applies to lifts');
-  await expect(customerPreview).toContainText('Lift-B');
+  await expect(customerPreview).toContainText('Service lift');
   await expect(customerPreview).toContainText('IS 17900 PART 4 2025');
   await customerPreview.getByRole('button', { name: 'Close preview', exact: true }).click();
   const quotationNumber = (await page.locator('.quotation-detail-record-header h2').textContent())?.trim();
@@ -202,12 +224,14 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   const quotationRowsPayload = await quotationRowsResponse.json();
   const createdQuote = quotationRowsPayload.data.map((row: { data?: unknown }) => row.data || row)
     .find((row: { attributes: { quotation_number: string } }) => row.attributes.quotation_number === quotationNumber);
-  expect(createdQuote.attributes.terms.elevator_units).toEqual([{ unit_code: 'Lift-A' }, { unit_code: 'Lift-B' }]);
+  expect(createdQuote.attributes.terms.elevator_units).toEqual([{ unit_code: 'Passenger lift' }, { unit_code: 'Service lift' }]);
   expect(createdQuote.attributes.terms.materials).toEqual(expect.arrayContaining([
-    expect.objectContaining({ description: 'Lift-B controller package', unit_codes: ['Lift-B'] }),
+    expect.objectContaining({ description: 'UNIT-B controller package', unit_codes: ['Service lift'] }),
+    expect.objectContaining({ description: 'UNIT-A drive package', unit_codes: ['Passenger lift'] }),
   ]));
   expect(createdQuote.attributes.lines).toEqual(expect.arrayContaining([
-    expect.objectContaining({ description: 'Lift-B controller package', unit_codes: ['Lift-B'] }),
+    expect.objectContaining({ description: 'UNIT-B controller package', unit_codes: ['Service lift'] }),
+    expect.objectContaining({ description: 'UNIT-A drive package', unit_codes: ['Passenger lift'] }),
   ]));
   expect(createdQuote.attributes.terms).not.toHaveProperty('payment_milestones');
   expect(createdQuote.attributes.terms).toHaveProperty('included_free_amc');
@@ -215,7 +239,11 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await page.getByRole('button', { name: 'Edit draft', exact: true }).click();
   await page.screenshot({ path: info.outputPath('quotation-edit-draft.png') });
   await page.locator('input[name="description"]').first().fill('Revised browser quotation scope');
-  await page.locator('input[name="amount"]').last().fill('455000');
+  await page.locator('input[name="amount"]').last().fill('485000');
+  for (const row of await page.locator('.quotation-material-editor-row').all()) {
+    if (!(await row.evaluate((element) => (element as HTMLDetailsElement).open))) await row.locator('summary').click();
+    await row.locator('label').filter({ hasText: 'Tax rule' }).locator('select').selectOption({ index: 1 });
+  }
   await page.getByRole('button', { name: 'Save draft', exact: true }).click();
   await expect(actionMessage(page, 'Quotation draft updated.')).toBeVisible();
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
@@ -236,7 +264,7 @@ test('Marketing Manager prepares, issues and records negotiation for a Lead-link
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: quotationNumber!, exact: true }).click();
   await page.getByRole('tab', { name: 'Review & actions', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Internal approval is required');
+  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Approval is required before this quotation can move to the customer.');
   await page.getByRole('button', { name: 'Approve revision', exact: true }).click();
   await page.screenshot({ path: info.outputPath('quotation-provider-review.png') });
   await page.getByRole('dialog', { name: 'Approve quotation revision', exact: true }).getByRole('button', { name: 'Approve revision', exact: true }).click();
@@ -306,19 +334,26 @@ test('approved quotation converts to an installation project from the Manager wo
   await navigateProvider(page, 'Quotations');
   await page.getByRole('button', { name: quotationLabel, exact: true }).click();
   await page.getByRole('tab', { name: 'Review & actions', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Internal approval is required');
+  await expect(page.getByRole('region', { name: 'Provider quotation review', exact: true })).toContainText('Approval is required before this quotation can move to the customer.');
   await page.getByRole('button', { name: 'Approve revision', exact: true }).click();
   await page.getByRole('dialog', { name: 'Approve quotation revision', exact: true }).getByRole('button', { name: 'Approve revision', exact: true }).click();
   await expect(actionMessage(page, 'Provider review approved for this exact quotation revision')).toBeVisible();
   await localSignOut(page);
 
-  const acceptedCustomer = await localSignIn(page, configuredAccount('CUSTOMER'));
-  const acceptedCustomerHeaders = { Authorization: `Bearer ${acceptedCustomer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const approvalResponse = await page.request.post(`${api}/quotations/${quotation.id}/approve`, {
-    headers: { ...acceptedCustomerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: issued.attributes.revision }
-  });
-  if (!approvalResponse.ok()) throw new Error(`quotation approval setup failed: ${await approvalResponse.text()}`);
-  await localSignOut(page);
+  const customerPage = await page.context().newPage();
+  await localSignIn(customerPage, configuredAccount('CUSTOMER'), 'http://127.0.0.1:4173/');
+  await customerPage.goto(`http://127.0.0.1:4173/#/quotation/${quotation.id}`);
+  await expect(customerPage.getByRole('heading', { name: 'Review the exact offer', exact: true })).toBeVisible({ timeout: 20_000 });
+  await customerPage.getByRole('button', { name: 'Accept quotation', exact: true }).click();
+  const confirmation = customerPage.getByRole('dialog', { name: new RegExp(`Accept revision ${issued.attributes.revision}\\?`) });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByLabel('Your full name').fill('E2E Installation Customer');
+  await confirmation.getByLabel('Your role or title').fill('Authorized customer reviewer');
+  await confirmation.getByRole('checkbox', { name: /I confirm I am authorised/ }).check();
+  await confirmation.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();
+  await expect(customerPage.locator('.quote-success')).toContainText('Your acceptance has been recorded.');
+  await localSignOut(customerPage);
+  await customerPage.close();
 
   const managerSession = await localSignIn(page, configuredAccount('MARKETING_MANAGER'));
   const managerProvider = managerSession.user.attributes.provider_capabilities.find((entry: { provider_id: string; capabilities: string[] }) => entry.provider_id === providerId);
@@ -388,23 +423,41 @@ test('Provider Administrator creates and converts an accepted paid AMC renewal q
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
   await navigateProvider(page, 'Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Create paid AMC renewal', exact: true }).click();
+  await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
+  await page.getByRole('button', { name: /Renew existing AMC/ }).click();
   const predecessor = page.locator('select[name="predecessor_contract_id"]');
-  await expect(predecessor.locator('option').filter({ hasText: 'DEMO-ELEV-AMC-001' })).toHaveCount(1);
-  await predecessor.selectOption((await predecessor.locator('option').filter({ hasText: 'DEMO-ELEV-AMC-001' }).getAttribute('value'))!);
+  const activeContractsResponse = await page.request.get(`${api}/maintenance-contracts?page[limit]=100`, { headers: managerHeaders });
+  expect(activeContractsResponse.ok()).toBeTruthy();
+  const activeContractsPayload = await activeContractsResponse.json();
+  const activeContracts = activeContractsPayload.data.map((row: { data?: unknown }) => row.data || row) as Array<{ id: string; attributes: Record<string, unknown> }>;
+  let predecessorWithLift: { id: string; attributes: Record<string, unknown> } | undefined;
+  for (const contract of activeContracts.filter((item) => ['active', 'approved'].includes(String(item.attributes.status).toLowerCase()))) {
+    const scopesResponse = await page.request.get(`${api}/maintenance-contracts/${contract.id}/asset-scopes?page[limit]=100`, { headers: managerHeaders });
+    if (!scopesResponse.ok()) continue;
+    const scopes = await scopesResponse.json();
+    if ((scopes.data || []).some((scope: { attributes?: { status?: string } }) => !scope.attributes?.status || scope.attributes.status.toUpperCase() === 'ACTIVE')) {
+      predecessorWithLift = contract;
+      break;
+    }
+  }
+  expect(predecessorWithLift, 'renewal requires an active predecessor with an active linked elevator').toBeTruthy();
+  await predecessor.selectOption(predecessorWithLift!.id);
   const predecessorContractId = await predecessor.inputValue();
-  const renewalDialog = page.getByRole('dialog', { name: 'Create paid AMC renewal quotation', exact: true });
-  const plan = renewalDialog.locator('select[name="provider_service_plan_id"]');
-  await expect.poll(() => plan.locator('option').count(), { timeout: 20_000 }).toBeGreaterThan(1);
-  await plan.selectOption({ index: 1 });
-  const coveredAsset = renewalDialog.locator('select[name="asset_id"]');
+  await expect(page.getByRole('heading', { name: 'Create paid AMC renewal quotation', exact: true })).toBeVisible();
+  const coveredAsset = page.locator('select[name="asset_id"]');
   await expect.poll(() => coveredAsset.locator('option').count(), { timeout: 20_000 }).toBeGreaterThan(1);
   await coveredAsset.selectOption({ index: 1 });
-  await renewalDialog.getByLabel('Passenger capacity', { exact: true }).fill('6');
-  await renewalDialog.getByLabel('Floors above ground', { exact: true }).fill('4');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  const plan = page.locator('select[name="provider_service_plan_id"]');
+  await expect.poll(() => plan.locator('option').count(), { timeout: 20_000 }).toBeGreaterThan(1);
+  await plan.selectOption({ index: 1 });
+  await page.getByLabel('Passenger capacity', { exact: true }).fill('6');
+  await page.getByLabel('Floors above ground', { exact: true }).fill('4');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Effective from', { exact: true }).fill('2030-01-01');
   await page.getByLabel('Effective to', { exact: true }).fill('2031-01-01');
-  await page.getByRole('button', { name: 'Create renewal quotation', exact: true }).click();
+  await page.getByRole('button', { name: 'Create renewal draft quotation', exact: true }).click();
   await expect(actionMessage(page, 'Paid AMC renewal quotation draft created.')).toBeVisible();
   await page.getByRole('tab', { name: 'Review & actions', exact: true }).click();
   await page.getByRole('button', { name: 'Issue quotation', exact: true }).click();
@@ -427,11 +480,30 @@ test('Provider Administrator creates and converts an accepted paid AMC renewal q
   if (providerReview.status() !== 201) throw new Error(`paid renewal provider review failed: ${providerReview.status()} ${await providerReview.text()}`);
   await localSignOut(page);
 
-  const customer = await localSignIn(page, configuredAccount('CUSTOMER'));
-  const customerHeaders = { Authorization: `Bearer ${customer.accessToken}`, 'X-TRISE-Provider-Id': providerId, 'Content-Type': 'application/json' };
-  const acceptance = await page.request.post(`${api}/quotations/${renewal.id}/approve`, { headers: { ...customerHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { expected_revision: revision } });
-  if (!acceptance.ok()) throw new Error(`paid renewal acceptance failed: ${await acceptance.text()}`);
-  await localSignOut(page);
+  const customerPage = await page.context().newPage();
+  await localSignIn(customerPage, configuredAccount('CUSTOMER'), 'http://127.0.0.1:4173/');
+  await customerPage.goto(`http://127.0.0.1:4173/#/quotation/${renewal.id}`);
+  await expect(customerPage.getByRole('heading', { name: 'Review the exact offer', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(customerPage.getByRole('heading', { name: 'Scope and specifications', exact: true })).toBeVisible();
+  const customerSections = customerPage.getByRole('tablist', { name: 'Quotation sections', exact: true });
+  for (const label of ['Scope & pricing', 'Payment & terms', 'Revisions & activity', 'Messages']) {
+    const tab = customerSections.getByRole('tab', { name: label, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(customerPage.getByRole('tabpanel')).toHaveCount(1);
+  }
+  await customerSections.getByRole('tab', { name: 'Scope & pricing', exact: true }).click();
+  await customerPage.getByRole('button', { name: 'Accept quotation', exact: true }).click();
+  const acceptDialog = customerPage.getByRole('dialog', { name: new RegExp(`Accept revision ${revision}\\?`) });
+  await expect(acceptDialog).toBeVisible();
+  await acceptDialog.getByLabel('Your full name').fill('E2E Demo Customer');
+  await acceptDialog.getByLabel('Your role or title').fill('Authorized customer reviewer');
+  await acceptDialog.getByRole('checkbox', { name: /I confirm I am authorised/ }).check();
+  await acceptDialog.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();
+  await expect(customerPage.locator('.quote-success')).toContainText('Your acceptance has been recorded.');
+  await expect(customerPage.getByRole('heading', { name: 'Acceptance recorded', exact: true })).toBeVisible();
+  await localSignOut(customerPage);
+  await customerPage.close();
 
   await localSignIn(page, configuredAccount('PROVIDER_ADMIN'));
   await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
@@ -458,10 +530,11 @@ test('Provider Administrator creates and converts an accepted paid AMC renewal q
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible({ timeout: 30_000 });
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Create paid AMC renewal', exact: true }).click();
+  await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
+  await page.getByRole('button', { name: /Renew existing AMC/ }).click();
   const successorLabel = String(successor.attributes.name || successor.attributes.contract_number || successor.id);
   await expect(page.locator('select[name="predecessor_contract_id"] option').filter({ hasText: successorLabel })).toHaveCount(1);
-  await page.getByRole('dialog', { name: 'Create paid AMC renewal quotation', exact: true }).getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await localSignOut(page);
 });
 
@@ -478,10 +551,10 @@ test('Marketing Manager creates a new immutable quotation revision from the work
   const reference = `BROWSER-REVISION-${Date.now()}`;
   await navigateProvider(page, 'Leads & Surveys');
   await page.getByRole('button', { name: 'New lead', exact: true }).click();
-  await page.getByLabel('Reference code', { exact: true }).fill(reference);
-  await page.getByLabel('Source', { exact: true }).fill('BROWSER');
-  await page.getByLabel('Prospect name', { exact: true }).fill('Quotation revision prospect');
-  await page.getByLabel('Opportunity title', { exact: true }).fill('Browser immutable revision opportunity');
+  await page.getByLabel('Lead reference code', { exact: true }).fill(reference);
+  await page.getByRole('combobox', { name: 'Work source', exact: true }).selectOption({ label: 'Marketing' });
+  await page.getByLabel('Requester name', { exact: true }).fill('Quotation revision prospect');
+  await page.getByLabel('Work title', { exact: true }).fill('Browser immutable revision opportunity');
   await page.getByRole('button', { name: 'Create lead', exact: true }).click();
   await expect(actionMessage(page, 'Lead created by the server.')).toBeVisible();
   const createdLeadId = decodeURIComponent(page.url().split('#leads/')[1] || '');
@@ -490,6 +563,7 @@ test('Marketing Manager creates a new immutable quotation revision from the work
   await navigateProvider(page, 'Quotations');
   await expect(page.getByRole('heading', { name: 'Quotations & Orders', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '+ New quotation', exact: true }).click();
+  await page.getByRole('button', { name: /New installation/ }).click();
   await chooseSearchableOption(page, 'Lead', 'Browser immutable revision opportunity', new RegExp(`Browser immutable revision opportunity.*${reference}`));
   await chooseSearchableOption(page, 'Customer relationship', 'Browser immutable revision opportunity', new RegExp(`Quotation revision prospect.*Browser immutable revision opportunity.*${reference}`));
   await page.locator('input[name="amount"]').first().fill('100000');

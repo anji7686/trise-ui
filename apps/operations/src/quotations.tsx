@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Button, PageHeader, SortedSelect } from "@trise/ui";
+import { Button, PageHeader, SortedSelect, InfoNotice } from "@trise/ui";
 import { useAuth } from "@trise/auth";
 import QRCode from "qrcode";
 import {
@@ -31,6 +31,7 @@ import {
 } from "./workflow-follow-ups";
 import { SearchableSelect, type LookupOption } from "./searchable-select";
 import { RichTextEditor, RichTextViewer } from "./rich-text-editor";
+import { quotationCreationLabels, quotationDefaultDescriptions, quotationPurposeLabels } from "./quotation-types";
 
 type Props = {
   providerId: string;
@@ -39,6 +40,8 @@ type Props = {
   initialTemplateId?: string;
   initialPurpose?: string;
   initialRelationshipId?: string;
+  initialRelationshipLabel?: string;
+  initialPredecessorContractId?: string;
   returnTo?: string;
 };
 
@@ -59,6 +62,25 @@ type QuotationMaterialLine = {
   /** Template/manual lines on multi-lift quotes require an explicit assignment. */
   unit_scope_confirmed?: boolean;
 };
+
+export function quotationAmcChecklistLabels(planResource: unknown): string[] {
+  const asRecord = (value: unknown): Record<string, unknown> =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
+  const resource = asRecord(planResource);
+  const attributes = asRecord(resource.attributes || resource);
+  const version = asRecord(attributes.current_version);
+  const definition = asRecord(version.plan);
+  const templates = Array.isArray(definition.checklist_templates)
+    ? definition.checklist_templates
+    : [];
+  return templates.map((item) => {
+    const template = asRecord(item);
+    const itemCount = Array.isArray(template.items) ? template.items.length : 0;
+    return `${String(template.name || template.code || "Checklist")} · v${String(template.version || "1")} · ${itemCount} checks`;
+  });
+}
 
 type QuotationDeliveryChannel = "EMAIL" | "SMS" | "WHATSAPP";
 
@@ -666,14 +688,30 @@ const quotationMaterialsFromForm = (
 };
 
 export const quotationMaterialsForApi = (materials: QuotationMaterialLine[]) =>
-  materials.map((material) => {
-    const { specifications, tax_rule_id, tax_pricing_mode, warranty_months } = material;
-    const apiMaterial = { ...material };
-    delete apiMaterial.unit_scope_confirmed;
+  materials.map((material, index) => {
+    const {
+      specifications,
+      tax_rule_id,
+      tax_pricing_mode,
+      warranty_months,
+      unit_scope_confirmed,
+      ...apiMaterial
+    } = material;
+    void unit_scope_confirmed;
+    const warrantyText = String(warranty_months ?? "").trim();
+    const warrantyMonths = warrantyText ? Number(warrantyText) : undefined;
+    if (
+      warrantyMonths !== undefined &&
+      (!Number.isInteger(warrantyMonths) || warrantyMonths < 0 || warrantyMonths > 1200)
+    ) {
+      throw new Error(
+        `Material ${index + 1} warranty must be a whole number from 0 to 1200 months.`,
+      );
+    }
     return {
       ...apiMaterial,
       ...(tax_rule_id ? { tax_rule_id, tax_pricing_mode } : {}),
-      ...(warranty_months.trim() ? { warranty_months: Number(warranty_months) } : {}),
+      ...(warrantyMonths !== undefined ? { warranty_months: warrantyMonths } : {}),
       ...(specifications.trim()
         ? { specifications: specificationPairsFromText(specifications, true) }
         : {}),
@@ -830,8 +868,8 @@ function MaterialScopeEditor({
     );
   };
 
-  const providerTemplates = templateResources.filter((template) => template.attributes.scope === "PROVIDER" && template.attributes.status === "ACTIVE");
-  const platformTemplates = templateResources.filter((template) => template.attributes.scope === "PLATFORM_MASTER" && template.attributes.status === "ACTIVE");
+  const providerTemplates = templateResources.filter((template) => template?.attributes?.scope === "PROVIDER" && template.attributes.status === "ACTIVE" && Array.isArray(template.attributes.lines));
+  const platformTemplates = templateResources.filter((template) => template?.attributes?.scope === "PLATFORM_MASTER" && template.attributes.status === "ACTIVE" && Array.isArray(template.attributes.lines));
   const selectableTemplates = templateScope === "PROVIDER" ? providerTemplates : platformTemplates;
   const selectedTemplate = selectableTemplates.find((template) => template.id === templateId);
 
@@ -1400,6 +1438,7 @@ export function QuotationTermsEditor({
   stagePaymentsEnabled = true,
   amcMode = false,
   showTermsAndConditions = true,
+  onApplyTemplate,
 }: {
   initialTerms?: Record<string, unknown>;
   templates?: Resource<QuotationTermsTemplateAttributes>[];
@@ -1407,6 +1446,7 @@ export function QuotationTermsEditor({
   stagePaymentsEnabled?: boolean;
   amcMode?: boolean;
   showTermsAndConditions?: boolean;
+  onApplyTemplate?: (template: Resource<QuotationTermsTemplateAttributes>) => void;
 }) {
   const selectionForMode = (source: unknown) => {
     const configured = quotationTermSelectionFromTerms(source);
@@ -1466,6 +1506,7 @@ export function QuotationTermsEditor({
   const applyTemplate = (template = selectedTemplate) => {
     if (!template) return;
     setSelection(selectionForTemplate(template));
+    onApplyTemplate?.(template);
     setTemplateMessage(
       `Applied ${template.attributes.name}. Its default commercial configuration is loaded; save the quotation draft to persist this snapshot.`,
     );
@@ -1476,6 +1517,7 @@ export function QuotationTermsEditor({
     if (!template) return;
     setTemplateId(initialTemplateId);
     setSelection(selectionForTemplate(template));
+    onApplyTemplate?.(template);
     setTemplateMessage(`Applied ${template.attributes.name}. Its default commercial configuration is loaded; save the quotation draft to persist this snapshot.`);
     autoAppliedTemplate.current = initialTemplateId;
   }, [initialTemplateId, selectableTemplates]);
@@ -1626,7 +1668,7 @@ export function QuotationTermsEditor({
           {selection.payment && <div className="quotation-payment-stage-actions"><Button type="button" variant="secondary" onClick={() => updateSelection("paymentStages", [...selection.paymentStages, { code: `STAGE_${selection.paymentStages.length + 1}`, description: "New stage", percentage: "0", sequence: selection.paymentStages.length + 1, trigger_kind: "MANUAL", material_release_condition: "", customer_acceptance_required: false }])}>Add stage</Button><span role="status">Total: {selection.paymentStages.reduce((total, stage) => total + (Number(stage.percentage) || 0), 0).toFixed(2)}%</span></div>}
         </div>
       ) : (
-        <p className="notice quotation-payment-not-applicable">Stage payments are not applicable to AMC/service quotations. The quotation remains payable as a commercial total or contract schedule.</p>
+        <p className="notice quotation-payment-not-applicable">Stage payment schedules are available for installation, modification and takeover only. This quotation follows its own payment terms.</p>
       )}
       <div className="quotation-terms-value-grid">
         {showTermsAndConditions && (
@@ -2028,7 +2070,7 @@ type CustomerQuotationPreviewLine = {
   amount?: string | number;
   tax_amount?: string | number;
   pricing_mode?: string;
-  tax?: { rule_code?: string; tax_treatment?: string } | null;
+  tax?: { rule_code?: string; rule_version?: number; total_rate_percent?: string; tax_treatment?: string; components?: Array<{ code?: string; name?: string; percentage?: string; rate_percent?: string; amount?: string }> } | null;
   unit_codes?: string[];
 };
 
@@ -2082,7 +2124,7 @@ function CustomerQuotationPreview({
   lines: CustomerQuotationPreviewLine[];
   materials: CustomerQuotationPreviewMaterial[];
   terms: Record<string, unknown>;
-  taxSummary?: { status?: string; components?: Array<{ code?: string; amount?: string }> };
+  taxSummary?: { status?: string; rules?: Array<{ rule_code?: string; rule_version?: number; total_rate_percent?: string; tax_treatment?: string }>; components?: Array<{ code?: string; name?: string; rate_percent?: string; amount?: string }> };
   moneyFor: (value: unknown, currency?: string) => string;
   logoUrl?: string;
 }) {
@@ -2188,11 +2230,11 @@ function CustomerQuotationPreview({
         <section className="quotation-template-sample-lines" aria-label="Actual quotation items">
           <div className="quotation-template-sample-lines-heading"><div><strong>Quotation items</strong><small>Original line items and prices from the saved quotation revision.</small></div><Status>{lines.length} {lines.length === 1 ? "item" : "items"}</Status></div>
           {lines.length ? (
-            <div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description</th><th>Applies to lifts</th><th>Qty</th><th>Unit</th><th>Unit price</th>{showTaxDetails && <th>Tax</th>}<th>Amount</th></tr></thead><tbody>{lines.map((line, index) => <tr key={`${line.description || "line"}-${index}`}><td>{line.description || "—"}</td><td><QuotationLiftAssignmentValue unitCodes={line.unit_codes} allUnitCodes={customerLiftUnitCodes} /></td><td>{String(line.quantity ?? "—")}</td><td>{String(line.unit || line.unit_code || "—")}</td><td>{moneyFor(line.unit_price || 0, currency)}</td>{showTaxDetails && <td>{line.tax ? `${String(line.tax.rule_code || line.tax.tax_treatment || "Configured")} · ${moneyFor(line.tax_amount || 0, currency)}` : "Not configured"}</td>}<td>{moneyFor(line.amount || 0, currency)}</td></tr>)}</tbody></table></div>
+            <div className="quotation-template-sample-table-wrap"><table className="quotation-template-sample-table"><thead><tr><th>Description</th><th>Applies to lifts</th><th>Qty</th><th>Unit</th><th>Unit price</th>{showTaxDetails && <th>Tax details</th>}<th>Amount</th></tr></thead><tbody>{lines.map((line, index) => <tr key={`${line.description || "line"}-${index}`}><td>{line.description || "—"}</td><td><QuotationLiftAssignmentValue unitCodes={line.unit_codes} allUnitCodes={customerLiftUnitCodes} /></td><td>{String(line.quantity ?? "—")}</td><td>{String(line.unit || line.unit_code || "—")}</td><td>{moneyFor(line.unit_price || 0, currency)}</td>{showTaxDetails && <td><strong>{line.tax?.rule_code || line.tax?.tax_treatment || "Not configured"}{line.tax?.rule_version ? ` · v${line.tax.rule_version}` : ""}{line.tax?.total_rate_percent ? ` · ${line.tax.total_rate_percent}%` : ""}</strong>{line.tax?.components?.map((component, componentIndex) => <small className="quotation-tax-component-line" key={`${component.code}-${componentIndex}`}>{component.name || component.code || "Tax"} {component.percentage || component.rate_percent || "—"}% · {moneyFor(component.amount || 0, currency)}</small>)}{line.tax && <small>Line tax · {moneyFor(line.tax_amount || 0, currency)}</small>}</td>}<td>{moneyFor(line.amount || 0, currency)}</td></tr>)}</tbody></table></div>
           ) : <p className="quotation-empty-state">No priced line items are attached to this revision.</p>}
           <div className="quotation-template-tax-summary quotation-customer-preview-totals">
-          <div className="quotation-template-tax-context"><div><span>Tax treatment</span><strong>{showTaxDetails ? "Included" : "Hidden"}</strong><small>{showTaxDetails ? "Breakdown appears in this customer view." : "Calculation remains included in the total payable."}</small></div><div><span>Tax rule</span><strong>{taxSummary?.components?.map((component) => displayLabel(component.code, "Tax")).join(" + ") || "Not configured"}</strong><small>Published central tax rules</small></div><div><span>Currency</span><strong>{currency}</strong><small>Quotation currency</small></div></div>
-            <dl className="quotation-template-totals"><div><dt>Subtotal</dt><dd>{moneyFor(quotation.attributes.subtotal || quotation.attributes.total || 0, currency)}</dd></div><div><dt>Discount</dt><dd>{moneyFor(quotation.attributes.discount_total || 0, currency)}</dd></div>{showTaxDetails && <><div><dt>Tax</dt><dd>{moneyFor(quotation.attributes.tax_total || 0, currency)}</dd></div>{taxSummary?.components?.map((component) => <div key={String(component.code)}><dt>{displayLabel(component.code, "Tax")}</dt><dd>{moneyFor(component.amount || 0, currency)}</dd></div>)}</>}<div className="is-grand-total"><dt>Quoted total</dt><dd><span>{moneyFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</span>{currency.toUpperCase() === "INR" && <small className="quotation-amount-words">{amountInWordsFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</small>}</dd></div></dl>
+          <div className="quotation-template-tax-context"><div><span>Tax treatment</span><strong>{showTaxDetails ? "Included" : "Hidden"}</strong><small>{showTaxDetails ? "Breakdown appears in this customer view." : "Calculation remains included in the total payable."}</small></div><div><span>Tax rule</span><strong>{showTaxDetails ? taxSummary?.rules?.map((rule) => `${rule.rule_code || "Tax rule"} v${rule.rule_version || "—"} · ${rule.total_rate_percent || "—"}%`).join(" + ") || "Not configured" : "Hidden"}</strong><small>{showTaxDetails ? "Published rule snapshots attached to the quoted lines." : "Rule and rates are omitted from the customer copy."}</small></div><div><span>Currency</span><strong>{currency}</strong><small>Quotation currency</small></div></div>
+            <dl className="quotation-template-totals"><div><dt>Subtotal</dt><dd>{moneyFor(quotation.attributes.subtotal || quotation.attributes.total || 0, currency)}</dd></div><div><dt>Discount</dt><dd>{moneyFor(quotation.attributes.discount_total || 0, currency)}</dd></div>{showTaxDetails && <><div><dt>Tax</dt><dd>{moneyFor(quotation.attributes.tax_total || 0, currency)}</dd></div>{taxSummary?.components?.map((component, index) => <div key={`${component.code}-${component.rate_percent}-${index}`}><dt>{component.name || displayLabel(component.code, "Tax")} ({component.rate_percent || "—"}%)</dt><dd>{moneyFor(component.amount || 0, currency)}</dd></div>)}</>}<div className="is-grand-total"><dt>Quoted total</dt><dd><span>{moneyFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</span>{currency.toUpperCase() === "INR" && <small className="quotation-amount-words">{amountInWordsFor(quotation.attributes.grand_total || quotation.attributes.total || 0, currency)}</small>}</dd></div></dl>
           </div>
         </section>
         {Object.keys(customerRequirementOverview).length > 0 && <section className="quotation-template-sample-lines quotation-customer-lift-specifications"><QuotationOverviewSpecifications requirements={customerRequirementOverview} customerFacing /></section>}
@@ -2355,7 +2397,7 @@ function QuotationRequirementSnapshot({
 }) {
   if (loading) return <p className="notice quotation-requirement-loading">Loading the selected Lead&apos;s latest requirements…</p>;
   if (error) return <p className="notice state-error" role="alert">{error}</p>;
-  if (!requirement) return <p className="notice">Select a Lead to carry its latest survey and requirement revision into this quotation.</p>;
+  if (!requirement) return null;
   const scope = requirement.attributes.requirement_scope || {};
   const values = scope.requirements || requirement.attributes.requirements || {};
   const entries = Object.entries(values).filter(([key, value]) => !["notes", "units", "profile_mode", "unit_requirement_mode", "business_operation_code"].includes(key) && value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0))
@@ -2376,6 +2418,142 @@ function QuotationRequirementSnapshot({
   </section>;
 }
 
+function AmcDraftLiftScopeEditor({ lines, plans, taxRules }: { lines: Array<Record<string, unknown>>; plans: Resource<GenericAttributes>[]; taxRules: QuotationTaxRule[] }) {
+  const record = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const availablePlans = plans.filter((plan) => {
+    const version = record(plan.attributes.current_version);
+    return String(version.status || "").toUpperCase() === "PUBLISHED" && !/^FREE_AMC(?:_|$)/i.test(String(plan.attributes.code || ""));
+  });
+  const publishedTaxRules = taxRules.filter((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED");
+  const currentPlanVersionIds = new Set(availablePlans.map((plan) => String(record(plan.attributes.current_version).id || "")));
+  return <fieldset className="amc-draft-lift-scope-editor"><legend>AMC lift scope &amp; tax</legend><p>Each lift is a separate service-plan scope line. Choose the maintenance plan and tax treatment for each lift; plan coverage and exclusions are shown for review.</p>
+    {lines.map((line, index) => {
+      const amc = record(line.amc);
+      const context = record(amc.pricing_context || line.pricing_context);
+      const tax = record(line.tax);
+      const currentPlanVersionId = String(line.provider_service_plan_version_id || amc.plan_version_id || "");
+      const currentPlan = availablePlans.find((plan) => String(record(plan.attributes.current_version).id || "") === currentPlanVersionId);
+      const currentVersion = record(currentPlan?.attributes.current_version);
+      const planDefinition = record(currentVersion.plan);
+      const currentRuleId = String(line.tax_rule_id || tax.rule_id || "");
+      const currentRule = taxRules.find((rule) => rule.id === currentRuleId);
+      const description = String(line.description || `AMC coverage · Lift ${index + 1}`);
+      const unitCodes = Array.isArray(line.unit_codes) ? line.unit_codes.map(String) : [];
+      const unit = unitCodes[0] || (description.includes("·") ? description.split("·").pop()?.trim() || `Lift ${index + 1}` : `Lift ${index + 1}`);
+      const included = Array.isArray(planDefinition.included) ? planDefinition.included.map(String) : [];
+      const excluded = Array.isArray(planDefinition.excluded) ? planDefinition.excluded.map(String) : [];
+      return <section className="amc-draft-lift-scope-card" key={`${String(line.asset_id || index)}-${index}`}>
+        <header><div><strong>{unit}</strong><small>{String(amc.plan_name || currentPlan?.attributes.name || "AMC service plan")} · {context.passenger_capacity ? `${String(context.passenger_capacity)} passengers` : "Capacity not recorded"} · {context.served_floors_above_ground ? `${String(context.served_floors_above_ground)} floors` : "Floors not recorded"}</small></div><span>Lift {index + 1}</span></header>
+        <div className="amc-draft-lift-scope-fields">
+          <label>AMC plan / scope type<select name={`amc_line_plan_version_id_${index}`} defaultValue={currentPlanVersionId}><option value={currentPlanVersionId}>{String(amc.plan_name || "Current quoted plan")} · current line</option>{availablePlans.filter((plan) => String(record(plan.attributes.current_version).id || "") !== currentPlanVersionId).map((plan) => { const version = record(plan.attributes.current_version); return <option key={plan.id} value={String(version.id || "")}>{String(plan.attributes.name || plan.attributes.code || "AMC plan")} · v{String(version.version_number || version.version || "1")}</option>; })}</select><small>Changing the plan recalculates this lift from its saved pricing details.</small></label>
+          <label>Customer-facing lift scope<input name={`amc_line_description_${index}`} defaultValue={description} maxLength={200} required /></label>
+          <label>Published tax rule<select name={`amc_line_tax_rule_id_${index}`} defaultValue={currentRuleId || "TEMPLATE"}><option value="TEMPLATE">Use quotation terms template default</option><option value="NONE">No tax rule selected</option>{currentRule && !taxRules.some((rule) => rule.id === currentRuleId) && <option value={currentRuleId}>{currentRule.attributes.rule_code || "Current rule"} · existing quotation rule</option>}{publishedTaxRules.map((rule) => <option key={rule.id} value={rule.id}>{rule.attributes.rule_code} · {taxTreatmentLabel(rule.attributes.tax_treatment)} · {rule.attributes.total_rate_percent}%</option>)}</select><small>{publishedTaxRules.length ? "Select a published tax rule or use the quotation terms template default." : "No published tax rules are available for this provider. Publish a tax rule to apply tax here."}</small></label>
+          <label>Price treatment<select name={`amc_line_tax_pricing_mode_${index}`} defaultValue={String(line.tax_pricing_mode || tax.pricing_mode || "TEMPLATE").toUpperCase()}><option value="TEMPLATE">Use quotation template default</option><option value="EXCLUSIVE">Tax extra</option><option value="INCLUSIVE">Tax included in price</option></select><small>Template default falls back to tax extra.</small></label>
+        </div>
+        <div className="amc-draft-lift-coverage"><div><strong>Included by plan</strong><span>{included.length ? included.join(" · ") : "Follow the selected published plan"}</span></div><div><strong>Excluded by plan</strong><span>{excluded.length ? excluded.join(" · ") : "See the selected plan terms"}</span></div></div>
+        {!currentPlanVersionId || !currentPlan && !currentPlanVersionIds.has(currentPlanVersionId) ? <small className="amc-draft-lift-plan-note">The current quoted plan version is retained. Choose a currently published plan only if you intend to change this lift’s coverage.</small> : null}
+      </section>;
+    })}
+  </fieldset>;
+}
+
+function ProviderAmcRenewalQuotationPage({ contracts, contractsLoading, assets, assetsLoading, customerName, asset, plans, materials, termsTemplates, taxRules, predecessorId, assetId, assetUnitCode, onPredecessorChange, onAssetChange, onSubmit, onCancel, onCreateTemplate, busy }: {
+  contracts: Resource<GenericAttributes>[];
+  contractsLoading: boolean;
+  assets: Resource<GenericAttributes>[];
+  assetsLoading: boolean;
+  customerName: string;
+  asset?: Resource<GenericAttributes>;
+  plans: Resource<GenericAttributes>[];
+  materials: Resource<MaterialScopeTemplateAttributes>[];
+  termsTemplates: Resource<QuotationTermsTemplateAttributes>[];
+  taxRules: QuotationTaxRule[];
+  predecessorId: string;
+  assetId: string;
+  assetUnitCode: string;
+  onPredecessorChange: (value: string) => void;
+  onAssetChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  onCreateTemplate?: (name: string, lines: QuotationMaterialLine[]) => Promise<Resource<MaterialScopeTemplateAttributes> | void>;
+  busy: boolean;
+}) {
+  const [step, setStep] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const activeContracts = contracts.filter((contract) => ["active", "approved"].includes(String(contract.attributes.status || "").toLowerCase()));
+  const activePlans = plans.filter((plan) => {
+    const version = plan.attributes.current_version as Record<string, unknown> | undefined;
+    return String(version?.status || "").toUpperCase() === "PUBLISHED" && !/^FREE_AMC(?:_|$)/i.test(String(plan.attributes.code || ""));
+  });
+  const selectedContract = activeContracts.find((contract) => contract.id === predecessorId);
+  const contractPlanRelation = selectedContract?.relationships.service_plan;
+  const linkedPlan = Array.isArray(contractPlanRelation) ? contractPlanRelation[0] : contractPlanRelation;
+  const linkedPlanId = linkedPlan && !Array.isArray(linkedPlan) ? linkedPlan.id : "";
+  const linkedPlanCode = String(selectedContract?.attributes.plan_code || selectedContract?.attributes.service_plan_code || "").toUpperCase();
+  const defaultPlan = activePlans.find((plan) => plan.id === linkedPlanId || String(plan.attributes.code || "").toUpperCase() === linkedPlanCode) || (activePlans.length === 1 ? activePlans[0] : undefined);
+  const activePlanKey = activePlans.map((plan) => plan.id).join("|");
+  const publishedTaxRules = taxRules.filter((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED");
+  const toAssetRecord = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const assetDetails = { ...toAssetRecord(asset?.attributes.technical_specifications), ...toAssetRecord(asset?.attributes.specifications), ...toAssetRecord(asset?.attributes.requirements), ...toAssetRecord(asset?.attributes) };
+  const assetValue = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = assetDetails[key];
+      if (value !== null && value !== undefined && String(value).trim()) return String(value);
+    }
+    return "";
+  };
+  const assetAudience = assetValue("audience", "building_audience", "building_use").toUpperCase();
+  const defaultAudience = assetAudience.includes("RESIDENT") ? "RESIDENTIAL" : assetAudience.includes("COMMERCIAL") ? "COMMERCIAL" : "MIXED";
+  const defaultLiftType = assetValue("equipment_type_code", "lift_type", "type").toUpperCase();
+  const steps = ["Contract & lift", "Plan & lift details", "Materials", "Dates & terms"];
+  const stepDescriptions = [
+    "Choose the existing AMC contract and the lift being renewed.",
+    "Set the renewal coverage, tax, and lift details used for plan pricing.",
+    "Add any replacements or upgrades found during the inspection.",
+    "Set the proposed coverage period and customer-facing quotation terms.",
+  ];
+  function continueCurrentStep() {
+    const activeSection = formRef.current?.querySelector<HTMLElement>(`[data-renewal-step="${step}"]`);
+    const invalidField = activeSection?.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(":invalid");
+    if (invalidField) { invalidField.reportValidity(); return; }
+    setStep((current) => Math.min(steps.length - 1, current + 1));
+  }
+  function submitCurrentStep(event: FormEvent<HTMLFormElement>) {
+    if (step === steps.length - 1) { onSubmit(event); return; }
+    event.preventDefault();
+    continueCurrentStep();
+  }
+  return <section className="content quotation-form-page amc-quotation-page amc-renewal-page">
+    <PageHeader eyebrow="Sales & Marketing · AMC" title="Create paid AMC renewal quotation" description="Review the expiring contract, choose renewal coverage, and add any replacement or upgraded materials before preparing the customer quotation." action={<Button type="button" variant="secondary" onClick={onCancel}>← Back to quotations</Button>} />
+    <section className="quotation-form-shell detail-card">
+      <div className="quotation-form-intro"><div><span className="eyebrow">Step {step + 1} of {steps.length} · AMC renewal quotation</span><div className="trise-info-heading-row"><h2>{steps[step]}</h2><InfoNotice>{stepDescriptions[step]}</InfoNotice></div></div></div>
+      <nav className="amc-form-steps" aria-label="AMC renewal setup">{steps.map((label, index) => <button type="button" key={label} className={index === step ? "is-active" : index < step ? "is-complete" : ""} onClick={() => { if (index < step) setStep(index); }}><span>{index < step ? "✓" : index + 1}</span>{label}</button>)}</nav>
+      <form ref={formRef} className="amc-renewal-form amc-quotation-steps-form" onSubmit={submitCurrentStep}>
+        <section className="amc-renewal-section" data-renewal-step="0" hidden={step !== 0}><header><span>01</span><div><h2>Contract and covered lift</h2><p>Choose an active predecessor and one elevator registered to that customer.</p></div></header>
+          <div className="form-grid-three"><label>Predecessor contract<SortedSelect name="predecessor_contract_id" value={predecessorId} onChange={(event) => onPredecessorChange(event.target.value)} required disabled={contractsLoading}><option value="">{contractsLoading ? "Loading active contracts…" : "Select active contract"}</option>{activeContracts.map((contract) => { const contractName = String(contract.attributes.contract_number || contract.attributes.name || contract.attributes.contract_name || "AMC contract"); const customerName = String(contract.attributes.customer_name || "Authorized customer"); const status = displayLabel(contract.attributes.status, "Active"); return <option key={contract.id} value={contract.id}>{`${contractName} · ${customerName} · ${status}`}</option>; })}</SortedSelect></label>
+            <label>Customer<input aria-label="Customer from selected contract" value={customerName} readOnly placeholder="Auto-filled from contract" /></label>
+            <label>Covered elevator<SortedSelect name="asset_id" value={assetId} onChange={(event) => onAssetChange(event.target.value)} required disabled={!predecessorId || assetsLoading}><option value="">{assetsLoading ? "Loading covered lifts…" : predecessorId ? assets.length ? "Select covered elevator" : "No covered elevators found" : "Select a predecessor first"}</option>{assets.map((item) => <option key={item.id} value={item.id}>{String(item.attributes.display_name || item.attributes.name || item.attributes.equipment_code || "Elevator asset")}</option>)}</SortedSelect></label>
+          </div>
+          {!activeContracts.length && !contractsLoading && <p className="notice">No active maintenance contracts are available for renewal.</p>}
+        </section>
+        <section className="amc-renewal-section" data-renewal-step="1" hidden={step !== 1}><header><span>02</span><div><div className="trise-info-heading-row"><h2>Renewal service plan and tax</h2><InfoNotice>Plan pricing is calculated by the server from its published rate card and the lift details below. No manual service-plan price is accepted.</InfoNotice></div><p>Choose the service coverage and pricing context for the covered elevator.</p></div></header>
+          <div className="form-grid-two"><label>Renewal quotation description<input name="description" required defaultValue="Paid AMC renewal" /></label><label>Published AMC service plan<SortedSelect key={`${predecessorId}:${activePlanKey}`} name="provider_service_plan_id" required disabled={!activePlans.length} defaultValue={defaultPlan?.id || ""}><option value="">{activePlans.length ? "Select an active published plan" : "No active published AMC plans"}</option>{activePlans.map((plan) => { const version = plan.attributes.current_version as Record<string, unknown> | undefined; return <option key={plan.id} value={plan.id}>{String(plan.attributes.name || plan.attributes.code || "AMC plan")} · v{String(version?.version || version?.version_number || "1")}</option>; })}</SortedSelect></label></div>
+          <div className="form-grid-three quotation-amc-context-grid"><label>Audience<SortedSelect key={asset?.id || "no-asset"} name="audience" defaultValue={defaultAudience}><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option><option value="MIXED">Mixed</option></SortedSelect></label><label>Passenger capacity<input key={asset?.id || "no-asset"} name="passenger_capacity" type="number" min="1" step="1" required defaultValue={assetValue("passenger_capacity", "passenger_capacity_count", "passenger_capacity_persons")} /></label><label>Floors above ground<input key={asset?.id || "no-asset"} name="served_floors_above_ground" type="number" min="1" step="1" required defaultValue={assetValue("served_floors_above_ground", "floors_above_ground", "floors_served")} /></label><label>Lift type<SortedSelect key={asset?.id || "no-asset"} name="lift_type" defaultValue={defaultLiftType}><option value="">Select lift type</option><option value="PASSENGER_TRACTION">Passenger traction lift</option><option value="PASSENGER_MRL">Machine-room-less passenger lift</option><option value="HOME_VILLA_LIFT">Home and villa lift</option><option value="HYDRAULIC_PASSENGER">Hydraulic passenger lift</option><option value="SERVICE_LIFT">Service lift</option><option value="HOSPITAL_BED_LIFT">Hospital and bed lift</option><option value="STRETCHER_LIFT">Stretcher lift</option><option value="GOODS_PASSENGER_LIFT">Goods and passenger lift</option><option value="INDUSTRIAL_FREIGHT_LIFT">Industrial freight lift</option><option value="CAR_LIFT">Vehicle and car lift</option><option value="DUMBWAITER">Dumbwaiter</option><option value="PLATFORM_LIFT">Vertical platform lift</option><option value="STAIR_CHAIR_LIFT">Stairway chair lift</option><option value="FIRE_EMERGENCY_LIFT">Firefighter and emergency lift</option><option value="EVACUATION_LIFT">Occupant evacuation lift</option><option value="ESCALATOR">Escalator</option><option value="MOVING_WALK">Moving walk and travelator</option></SortedSelect></label><label>Usage class<input key={asset?.id || "no-asset"} name="usage_class" placeholder="e.g. passenger" defaultValue={assetValue("usage_class", "building_usage_class")} /></label><label>Stops<input key={asset?.id || "no-asset"} name="number_of_stops" type="number" min="1" step="1" defaultValue={assetValue("number_of_stops", "stops")} /></label><label>Travel height (m)<input key={asset?.id || "no-asset"} name="travel_height_m" type="number" min="0.1" step="0.1" defaultValue={assetValue("travel_height_m", "travel_height")} /></label></div>
+          <fieldset className="quotation-amc-tax-settings"><legend>Tax for the AMC service line</legend><div className="form-grid-two"><label>Published tax rule<SortedSelect name="renewal_tax_rule_id" defaultValue=""><option value="">Use quotation terms template default, if available</option>{publishedTaxRules.map((rule) => <option key={rule.id} value={rule.id}>{rule.attributes.rule_code} · {taxTreatmentLabel(rule.attributes.tax_treatment)} · {rule.attributes.total_rate_percent}%</option>)}</SortedSelect><small>{publishedTaxRules.length ? "Select a published tax rule, or let the quotation terms template supply its default." : "No published tax rules are available for this provider."}</small></label><label>Price treatment<SortedSelect name="renewal_tax_pricing_mode" defaultValue="TEMPLATE"><option value="TEMPLATE">Use quotation template default</option><option value="EXCLUSIVE">Tax extra</option><option value="INCLUSIVE">Tax included in plan price</option></SortedSelect><small>Tax rates are calculated from the published tax catalogue.</small></label></div></fieldset>
+        </section>
+        <section className="amc-renewal-section" data-renewal-step="2" hidden={step !== 2}><header><span>03</span><div><div className="trise-info-heading-row"><h2>Replacement and upgrade materials</h2>{!assetUnitCode && <InfoNotice>Select the covered elevator above to add replacement or upgrade materials to this renewal.</InfoNotice>}</div><p>Add inspection findings that change the planned work: parts to replace, materials to upgrade, or related scope items. These are priced separately from AMC service coverage.</p></div></header>
+          {assetUnitCode && <MaterialScopeEditor initialMaterials={[]} unitCodes={[assetUnitCode]} templates={materials} taxRules={taxRules} onCreateTemplate={onCreateTemplate} />}
+        </section>
+        <section className="amc-renewal-section" data-renewal-step="3" hidden={step !== 3}><header><span>04</span><div><h2>Renewal dates and quotation terms</h2><p>Set the proposed coverage period and the customer-facing terms for this revision.</p></div></header>
+          <div className="quotation-renewal-date-grid"><label>Effective from<input name="effective_from" type="date" required /></label><label>Effective to<input name="effective_to" type="date" required /></label></div>
+          <QuotationTermsEditor initialTerms={{ validity_days: 30, included_free_amc: { months: 0 } }} templates={termsTemplates} stagePaymentsEnabled={false} amcMode />
+        </section>
+        <div className="provider-form-actions amc-renewal-actions">{step === 0 ? <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button> : <Button type="button" variant="secondary" onClick={() => setStep((current) => Math.max(0, current - 1))}>Back</Button>}{step < steps.length - 1 ? <Button type="button" disabled={busy || !activeContracts.length} onClick={continueCurrentStep}>Continue</Button> : <Button type="submit" busy={busy} disabled={busy || !activeContracts.length}>Create renewal draft quotation</Button>}</div>
+      </form>
+    </section>
+  </section>;
+}
+
 function QuotationFormPage({
   mode,
   busy,
@@ -2388,6 +2566,8 @@ function QuotationFormPage({
   initialPurpose = "INSTALLATION",
   initialAmount,
   initialMaterials,
+  initialAmcLines = [],
+  amcPlans = [],
   initialTerms,
   initialTemplateId,
   templates,
@@ -2412,6 +2592,8 @@ function QuotationFormPage({
   initialPurpose?: string;
   initialAmount?: string;
   initialMaterials?: QuotationMaterialLine[];
+  initialAmcLines?: Array<Record<string, unknown>>;
+  amcPlans?: Resource<GenericAttributes>[];
   initialTerms?: Record<string, unknown>;
   initialTemplateId?: string;
   templates: Resource<MaterialScopeTemplateAttributes>[];
@@ -2430,12 +2612,13 @@ function QuotationFormPage({
 }) {
   const isCreate = mode === "create";
   const isRevision = mode === "revision";
+  const isAmcQuotation = String(initialPurpose).toUpperCase() === "MAINTENANCE_CONTRACT";
   const [relationshipId, setRelationshipId] = useState("");
   const [relationshipSearch, setRelationshipSearch] = useState("");
   const [leadLinkedRelationship, setLeadLinkedRelationship] = useState<LookupOption | null>(null);
   const [leadId, setLeadId] = useState("");
   const [leadSearch, setLeadSearch] = useState("");
-  const [purpose, setPurpose] = useState(initialPurpose);
+  const [purpose] = useState(initialPurpose);
   const [liftUnitCodes, setLiftUnitCodes] = useState(() => initialLiftUnitCodes || (
     Array.isArray(initialTerms?.elevator_units)
       ? initialTerms.elevator_units.map((unit) => String((unit as Record<string, unknown>).unit_code || "")).filter(Boolean).join(", ")
@@ -2448,9 +2631,9 @@ function QuotationFormPage({
   const [associatedAssetsLoading, setAssociatedAssetsLoading] = useState(false);
   const [associatedAssetsError, setAssociatedAssetsError] = useState("");
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const usesLiftAssetScope = isCreate && ["SERVICE", "CONTRACT_RENEWAL"].includes(purpose);
+  const usesLiftAssetScope = isCreate && ["SERVICE", "REPAIR", "PARTS", "CONTRACT_RENEWAL"].includes(purpose);
   const assetUnitCode = (asset: Resource<GenericAttributes>) => String(asset.attributes.equipment_code || asset.attributes.asset_code || asset.attributes.code || asset.attributes.name || `Lift ${asset.id.slice(0, 8)}`);
-  const createTypeLabel: Record<string, string> = { INSTALLATION: "New installation", MODIFICATION: "Modification", TAKEOVER: "Takeover", SERVICE: "Service / repair", CONTRACT_RENEWAL: "AMC / contract renewal", MAINTENANCE_CONTRACT: "AMC quotation" };
+  const createTypeLabel = quotationCreationLabels;
   const title = isCreate
     ? `${createTypeLabel[purpose] || "New"} quotation`
     : isRevision
@@ -2628,6 +2811,7 @@ function QuotationFormPage({
                 <div className="quotation-form-lookup">
                   <SearchableSelect
                     label="Lead"
+                    labelAdornment={<InfoNotice title="Lead requirements">Link a Lead to carry its latest survey and requirement revision into this quotation. Captured requirements appear below the selector and are not re-entered here.</InfoNotice>}
                     searchLabel="Search lead title or reference"
                     search={leadSearch}
                     onSearch={setLeadSearch}
@@ -2664,7 +2848,8 @@ function QuotationFormPage({
               Description
               <input name="description" required defaultValue={initialDescription} />
             </label>
-            {usesLiftAssetScope && <fieldset className="quotation-associated-lifts"><legend>Customer’s associated lifts</legend><p>Select the lifts included in this service or AMC quotation. Selecting a customer loads its linked elevator assets automatically.</p>{associatedAssetsLoading ? <p role="status">Loading customer lifts…</p> : associatedAssetsError ? <p className="state-error" role="alert">{associatedAssetsError}</p> : associatedAssets.length ? <div>{associatedAssets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAssociatedAsset(asset, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetUnitCode(asset))}</strong><small>{assetUnitCode(asset)}{asset.attributes.location_name ? ` · ${String(asset.attributes.location_name)}` : ""}</small></span></label>)}</div> : relationshipId ? <p>No elevator assets are linked to this customer. You can still enter lift unit codes manually below.</p> : <p>Select a customer relationship to load its associated lifts.</p>}<input type="hidden" name="associated_assets_json" value={JSON.stringify(associatedAssets.filter((asset) => selectedAssetIds.includes(asset.id)).map((asset) => ({ id: asset.id, unit_code: assetUnitCode(asset) })))} /></fieldset>}
+            {isAmcQuotation && initialAmcLines.length > 0 && <AmcDraftLiftScopeEditor lines={initialAmcLines} plans={amcPlans} taxRules={taxRules} />}
+            {usesLiftAssetScope && <fieldset className="quotation-associated-lifts"><legend>Customer’s associated lifts</legend><p>Select the lifts covered by this quotation. Selecting a customer loads its linked elevator assets automatically.</p>{associatedAssetsLoading ? <p role="status">Loading customer lifts…</p> : associatedAssetsError ? <p className="state-error" role="alert">{associatedAssetsError}</p> : associatedAssets.length ? <div>{associatedAssets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAssociatedAsset(asset, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetUnitCode(asset))}</strong><small>{assetUnitCode(asset)}{asset.attributes.location_name ? ` · ${String(asset.attributes.location_name)}` : ""}</small></span></label>)}</div> : relationshipId ? <p>No elevator assets are linked to this customer. You can still enter lift unit codes manually below.</p> : <p>Select a customer relationship to load its associated lifts.</p>}<input type="hidden" name="associated_assets_json" value={JSON.stringify(associatedAssets.filter((asset) => selectedAssetIds.includes(asset.id)).map((asset) => ({ id: asset.id, unit_code: assetUnitCode(asset) })))} /></fieldset>}
             {(isCreate || mode === "edit") && (
               <div className="quotation-unit-selection">
                 <label>
@@ -2717,7 +2902,7 @@ function QuotationFormPage({
               initialTemplateId={initialTemplateId}
               stagePaymentsEnabled={supportsStagePayments(purpose)}
             />
-            <label>
+            {!isAmcQuotation && <label>
               Manual total (INR)
               <input
                 name="amount"
@@ -2730,7 +2915,7 @@ function QuotationFormPage({
               <small>
                 If priced material lines are present, their total is used.
               </small>
-            </label>
+            </label>}
           </div>
           <div className="provider-form-actions quotation-form-actions">
             <Button type="button" variant="quiet" onClick={onCancel}>
@@ -2842,7 +3027,7 @@ function amcRulePreview(plan: Resource<GenericAttributes> | undefined, context: 
   return Number.isFinite(amount) && Number.isFinite(floors) ? { rule: "Legacy catalog pricing", amount, error: "" } : { rule: "Pricing needs review", amount: null, error: "Pricing context is incomplete." };
 }
 
-function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initialRelationshipId, returnTo }: { providerId: string; relationshipOptions: Array<{ id: string; label: string }>; initialRelationshipId?: string; returnTo?: string }) {
+function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, termsTemplates, taxRules, initialRelationshipId, initialRelationshipLabel, returnTo }: { providerId: string; relationshipOptions: Array<{ id: string; label: string }>; termsTemplates: Resource<QuotationTermsTemplateAttributes>[]; taxRules: QuotationTaxRule[]; initialRelationshipId?: string; initialRelationshipLabel?: string; returnTo?: string }) {
   type LiftContext = { floors: string; capacity: string; stops: string; liftType: string; travelHeight: string; usageClass: string; audience: "RESIDENTIAL" | "COMMERCIAL" };
   const [step, setStep] = useState(0);
   const [relationshipId, setRelationshipId] = useState(initialRelationshipId || "");
@@ -2854,11 +3039,17 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
   const [bulkPlanId, setBulkPlanId] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(dateInputValue(new Date()));
   const [effectiveTo, setEffectiveTo] = useState(dateInputValue(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)));
+  const [taxRuleId, setTaxRuleId] = useState("");
+  const [taxPricingMode, setTaxPricingMode] = useState<"EXCLUSIVE" | "INCLUSIVE">("EXCLUSIVE");
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [specificationStatus, setSpecificationStatus] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const createRequested = useRef(false);
   const cancel = () => { window.location.hash = returnTo === "customers" ? "customers" : "quotations/new"; };
+  const effectiveRelationshipOptions = initialRelationshipId && !relationshipOptions.some((item) => item.id === initialRelationshipId)
+    ? [...relationshipOptions, { id: initialRelationshipId, label: initialRelationshipLabel || "Selected customer" }]
+    : relationshipOptions;
   const equipmentCode = (asset: Resource<GenericAttributes>) => {
     const primary = asset.attributes.primary_identifier && typeof asset.attributes.primary_identifier === "object" ? asset.attributes.primary_identifier as Record<string, unknown> : {};
     const identifiers = Array.isArray(asset.attributes.identifiers) ? asset.attributes.identifiers as Array<Record<string, unknown>> : [];
@@ -2964,6 +3155,7 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
   const planForAsset = (assetId: string) => availablePlans.find((plan) => plan.id === planIdsByAsset[assetId]);
   const versionForPlan = (plan: Resource<GenericAttributes> | undefined) => plan?.attributes.current_version && typeof plan.attributes.current_version === "object" ? plan.attributes.current_version as Record<string, unknown> : {};
   const definitionForPlan = (plan: Resource<GenericAttributes> | undefined) => { const version = versionForPlan(plan); return version.plan && typeof version.plan === "object" ? version.plan as Record<string, unknown> : {}; };
+  const checklistLabelsForPlan = (plan: Resource<GenericAttributes> | undefined) => quotationAmcChecklistLabels(plan);
   const planNeedsUsageClass = (plan: Resource<GenericAttributes> | undefined) => {
     const pricing = definitionForPlan(plan).pricing;
     const cards = pricing && typeof pricing === "object" ? (pricing as Record<string, unknown>).rate_cards : undefined;
@@ -2975,6 +3167,13 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
   function toggleAsset(assetId: string, checked: boolean) { setSelectedAssetIds((current) => checked ? [...new Set([...current, assetId])] : current.filter((id) => id !== assetId)); }
   function setPlanForAsset(assetId: string, selectedPlanId: string) { setPlanIdsByAsset((current) => ({ ...current, [assetId]: selectedPlanId })); }
   function applyPlanToSelectedAssets() { if (bulkPlanId) setPlanIdsByAsset((current) => Object.fromEntries([...new Set([...Object.keys(current), ...chosenAssets.map((asset) => asset.id)])].map((id) => [id, selectedAssetIds.includes(id) ? bulkPlanId : current[id] || ""]))); }
+  function applyTermsTemplateTax(template: Resource<QuotationTermsTemplateAttributes>) {
+    const templateTerms = template.attributes.terms || {};
+    const defaultRuleId = String(templateTerms.default_tax_rule_id || "");
+    const availableRule = taxRules.some((rule) => rule.id === defaultRuleId && String(rule.attributes.status).toUpperCase() === "PUBLISHED");
+    setTaxRuleId(availableRule ? defaultRuleId : "");
+    setTaxPricingMode(String(templateTerms.default_tax_pricing_mode || "EXCLUSIVE").toUpperCase() === "INCLUSIVE" ? "INCLUSIVE" : "EXCLUSIVE");
+  }
   function continueStep() {
     setError("");
     if (step === 0 && (!relationshipId || chosenAssets.length === 0)) { setError("Select a customer and at least one associated lift."); return; }
@@ -2985,6 +3184,8 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
   }
   async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!createRequested.current) return;
+    createRequested.current = false;
     if (!relationshipId || chosenAssets.length === 0 || chosenAssets.some((asset) => !planForAsset(asset.id) || !versionForPlan(planForAsset(asset.id)).id)) return;
     setBusy(true); setError("");
     try {
@@ -2994,6 +3195,7 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
       terms.included_free_amc = { months: 0 };
       const created = await operationsData.createQuotation(providerId, {
         customer_relationship_id: relationshipId,
+        quotation_terms_template_id: termsForm.get("quotation_terms_template_id") || undefined,
         purpose: "MAINTENANCE_CONTRACT",
         terms,
         currency: "INR",
@@ -3001,19 +3203,19 @@ function ProviderAmcQuotationCreatePage({ providerId, relationshipOptions, initi
           const context = contexts[asset.id];
           const selectedPlan = planForAsset(asset.id);
           const selectedVersion = versionForPlan(selectedPlan);
-          return { description: `${String(selectedPlan?.attributes.name || "AMC")} · ${String(asset.attributes.name || assetCode(asset))}`, quantity: 1, provider_service_plan_version_id: String(selectedVersion.id), asset_id: asset.id, pricing_context: { served_floors_above_ground: Number(context.floors), passenger_capacity: Number(context.capacity), ...(context.stops ? { number_of_stops: Number(context.stops) } : {}), audience: context.audience, ...(context.liftType ? { lift_type: context.liftType.toUpperCase() } : {}), ...(context.travelHeight ? { travel_height_m: Number(context.travelHeight) } : {}), ...(context.usageClass ? { usage_class: context.usageClass.toUpperCase() } : {}) } };
+          return { description: `${String(selectedPlan?.attributes.name || "AMC")} · ${String(asset.attributes.name || assetCode(asset))}`, quantity: 1, provider_service_plan_version_id: String(selectedVersion.id), asset_id: asset.id, ...(taxRuleId ? { tax_rule_id: taxRuleId, tax_pricing_mode: taxPricingMode } : {}), pricing_context: { served_floors_above_ground: Number(context.floors), passenger_capacity: Number(context.capacity), ...(context.stops ? { number_of_stops: Number(context.stops) } : {}), audience: context.audience, ...(context.liftType ? { lift_type: context.liftType.toUpperCase() } : {}), ...(context.travelHeight ? { travel_height_m: Number(context.travelHeight) } : {}), ...(context.usageClass ? { usage_class: context.usageClass.toUpperCase() } : {}) } };
         }),
       }, crypto.randomUUID());
       window.location.hash = `quotations/${created.id}`;
     } catch (cause) { setError((cause as Error).message || "AMC quotation draft could not be created."); } finally { setBusy(false); }
   }
   const steps = ["Customer & lifts", "Catalog per lift", "Term & lift details", "Review"];
-  return <section className="quotation-form-page amc-quotation-page" aria-label="New AMC quotation"><PageHeader eyebrow="Sales & Marketing · AMC" title="New AMC quotation" description="Choose the customer’s lifts and a published plan. The selected plan supplies the coverage and the server calculates each lift’s price." action={<Button type="button" variant="secondary" onClick={cancel}>Cancel</Button>} /><section className="quotation-form-shell detail-card"><div className="quotation-form-intro"><div><span className="eyebrow">Step {step + 1} of 4</span><h2>{steps[step]}</h2></div><p className="notice">{["Select a customer to load their associated lifts.", "Choose the published AMC plan to apply to this quote.", "Check the term and fill any pricing details missing from the lift record.", "Review each lift and plan coverage before creating the draft."][step]}</p></div><nav className="amc-form-steps" aria-label="AMC quotation setup">{steps.map((label, index) => <button type="button" key={label} className={index === step ? "is-active" : index < step ? "is-complete" : ""} onClick={() => { if (index < step) setStep(index); }}><span>{index < step ? "✓" : index + 1}</span>{label}</button>)}</nav><form className="amc-quotation-steps-form" onSubmit={(event) => { event.preventDefault(); if (step < 3) continueStep(); else void createDraft(event); }}>
-    {step === 0 && <div className="amc-quotation-step-grid"><label>Customer relationship *<SortedSelect required value={relationshipId} onChange={(event) => setRelationshipId(event.target.value)}><option value="">Select customer</option>{relationshipOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</SortedSelect></label><fieldset className="quotation-associated-lifts"><legend>Associated lifts</legend><p>Lifts linked to this customer are selected by default. Each E-Code identifies the registered equipment asset; the quotation keeps the underlying asset link.</p>{loadingAssets ? <p role="status">Loading customer lifts…</p> : assets.length ? <div>{assets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAsset(asset.id, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetCode(asset))}</strong><small>{equipmentCode(asset) ? `E-Code · ${equipmentCode(asset)}` : `Asset code · ${assetCode(asset)}`}</small></span></label>)}</div> : relationshipId ? <div className="amc-empty-equipment"><p className="notice">No elevator assets are linked to this customer yet. Register or link the customer’s equipment before preparing a paid AMC offer.</p><Button type="button" variant="secondary" onClick={() => { window.location.hash = "assets"; }}>Open Assets</Button></div> : <p>Select a customer to load their lifts.</p>}</fieldset></div>}
+  return <section className="quotation-form-page amc-quotation-page" aria-label="New AMC quotation"><PageHeader eyebrow="Sales & Marketing · AMC" title="New AMC quotation" description="Choose the customer’s lifts and a published plan. The selected plan supplies the coverage and the server calculates each lift’s price." action={<Button type="button" variant="secondary" onClick={cancel}>Cancel</Button>} /><section className="quotation-form-shell detail-card"><div className="quotation-form-intro"><div><span className="eyebrow">Step {step + 1} of 4</span><div className="trise-info-heading-row"><h2>{steps[step]}</h2><InfoNotice>{["Select a customer to load their associated lifts.", "Choose the published AMC plan to apply to this quote.", "Check the term and fill any pricing details missing from the lift record.", "Review each lift and plan coverage before creating the draft."][step]}</InfoNotice></div></div></div><nav className="amc-form-steps" aria-label="AMC quotation setup">{steps.map((label, index) => <button type="button" key={label} className={index === step ? "is-active" : index < step ? "is-complete" : ""} onClick={() => { if (index < step) setStep(index); }}><span>{index < step ? "✓" : index + 1}</span>{label}</button>)}</nav><form className="amc-quotation-steps-form" onSubmit={(event) => { event.preventDefault(); if (step < 3) continueStep(); else void createDraft(event); }}>
+    {step === 0 && <div className="amc-quotation-step-grid"><label>Customer relationship *<SortedSelect required value={relationshipId} onChange={(event) => setRelationshipId(event.target.value)}><option value="">Select customer</option>{effectiveRelationshipOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</SortedSelect></label><fieldset className="quotation-associated-lifts"><legend>Associated lifts</legend><p>Lifts linked to this customer are selected by default. Each E-Code identifies the registered equipment asset; the quotation keeps the underlying asset link.</p>{loadingAssets ? <p role="status">Loading customer lifts…</p> : assets.length ? <><div className="amc-lift-selection-actions"><span>{chosenAssets.length} of {assets.length} lifts selected</span><div><Button type="button" variant="secondary" disabled={chosenAssets.length === assets.length} onClick={() => setSelectedAssetIds(assets.map((asset) => asset.id))}>Select all</Button><Button type="button" variant="secondary" disabled={!chosenAssets.length} onClick={() => setSelectedAssetIds([])}>Clear all</Button></div></div><div className="amc-lift-checkbox-grid">{assets.map((asset) => <label key={asset.id}><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(event) => toggleAsset(asset.id, event.target.checked)} /><span><strong>{String(asset.attributes.display_name || asset.attributes.name || assetCode(asset))}</strong><small>{equipmentCode(asset) ? `E-Code · ${equipmentCode(asset)}` : `Asset code · ${assetCode(asset)}`}</small></span></label>)}</div></> : relationshipId ? <div className="amc-empty-equipment"><p className="notice">No elevator assets are linked to this customer yet. Register or link the customer’s equipment before preparing a paid AMC offer.</p><Button type="button" variant="secondary" onClick={() => { window.location.hash = "assets"; }}>Open Assets</Button></div> : <p>Select a customer to load their lifts.</p>}</fieldset></div>}
     {step === 1 && <div className="amc-quotation-step-grid"><div className="amc-plan-bulk-apply"><label>Apply one catalog to selected lifts<SortedSelect value={bulkPlanId} onChange={(event) => setBulkPlanId(event.target.value)} disabled={!plans}><option value="">{plans ? "Select a published catalog" : "Loading catalogs…"}</option>{availablePlans.map((plan) => <option key={plan.id} value={plan.id}>{String(plan.attributes.name || "AMC plan")} · v{String((plan.attributes.current_version as Record<string, unknown> | undefined)?.version || "1")}</option>)}</SortedSelect></label><Button type="button" variant="secondary" disabled={!bulkPlanId || !chosenAssets.length} onClick={applyPlanToSelectedAssets}>Apply to all selected lifts</Button><small>Use one catalog for every lift, or choose a different catalog below for any lift.</small></div>{chosenAssets.map((asset) => { const selectedPlan = planForAsset(asset.id); const definition = definitionForPlan(selectedPlan); const entitlements = definition.entitlements && typeof definition.entitlements === "object" ? definition.entitlements as Record<string, unknown> : {}; const includedItems = Array.isArray(definition.included) ? definition.included.map(String) : []; const excludedItems = Array.isArray(definition.excluded) ? definition.excluded.map(String) : []; return <fieldset className="amc-lift-catalog-assignment" key={asset.id}><legend>{String(asset.attributes.display_name || asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</legend><label>AMC catalog for this lift *<SortedSelect value={planIdsByAsset[asset.id] || ""} onChange={(event) => setPlanForAsset(asset.id, event.target.value)} disabled={!plans}><option value="">{plans ? "Select a published catalog" : "Loading catalogs…"}</option>{availablePlans.map((plan) => <option key={plan.id} value={plan.id}>{String(plan.attributes.name || "AMC plan")} · v{String((plan.attributes.current_version as Record<string, unknown> | undefined)?.version || "1")}</option>)}</SortedSelect></label>{selectedPlan && <div className="amc-lift-catalog-summary"><strong>{String(selectedPlan.attributes.name || "AMC plan")} · {String(entitlements.preventive_frequency || "Frequency not set").replaceAll("_", " ")} · {String(entitlements.scheduled_visits || "—")} visits / year · {String(entitlements.breakdown_callbacks || "—")} callbacks</strong><div><span>Included</span><p>{includedItems.join(" · ") || "No included items listed"}</p></div><div><span>Excluded / chargeable</span><p>{excludedItems.join(" · ") || "No exclusions listed"}</p></div></div>}</fieldset>; })}{plans && availablePlans.length === 0 && <p className="notice">No published paid AMC catalogs are available. Publish an approved plan before creating an AMC quotation.</p>}</div>}
     {step === 2 && <div className="amc-quotation-step-grid"><div className="quotation-renewal-date-grid"><label>Effective from *<input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} required /></label><label>Effective to *<input type="date" value={effectiveTo} onChange={(event) => setEffectiveTo(event.target.value)} required /></label></div><p className="amc-context-hint">{specificationStatus || "Loading project specifications…"} Each lift is checked against its assigned catalog’s Type, Audience, passenger capacity, stops, floors and travel height rules.</p>{chosenAssets.map((asset) => { const plan = planForAsset(asset.id); const preview = previewForAsset(asset); return <fieldset className="amc-lift-context" key={asset.id}><legend>{String(asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</legend><small className="amc-lift-assigned-catalog">Catalog: {String(plan?.attributes.name || "Not selected")}</small><div><label>Audience *<SortedSelect value={contexts[asset.id]?.audience || "COMMERCIAL"} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], audience: event.target.value as LiftContext["audience"] } }))}><option value="RESIDENTIAL">Residential community</option><option value="COMMERCIAL">Commercial building</option></SortedSelect></label><label>Passenger capacity *<input type="number" min="1" value={contexts[asset.id]?.capacity || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], capacity: event.target.value } }))} /></label><label>Floors above ground *<input type="number" min="1" value={contexts[asset.id]?.floors || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], floors: event.target.value } }))} /></label><label>Stops<input type="number" min="1" value={contexts[asset.id]?.stops || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], stops: event.target.value } }))} /></label><label>Lift type<SortedSelect value={contexts[asset.id]?.liftType || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], liftType: event.target.value } }))}><option value="">Select lift type</option><option value="PASSENGER_TRACTION">Passenger traction lift</option><option value="PASSENGER_MRL">Machine-room-less passenger lift</option><option value="HOME_VILLA_LIFT">Home and villa lift</option><option value="HYDRAULIC_PASSENGER">Hydraulic passenger lift</option><option value="SERVICE_LIFT">Service lift</option><option value="HOSPITAL_BED_LIFT">Hospital and bed lift</option><option value="STRETCHER_LIFT">Stretcher lift</option><option value="GOODS_PASSENGER_LIFT">Goods and passenger lift</option><option value="INDUSTRIAL_FREIGHT_LIFT">Industrial freight lift</option><option value="CAR_LIFT">Vehicle and car lift</option><option value="DUMBWAITER">Dumbwaiter</option><option value="PLATFORM_LIFT">Vertical platform lift</option><option value="STAIR_CHAIR_LIFT">Stairway chair lift</option><option value="FIRE_EMERGENCY_LIFT">Firefighter and emergency lift</option><option value="EVACUATION_LIFT">Occupant evacuation lift</option><option value="ESCALATOR">Escalator</option><option value="MOVING_WALK">Moving walk and travelator</option></SortedSelect></label>{planNeedsUsageClass(plan) && <label>Usage class *<input value={contexts[asset.id]?.usageClass || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], usageClass: event.target.value } }))} placeholder="e.g. passenger" /></label>}<label>Travel height (m)<input type="number" min="0.1" step="0.1" value={contexts[asset.id]?.travelHeight || ""} onChange={(event) => setContexts((current) => ({ ...current, [asset.id]: { ...current[asset.id], travelHeight: event.target.value } }))} /></label></div><div className={`amc-lift-price-match${preview.error ? " has-error" : ""}`}><span>{preview.rule}</span>{preview.amount !== null && <strong>{formatMoneyForQuotation(preview.amount)} / year before GST</strong>}{preview.error && <small>{preview.error}</small>}</div></fieldset>; })}</div>}
-    {step === 3 && <div className="amc-quotation-review"><section><h3>Customer &amp; covered lifts</h3><p>{relationshipOptions.find((item) => item.id === relationshipId)?.label || "Customer not selected"}</p>{estimateRows.map(({ asset, plan, preview }) => <div className="amc-quote-lift-review" key={asset.id}><strong>{String(asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</strong><span>{contexts[asset.id]?.capacity || "—"} passengers · {contexts[asset.id]?.floors || "—"} floors · {contexts[asset.id]?.stops || "—"} stops</span><span>Catalog: {String(plan?.attributes.name || "Not selected")} · {preview.rule}</span>{plan && <span>Scope: {Array.isArray(definitionForPlan(plan).included) ? (definitionForPlan(plan).included as unknown[]).map(String).join(" · ") : "Included work follows this catalog"} · Exclusions: {Array.isArray(definitionForPlan(plan).excluded) ? (definitionForPlan(plan).excluded as unknown[]).map(String).join(" · ") : "see catalog terms"}</span>}<b>{preview.amount === null ? "Price needs review" : `${formatMoneyForQuotation(preview.amount)} / year before GST`}</b></div>)}</section><section><h3>Term &amp; estimate</h3><p>{chosenAssets.length} lift(s) · {effectiveFrom} to {effectiveTo}</p><p><strong>Estimated subtotal before GST:</strong> {estimateTotal === null ? "Resolve unmatched pricing rules" : formatMoneyForQuotation(estimateTotal)}</p><p>Each lift uses its assigned published catalog. Included work, exclusions, visits, callbacks and terms follow that catalog; each catalog version is retained on the quote line and contract asset scope.</p></section><p className="notice">The subtotal above previews the matched catalog rules before tax. Create the draft to let the server calculate authoritative line amounts, discounts and tax. Then review the full total in customer preview/PDF before issuing.</p></div>}
-    {error && <p className="notice state-error" role="alert">{error}</p>}<div className="provider-form-actions">{step === 0 ? <Button type="button" variant="secondary" onClick={cancel}>Cancel</Button> : <Button type="button" variant="secondary" onClick={() => { setError(""); setStep((value) => Math.max(0, value - 1)); }}>Back</Button>}{step < 3 ? <Button type="button" onClick={continueStep}>Continue</Button> : <Button type="submit" busy={busy} disabled={busy || !chosenAssets.length || chosenAssets.some((asset) => !planForAsset(asset.id))}>Create draft quotation</Button>}</div></form></section></section>;
+    {step === 3 && <><div className="amc-quotation-review"><section><div className="trise-info-heading-row"><h3>Customer &amp; covered lifts</h3><InfoNotice>The selected published plan version, including pinned preventive checklists, is saved on each quotation line. Check the checklist shown for every lift.</InfoNotice></div><p>{effectiveRelationshipOptions.find((item) => item.id === relationshipId)?.label || "Customer not selected"}</p>{estimateRows.map(({ asset, plan, preview }) => <div className="amc-quote-lift-review" key={asset.id}><strong>{String(asset.attributes.name || assetCode(asset))} · {equipmentCode(asset) ? `E-Code ${equipmentCode(asset)}` : assetCode(asset)}</strong><span>{contexts[asset.id]?.capacity || "—"} passengers · {contexts[asset.id]?.floors || "—"} floors · {contexts[asset.id]?.stops || "—"} stops</span><span>Catalog: {String(plan?.attributes.name || "Not selected")} · {preview.rule}</span>{plan && <span>Scope: {Array.isArray(definitionForPlan(plan).included) ? (definitionForPlan(plan).included as unknown[]).map(String).join(" · ") : "Included work follows this catalog"} · Exclusions: {Array.isArray(definitionForPlan(plan).excluded) ? (definitionForPlan(plan).excluded as unknown[]).map(String).join(" · ") : "see catalog terms"}</span>}{plan && <span>Preventive checklist: {checklistLabelsForPlan(plan).length ? checklistLabelsForPlan(plan).join(" · ") : "None pinned to this plan version"}</span>}<b>{preview.amount === null ? "Price needs review" : `${formatMoneyForQuotation(preview.amount)} / year before tax`}</b></div>)}</section><section><div className="trise-info-heading-row"><h3>Term &amp; estimate</h3><InfoNotice>The server calculates authoritative line amounts, discounts, and tax when you create the draft. Review the final total before issuing.</InfoNotice></div><p>{chosenAssets.length} lift(s) · {effectiveFrom} to {effectiveTo}</p><p><strong>Estimated subtotal before tax:</strong> {estimateTotal === null ? "Resolve unmatched pricing rules" : formatMoneyForQuotation(estimateTotal)}</p><p>Each lift uses its assigned published catalog. Included work, exclusions, visits, callbacks and terms follow that catalog; each catalog version is retained on the quote line and contract asset scope.</p></section><section className="amc-tax-settings" aria-label="Quotation tax settings"><h3>Tax settings</h3><p>Use a published tax rule and choose whether the AMC price is tax extra or already includes tax. The selected rule and mode apply to every covered lift.</p><div className="amc-tax-settings-fields"><label>Published tax rule<SortedSelect value={taxRuleId} onChange={(event) => setTaxRuleId(event.target.value)}><option value="">Tax not configured</option>{taxRules.filter((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED").map((rule) => <option key={rule.id} value={rule.id}>{rule.attributes.rule_code} · {taxTreatmentLabel(rule.attributes.tax_treatment)} · {rule.attributes.total_rate_percent}%</option>)}</SortedSelect></label><label>Price treatment<SortedSelect value={taxPricingMode} disabled={!taxRuleId} onChange={(event) => setTaxPricingMode(event.target.value as "EXCLUSIVE" | "INCLUSIVE")}><option value="EXCLUSIVE">Tax extra</option><option value="INCLUSIVE">Tax included in price</option></SortedSelect></label></div>{taxRuleId ? <small>Tax is calculated and validated by the server for each lift line using the selected published rule.</small> : <small>Select a published tax rule to calculate tax. The draft can be saved without tax, but tax readiness will block issue.</small>}</section></div><QuotationTermsEditor templates={termsTemplates} stagePaymentsEnabled={false} amcMode onApplyTemplate={applyTermsTemplateTax} /></>}
+    {error && <p className="notice state-error" role="alert">{error}</p>}<div className="provider-form-actions">{step === 0 ? <Button type="button" variant="secondary" onClick={cancel}>Cancel</Button> : <Button type="button" variant="secondary" onClick={() => { setError(""); setStep((value) => Math.max(0, value - 1)); }}>Back</Button>}{step < 3 ? <Button type="button" onClick={continueStep}>Continue</Button> : <Button type="submit" busy={busy} disabled={busy || !chosenAssets.length || chosenAssets.some((asset) => !planForAsset(asset.id))} onClick={() => { createRequested.current = true; }}>Create draft quotation</Button>}</div></form></section></section>;
 }
 
 function formatMoneyForQuotation(value: unknown) { const amount = Number(value); return Number.isFinite(amount) ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount) : "Price on review"; }
@@ -3025,6 +3227,8 @@ export function QuotationsWorkspace({
   initialTemplateId,
   initialPurpose,
   initialRelationshipId,
+  initialRelationshipLabel,
+  initialPredecessorContractId,
   returnTo,
 }: Props) {
   const { session } = useAuth();
@@ -3076,6 +3280,7 @@ export function QuotationsWorkspace({
   const [queryText, setQueryText] = useState("");
   const [debouncedQueryText, setDebouncedQueryText] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [purposeFilter, setPurposeFilter] = useState("");
   const roleContext = session?.providerCapabilities
     .find((context) => context.providerId === providerId)
     ?.roleContext?.toUpperCase();
@@ -3098,7 +3303,11 @@ export function QuotationsWorkspace({
   const [quotationSearchMode, setQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [debouncedQuotationSearchMode, setDebouncedQuotationSearchMode] = useState<"quotation" | "quotation_id" | "email" | "phone">("quotation");
   const [renewalOpen, setRenewalOpen] = useState(false);
-  const [renewalFormPredecessorId, setRenewalFormPredecessorId] = useState("");
+  const [renewalFormPredecessorId, setRenewalFormPredecessorId] = useState(initialPredecessorContractId || "");
+  const [renewalFormAssetId, setRenewalFormAssetId] = useState("");
+  const [renewalContractAssetIds, setRenewalContractAssetIds] = useState<string[] | null>(null);
+  const [renewalContractAssetsLoading, setRenewalContractAssetsLoading] = useState(false);
+  const renewalFlow = renewalOpen || (initialCreate && initialPurpose === "CONTRACT_RENEWAL");
   const [initialAmcOpen, setInitialAmcOpen] = useState(false);
   const [detailDialog, setDetailDialog] = useState<
     "edit" | "revision" | "negotiation" | "customer-preview" | "customer-change" | null
@@ -3165,16 +3374,27 @@ export function QuotationsWorkspace({
   );
   const renewalFormCustomerRelationship =
     renewalFormPredecessor?.relationships.customer_relationship;
-  const renewalFormAssets = amcAssets?.data.filter((item) => {
-    const relationship = item.relationships.customer_relationship;
+  const renewalCustomerAssets = amcAssets?.data.filter((item) => {
+    const linkedRelationship = item.relationships.customer_relationship;
+    const relationship = Array.isArray(linkedRelationship) ? linkedRelationship[0] : linkedRelationship;
+    const linkedId = relationship && !Array.isArray(relationship) ? relationship.id : String(item.attributes.customer_relationship_id || "");
+    const predecessorLink = Array.isArray(renewalFormCustomerRelationship) ? renewalFormCustomerRelationship[0] : renewalFormCustomerRelationship;
     return Boolean(
-      renewalFormCustomerRelationship &&
-        !Array.isArray(renewalFormCustomerRelationship) &&
-        relationship &&
-        !Array.isArray(relationship) &&
-        relationship.id === renewalFormCustomerRelationship.id,
+      predecessorLink && !Array.isArray(predecessorLink) && linkedId === predecessorLink.id,
     );
   }) || [];
+  const renewalFormAssets = renewalContractAssetIds === null
+    ? renewalCustomerAssets
+    : renewalCustomerAssets.filter((item) => renewalContractAssetIds.includes(item.id));
+  const renewalFormAssetOptionsKey = renewalFormAssets.map((item) => item.id).join("|");
+  const renewalFormAsset = renewalFormAssets.find((item) => item.id === renewalFormAssetId);
+  useEffect(() => {
+    if (!renewalFlow || !renewalFormPredecessorId || !renewalFormAssets.length) return;
+    setRenewalFormAssetId((current) => renewalFormAssets.some((item) => item.id === current) ? current : renewalFormAssets[0].id);
+  }, [renewalFlow, renewalFormPredecessorId, renewalFormAssetOptionsKey]);
+  const renewalAssetUnitCode = renewalFormAsset
+    ? String(renewalFormAsset.attributes.equipment_code || renewalFormAsset.attributes.asset_code || renewalFormAsset.attributes.display_name || renewalFormAsset.attributes.name || "Renewal lift")
+    : "";
   const automaticQuotationSelection = useRef(true);
   const quotationListRequestId = useRef(0);
   const quotationListInFlight = useRef<{
@@ -3234,6 +3454,7 @@ export function QuotationsWorkspace({
   const quotationFilterKey = JSON.stringify([
     debouncedQueryText.trim(),
     statusFilter,
+    purposeFilter,
     debouncedQuotationSearchMode,
     pageLimit,
   ]);
@@ -3259,6 +3480,7 @@ export function QuotationsWorkspace({
       pageLimit,
       debouncedQueryText.trim(),
       statusFilter,
+      purposeFilter,
       debouncedQuotationSearchMode,
     ]);
     setQuotations(null);
@@ -3272,6 +3494,7 @@ export function QuotationsWorkspace({
         limit: pageLimit,
         query: debouncedQuotationSearchMode === "quotation" ? debouncedQueryText.trim() || undefined : undefined,
         status: statusFilter || undefined,
+        purpose: purposeFilter || undefined,
         quotationId: debouncedQuotationSearchMode === "quotation_id" ? debouncedQueryText.trim() || undefined : undefined,
         customerEmail: debouncedQuotationSearchMode === "email" && debouncedQueryText.trim().length >= 3 ? debouncedQueryText.trim() : undefined,
         customerPhone: debouncedQuotationSearchMode === "phone" && debouncedQueryText.replace(/\D/g, "").length >= 3 && debouncedQueryText.replace(/\D/g, "").length <= 20 ? debouncedQueryText : undefined,
@@ -3296,6 +3519,7 @@ export function QuotationsWorkspace({
     pageLimit,
     debouncedQueryText,
     statusFilter,
+    purposeFilter,
     debouncedQuotationSearchMode,
   ]);
 
@@ -3303,7 +3527,7 @@ export function QuotationsWorkspace({
     name: string,
     lines: QuotationMaterialLine[],
   ): Promise<Resource<MaterialScopeTemplateAttributes>> {
-    const created = await operationsData.createMaterialScopeTemplate(
+    const response = await operationsData.createMaterialScopeTemplate(
       providerId,
       {
         name,
@@ -3325,6 +3549,7 @@ export function QuotationsWorkspace({
       },
       crypto.randomUUID(),
     );
+    const created = (response as Resource<MaterialScopeTemplateAttributes> & { data?: Resource<MaterialScopeTemplateAttributes> }).data || response;
     setMaterialScopeTemplates((current) => [created, ...current]);
     return created;
   }
@@ -3353,7 +3578,7 @@ export function QuotationsWorkspace({
     setActiveDetailTab("overview");
     setOpenMaterialDetailIndex(0);
     automaticQuotationSelection.current = true;
-  }, [providerId, debouncedQueryText, statusFilter, debouncedQuotationSearchMode]);
+  }, [providerId, debouncedQueryText, statusFilter, purposeFilter, debouncedQuotationSearchMode]);
 
   const loadMoreCustomerRelationships = useCallback(async () => {
     const after = relationshipNextPage.current;
@@ -3415,7 +3640,7 @@ export function QuotationsWorkspace({
   const selectedQuotationTermsForContract = selected?.attributes.terms as
     | { predecessor_contract_id?: string }
     | undefined;
-  const needsMaintenanceContracts = (!initialCreate && !initialQuotationId) || renewalOpen || Boolean(
+  const needsMaintenanceContracts = (!initialCreate && !initialQuotationId) || renewalFlow || Boolean(
     selectedQuotationTermsForContract?.predecessor_contract_id ||
     convertedContract?.attributes.predecessor_contract_id,
   );
@@ -3435,6 +3660,33 @@ export function QuotationsWorkspace({
       .finally(() => { if (active) setContractsLoading(false); });
     return () => { active = false; };
   }, [providerId, needsMaintenanceContracts]);
+
+  useEffect(() => {
+    if (!renewalFlow || !renewalFormPredecessorId) {
+      setRenewalContractAssetIds(null);
+      setRenewalContractAssetsLoading(false);
+      return;
+    }
+    let active = true;
+    setRenewalContractAssetsLoading(true);
+    setRenewalContractAssetIds(null);
+    void operationsData.maintenanceContractAssetScopes(providerId, renewalFormPredecessorId)
+      .then((result) => {
+        if (!active) return;
+        const ids = result.data
+          .filter((scope) => !scope.attributes.status || String(scope.attributes.status).toUpperCase() === "ACTIVE")
+          .map((scope) => {
+            const linked = scope.relationships?.asset;
+            const relationship = Array.isArray(linked) ? linked[0] : linked;
+            return relationship && !Array.isArray(relationship) ? relationship.id : String(scope.attributes.asset_id || "");
+          })
+          .filter(Boolean);
+        setRenewalContractAssetIds(ids);
+      })
+      .catch(() => { if (active) setRenewalContractAssetIds([]); })
+      .finally(() => { if (active) setRenewalContractAssetsLoading(false); });
+    return () => { active = false; };
+  }, [providerId, renewalFlow, renewalFormPredecessorId]);
 
   const needsQuotationConfiguration = initialCreate || initialAmcOpen || renewalOpen || detailDialog === "edit" || detailDialog === "revision" || detailDialog === "customer-preview";
   useEffect(() => {
@@ -3466,7 +3718,8 @@ export function QuotationsWorkspace({
   }, [providerId, needsQuotationConfiguration]);
 
   useEffect(() => {
-    if (!renewalOpen && !initialAmcOpen) return;
+    const editingAmc = detailDialog === "edit" && String(selected?.attributes.purpose || "").toUpperCase() === "MAINTENANCE_CONTRACT";
+    if (!renewalFlow && !initialAmcOpen && !editingAmc) return;
     let active = true;
     void Promise.all([
       operationsData.providerAmcPlans(providerId, "ACTIVE"),
@@ -3485,7 +3738,7 @@ export function QuotationsWorkspace({
     return () => {
       active = false;
     };
-  }, [providerId, renewalOpen, initialAmcOpen]);
+  }, [providerId, renewalFlow, initialAmcOpen, detailDialog, selected?.id, selected?.attributes.purpose]);
 
   useEffect(() => {
     if (!initialQuotationId) {
@@ -3774,24 +4027,70 @@ export function QuotationsWorkspace({
       const commercial = quotationCommercialLinesAndAmount(form);
       const termSelection = quotationTermSelectionFromForm(form);
       const purpose = String(selected.attributes.purpose || "INSTALLATION");
+      const selectedTermsTemplateId = String(form.get("quotation_terms_template_id") || "");
+      const selectedTermsTemplate = quotationTermsTemplates.find((template) => template.id === selectedTermsTemplateId);
+      const selectedTermsTemplateValues = selectedTermsTemplate?.attributes.terms || {};
+      const templateTaxRuleId = String(selectedTermsTemplateValues.default_tax_rule_id || "");
+      const defaultTaxRuleId = quotationTaxRules.some((rule) => rule.id === templateTaxRuleId && String(rule.attributes.status).toUpperCase() === "PUBLISHED") ? templateTaxRuleId : "";
+      const defaultTaxMode = String(selectedTermsTemplateValues.default_tax_pricing_mode || "EXCLUSIVE").toUpperCase() === "INCLUSIVE" ? "INCLUSIVE" : "EXCLUSIVE";
       const existingTerms =
         (selected.attributes.terms as Record<string, unknown> | undefined) || {};
-      const unitCodes = Array.from(new Set(String(form.get("lift_unit_codes") || "")
+      const amcAssetUnits = purpose === "MAINTENANCE_CONTRACT"
+        ? selectedLines.map((line, index) => {
+            const assetId = String((line as typeof line & { asset_id?: string }).asset_id || "");
+            const description = String(line.description || "");
+            const inferredCode = description.includes("·") ? description.split("·").pop()?.trim() : "";
+            return { unit_code: inferredCode || `Lift ${index + 1}`, ...(assetId ? { asset_id: assetId } : {}) };
+          })
+        : [];
+      const formUnitCodes = Array.from(new Set(String(form.get("lift_unit_codes") || "")
         .split(",").map((code) => code.trim()).filter(Boolean)));
+      const unitCodes = amcAssetUnits.length ? amcAssetUnits.map((unit) => unit.unit_code) : formUnitCodes;
       if (!unitCodes.length) throw new Error("Add at least one quoted lift unit before saving this quotation.");
       validateQuotationMaterialLiftAssignments(formMaterials, unitCodes);
       const materials = quotationMaterialsForApi(formMaterials);
+      // AMC quotations price each registered lift as its own service-plan line.
+      // This editor only exposes one manual amount when no material scope exists;
+      // rebuilding from that field would silently collapse a multi-lift quote.
+      const isAmc = purpose === "MAINTENANCE_CONTRACT";
+      const amcPlanLines = isAmc ? selectedLines.map((line, index) => {
+        const value = line as typeof line & Record<string, unknown>;
+        const amc = value.amc && typeof value.amc === "object" ? value.amc as Record<string, unknown> : {};
+        const tax = value.tax && typeof value.tax === "object" ? value.tax as Record<string, unknown> : {};
+        const selectedRuleId = String(form.get(`amc_line_tax_rule_id_${index}`) || "");
+        const ruleId = selectedRuleId === "NONE" ? "" : selectedRuleId === "TEMPLATE" ? defaultTaxRuleId : selectedRuleId || String(value.tax_rule_id || tax.rule_id || defaultTaxRuleId || "");
+        const selectedMode = String(form.get(`amc_line_tax_pricing_mode_${index}`) || "").toUpperCase();
+        const pricingMode = selectedMode === "TEMPLATE" ? defaultTaxMode : selectedMode || String(value.tax_pricing_mode || tax.pricing_mode || (defaultTaxRuleId ? defaultTaxMode : "EXCLUSIVE"));
+        const selectedVersionId = String(form.get(`amc_line_plan_version_id_${index}`) || value.provider_service_plan_version_id || amc.plan_version_id || "");
+        const description = String(form.get(`amc_line_description_${index}`) || line.description || `AMC coverage · Lift ${index + 1}`).trim();
+        return Object.fromEntries(Object.entries({
+          description,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          amount: line.amount,
+          discount_amount: value.discount_amount,
+          asset_id: value.asset_id,
+          provider_service_plan_version_id: selectedVersionId,
+          pricing_context: value.pricing_context || amc.pricing_context,
+          tax_rule_id: ruleId || undefined,
+          tax_pricing_mode: ruleId ? pricingMode : undefined,
+          unit_codes: value.unit_codes,
+        }).filter(([, entry]) => entry !== undefined && entry !== null));
+      }) : [];
+      const supplementalLines = isAmc ? quotationCommercialLinesFromForm(form) : commercial.lines;
+      const lines = isAmc ? [...amcPlanLines, ...supplementalLines] : commercial.lines;
       const updated = await operationsData.updateQuotation(
         providerId,
         selected.id,
         {
           expected_revision: Number(selected.attributes.revision),
-          lines: commercial.lines,
+          lines,
           quotation_terms_template_id: form.get("quotation_terms_template_id") || undefined,
           terms: quotationTermsForApi({
             ...existingTerms,
-            elevator_units: unitCodes.map((unit_code) => ({ unit_code })),
+            elevator_units: amcAssetUnits.length ? amcAssetUnits : unitCodes.map((unit_code) => ({ unit_code })),
             materials,
+            ...(isAmc ? { tax_source: "CANONICAL_PROVIDER_TAX" } : {}),
           }, termSelection, supportsStagePayments(purpose)),
         },
         crypto.randomUUID(),
@@ -3936,6 +4235,17 @@ export function QuotationsWorkspace({
       const value = Number(form.get(name));
       return Number.isFinite(value) && value > 0 ? value : undefined;
     };
+    const unitCode = String(asset.attributes.equipment_code || asset.attributes.asset_code || asset.attributes.display_name || asset.attributes.name || "Renewal lift");
+    const selectedTermsTemplateId = String(form.get("quotation_terms_template_id") || "");
+    const selectedTermsTemplate = quotationTermsTemplates.find((template) => template.id === selectedTermsTemplateId);
+    const templateTerms = selectedTermsTemplate?.attributes.terms || {};
+    const templateTaxRuleId = String(templateTerms.default_tax_rule_id || "");
+    const defaultTaxRuleId = quotationTaxRules.some((rule) => rule.id === templateTaxRuleId && String(rule.attributes.status).toUpperCase() === "PUBLISHED") ? templateTaxRuleId : "";
+    const selectedTaxRuleId = String(form.get("renewal_tax_rule_id") || "");
+    const taxRuleId = selectedTaxRuleId || defaultTaxRuleId;
+    const defaultTaxMode = String(templateTerms.default_tax_pricing_mode || "EXCLUSIVE").toUpperCase() === "INCLUSIVE" ? "INCLUSIVE" : "EXCLUSIVE";
+    const requestedTaxMode = String(form.get("renewal_tax_pricing_mode") || "TEMPLATE").toUpperCase();
+    const taxPricingMode = requestedTaxMode === "TEMPLATE" ? defaultTaxMode : requestedTaxMode === "INCLUSIVE" ? "INCLUSIVE" : "EXCLUSIVE";
     const termSelection = quotationTermSelectionFromForm(form);
     const quotationTerms = quotationTermsForApi({
       effective_from: `${String(form.get("effective_from"))}T00:00:00Z`,
@@ -3943,12 +4253,23 @@ export function QuotationsWorkspace({
       predecessor_contract_id: contract.id,
       paid_renewal: true,
       included_free_amc: { months: 0 },
+      elevator_units: [{ unit_code: unitCode, asset_id: assetId }],
     }, termSelection, false);
     quotationTerms.included_free_amc = { months: 0 };
     setBusy(true);
     setError("");
     setMessage("");
     try {
+      const formMaterials = quotationMaterialsFromForm(form);
+      validateQuotationMaterialLiftAssignments(formMaterials, [unitCode]);
+      const materials = quotationMaterialsForApi(formMaterials);
+      const supplementalLines = quotationCommercialLinesFromForm(form).map((line) => ({
+        ...line,
+        asset_id: assetId,
+        unit_codes: [unitCode],
+      }));
+      quotationTerms.materials = materials;
+      quotationTerms.tax_source = "CANONICAL_PROVIDER_TAX";
       const created = await operationsData.createQuotation(
         providerId,
         {
@@ -3963,6 +4284,8 @@ export function QuotationsWorkspace({
               quantity: 1,
               provider_service_plan_version_id: version.id,
               asset_id: assetId,
+              ...(taxRuleId ? { tax_rule_id: taxRuleId, tax_pricing_mode: taxPricingMode } : {}),
+              unit_codes: [unitCode],
               pricing_context: {
                 served_floors_above_ground: numeric("served_floors_above_ground"),
                 audience: String(form.get("audience") || plan.attributes.audience || "MIXED").toUpperCase(),
@@ -3973,12 +4296,14 @@ export function QuotationsWorkspace({
                 travel_height_m: numeric("travel_height_m"),
               },
             },
+            ...supplementalLines,
           ],
         },
         crypto.randomUUID(),
       );
       automaticQuotationSelection.current = false;
       setRenewalOpen(false);
+      setRenewalFormAssetId("");
       setMessage(
         "Paid AMC renewal quotation draft created. Customer acceptance remains required before contract activation.",
       );
@@ -4152,14 +4477,14 @@ export function QuotationsWorkspace({
     setError("");
     setMessage("");
     try {
-      const renewal =
-        String(selected.attributes.purpose || "").toUpperCase() ===
-        "CONTRACT_RENEWAL";
+      const purpose = String(selected.attributes.purpose || "").toUpperCase();
+      const maintenanceContract = ["MAINTENANCE_CONTRACT", "CONTRACT_RENEWAL"].includes(purpose);
+      const renewal = purpose === "CONTRACT_RENEWAL";
       const convertedPayload = await operationsData.convertQuotation(
         providerId,
         selected.id,
         {
-          target: renewal ? "DRAFT_MAINTENANCE_CONTRACT" : "INSTALLATION_CASE",
+          target: maintenanceContract ? "DRAFT_MAINTENANCE_CONTRACT" : "INSTALLATION_CASE",
           expected_revision: Number(selected.attributes.revision),
         },
         crypto.randomUUID(),
@@ -4178,9 +4503,11 @@ export function QuotationsWorkspace({
       setMessage(
         renewal
           ? `Renewal draft contract ${converted.id} created; activation remains separately authorized.`
-          : `Quotation converted to installation project ${converted.id}.`,
+          : maintenanceContract
+            ? `Paid AMC draft contract ${converted.id} created; activation remains separately authorized.`
+            : `Quotation converted to installation project ${converted.id}.`,
       );
-      if (renewal) setConvertedContract(converted);
+      if (maintenanceContract) setConvertedContract(converted);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -4203,7 +4530,7 @@ export function QuotationsWorkspace({
             convertedContract.attributes.effective_from ||
               new Date().toISOString(),
           ),
-          reason: "Customer accepted paid AMC renewal",
+          reason: quotationPurpose === "CONTRACT_RENEWAL" ? "Customer accepted paid AMC renewal" : "Customer accepted paid AMC quotation",
           expected_revision: Number(convertedContract.attributes.revision || 1),
         },
         crypto.randomUUID(),
@@ -4220,7 +4547,7 @@ export function QuotationsWorkspace({
             }
           : current,
       );
-      setMessage(`Paid AMC renewal contract ${activated.id} activated.`);
+      setMessage(`${quotationPurpose === "CONTRACT_RENEWAL" ? "Paid AMC renewal" : "Paid AMC"} contract ${activated.id} activated.`);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -4373,6 +4700,9 @@ export function QuotationsWorkspace({
     (item, index, values) =>
       values.findIndex((candidate) => candidate.id === item.id) === index,
   );
+  const renewalCustomerRelationshipLink = renewalFormPredecessor?.relationships.customer_relationship;
+  const renewalCustomerRelationshipId = String(renewalFormPredecessor?.attributes.customer_relationship_id || (renewalCustomerRelationshipLink && !Array.isArray(renewalCustomerRelationshipLink) ? renewalCustomerRelationshipLink.id : ""));
+  const renewalCustomerName = String(renewalFormPredecessor?.attributes.customer_name || selectableRelationships.find((item) => item.id === renewalCustomerRelationshipId)?.label || "");
   const customerChangeRelationshipOptions = relationshipOptions
     .filter((item) => String(item.attributes.status || "").toUpperCase() === "ACTIVE")
     .map((item) => ({
@@ -4398,10 +4728,18 @@ export function QuotationsWorkspace({
           taxable_amount?: string | number;
           tax_amount?: string | number;
           pricing_mode?: string;
+          tax_rule_id?: string;
+          tax_pricing_mode?: string;
+          asset_id?: string;
+          provider_service_plan_version_id?: string;
+          pricing_context?: Record<string, unknown>;
+          amc?: { pricing_context?: Record<string, unknown> } | null;
           tax?: {
+            rule_id?: string;
             rule_code?: string;
             tax_treatment?: string;
             total_tax?: string;
+            pricing_mode?: string;
             components?: Array<{ code?: string; amount?: string }>;
           } | null;
           unit_codes?: string[];
@@ -4421,13 +4759,16 @@ export function QuotationsWorkspace({
     | {
         status?: string;
         tax_total?: string;
-        components?: Array<{ code?: string; amount?: string }>;
+        rules?: Array<{ rule_code?: string; rule_version?: number; total_rate_percent?: string; tax_treatment?: string }>;
+        components?: Array<{ code?: string; name?: string; rate_percent?: string; amount?: string }>;
       }
     | undefined;
   const pricedMaterialCount = selectedQuotationMaterials.filter(
     (material) => material.unit_price.trim() !== "",
   ).length;
-  const quotationTaxRequired = pricedMaterialCount > 0;
+  const quotationPurpose = String(selected?.attributes.purpose || "").toUpperCase();
+  const hasPricedAmcLines = quotationPurpose === "MAINTENANCE_CONTRACT" && selectedLines.some((line) => Number(line.amount || 0) > 0);
+  const quotationTaxRequired = pricedMaterialCount > 0 || hasPricedAmcLines;
   const quotationTaxReady =
     !quotationTaxRequired || selectedTaxSummary?.status === "CALCULATED";
   const renewalPredecessorId =
@@ -4544,8 +4885,18 @@ export function QuotationsWorkspace({
         .filter(Boolean)
     : [];
   const editableQuotationUnitCodes = selectedRequirementUnitCodes.length
-    ? selectedRequirementUnitCodes
+    ? selectedQuotationUnitCodes.length
+      ? selectedQuotationUnitCodes
+      : selectedRequirementUnitCodes
     : selectedQuotationUnitCodes;
+  const selectedAmcUnitCodes = String(selected?.attributes.purpose || "").toUpperCase() === "MAINTENANCE_CONTRACT"
+    ? Array.from(new Set(selectedLines.map((line, index) => {
+        const codes = Array.isArray(line.unit_codes) ? line.unit_codes.map(String).filter(Boolean) : [];
+        if (codes.length) return codes[0];
+        const description = String(line.description || "");
+        return description.includes("·") ? description.split("·").pop()?.trim() || `Lift ${index + 1}` : `Lift ${index + 1}`;
+      })))
+    : [];
   const uncoveredRequirementUnitCodes = selectedRequirementUnitCodes.filter((unitCode) =>
     !selectedQuotationUnitCodes.includes(unitCode) || !selectedLines.some((line) => {
       const lineUnitCodes = Array.isArray(line.unit_codes) ? line.unit_codes : [];
@@ -4617,6 +4968,9 @@ export function QuotationsWorkspace({
       : "";
   const projectDraftReady = Boolean(linkedProjectId);
   const projectConversionEligible = ["INSTALLATION", "MODIFICATION", "TAKEOVER"].includes(
+    String(selected?.attributes.purpose || "").toUpperCase(),
+  );
+  const maintenanceContractConversionEligible = ["MAINTENANCE_CONTRACT", "CONTRACT_RENEWAL"].includes(
     String(selected?.attributes.purpose || "").toUpperCase(),
   );
   const providerReviewApproved = selectedProviderReview?.decision === "approved";
@@ -5197,7 +5551,7 @@ export function QuotationsWorkspace({
               <div className="quotation-pricing-summary-heading">
                 <div>
                   <span className="eyebrow">Amount summary</span>
-                  <strong>Quotation totals</strong>
+                  <span className="quotation-totals-label"><strong>Quotation totals</strong>{selectedTaxSummary?.status !== "CALCULATED" && <InfoNotice>Tax status: {String(selectedTaxSummary?.status || "NOT_CONFIGURED").replaceAll("_", " ").toLowerCase()}. Select a published central tax rule for each priced package or item before issuing the quotation.</InfoNotice>}</span>
                 </div>
                 <span className="quotation-currency-badge">{String(selected.attributes.currency || "INR")}</span>
               </div>
@@ -5254,11 +5608,6 @@ export function QuotationsWorkspace({
                 </div>
               </div>
             </section>
-            {selectedTaxSummary?.status !== "CALCULATED" && (
-              <p className="notice">
-                Tax status: {String(selectedTaxSummary?.status || "NOT_CONFIGURED").replaceAll("_", " ").toLowerCase()}. Select a published central tax rule for each priced package or item before issuing the quotation.
-              </p>
-            )}
           </section>
           </>
           )}
@@ -5365,11 +5714,7 @@ export function QuotationsWorkspace({
               <span className="quotation-next-action-marker" aria-hidden="true">
                 <SvgIcon name={quotationActionPhase === "project" ? "building" : "arrow-right"} size={16} />
               </span>
-              <span>
-                <small>Next action</small>
-                <strong>{quotationNextAction.label}</strong>
-                <em>{quotationNextAction.detail}</em>
-              </span>
+              <span><small>Next action</small><strong>{quotationNextAction.label}</strong><em>{quotationNextAction.detail}</em></span>
             </div>
             <fieldset disabled={workflowConcluded}>
               <div className="quotation-detail-actions">
@@ -5421,16 +5766,17 @@ export function QuotationsWorkspace({
                   String(selected.attributes.status).toLowerCase(),
                 ) &&
                   hasPermission("QUOTATION_CONVERT") &&
-                  (String(selected.attributes.purpose || "").toUpperCase() === "CONTRACT_RENEWAL" ||
+                  (maintenanceContractConversionEligible ||
                     (projectConversionEligible && !projectDraftReady)) && (
                     <Button
                       onClick={() => void convertQuotation()}
                       disabled={busy}
                     >
-                      {String(selected.attributes.purpose || "").toUpperCase() ===
-                      "CONTRACT_RENEWAL"
+                      {quotationPurpose === "CONTRACT_RENEWAL"
                         ? "Create renewal contract draft"
-                        : "Create project draft"}
+                        : quotationPurpose === "MAINTENANCE_CONTRACT"
+                          ? "Create paid AMC contract draft"
+                          : "Create project draft"}
                     </Button>
                   )}
                 {projectConversionEligible && projectDraftReady && (
@@ -5519,7 +5865,7 @@ export function QuotationsWorkspace({
                     <small>
                       {quotationTaxReady
                         ? "Every priced material line uses a published central tax rule."
-                        : "Select a published central tax rule for every priced material line before issuing."}
+                        : "Select a published central tax rule for every priced line before issuing."}
                     </small>
                   </div>
                 </li>
@@ -5548,79 +5894,6 @@ export function QuotationsWorkspace({
               </li>
             </ul>
           </section>
-          {["issued", "viewed", "under_review"].includes(
-            String(selected.attributes.status).toLowerCase(),
-          ) && (
-            <section
-              className="detail-card quotation-provider-review"
-              aria-label="Provider quotation review"
-            >
-              <header className="quotation-provider-review-header">
-                <div>
-                  <span className="eyebrow">Internal approval</span>
-                  <h4>Provider review</h4>
-                </div>
-                <Status>
-                  {selectedProviderReview?.decision
-                    ? quotationLabelFor(selectedProviderReview.decision).toUpperCase()
-                    : "PENDING"}
-                </Status>
-              </header>
-              {(
-                selected.attributes.provider_review as {
-                  decision?: string;
-                  quotation_revision?: number;
-                  reason?: string | null;
-                  reviewer?: { name?: string; email?: string } | null;
-                } | null
-              )?.decision ? (
-                <div className="quotation-provider-review-record">
-                  <div className="quotation-provider-review-decision">
-                    <strong>
-                      {quotationLabelFor(selectedProviderReview?.decision || "")}
-                      {" for revision R"}
-                      {String(selectedProviderReview?.quotation_revision || selected.attributes.revision)}
-                    </strong>
-                    <small>Customer acceptance remains a separate action.</small>
-                  </div>
-                  {selectedProviderReview?.reviewer && (
-                    <div className="quotation-provider-review-reviewer">
-                      <small>Reviewed by</small>
-                      <strong>{selectedProviderReview.reviewer.name || "Provider reviewer"}</strong>
-                      {selectedProviderReview.reviewer.email && <span>{selectedProviderReview.reviewer.email}</span>}
-                    </div>
-                  )}
-                  {selectedProviderReview?.reason && (
-                    <p className="quotation-provider-review-reason">{selectedProviderReview.reason}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="quotation-provider-review-pending">
-                  <p>
-                    Internal approval is required before the customer can accept
-                    this issued revision.
-                  </p>
-                  {hasPermission("QUOTATION_APPROVE") && (
-                    <div className="quotation-detail-actions">
-                      <Button
-                        disabled={busy}
-                        onClick={() => setReviewDialog("approve")}
-                      >
-                        Approve revision
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() => setReviewDialog("reject")}
-                      >
-                        Reject revision
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
         </div>
       )}
       {(!detailTabVisible || activeDetailTab === "review") && (
@@ -5628,24 +5901,24 @@ export function QuotationsWorkspace({
           {convertedContract &&
             String(convertedContract.attributes.status || "").toLowerCase() ===
               "draft" && (
-              <div className="detail-card">
-                <h4>Renewal contract draft</h4>
+              <div className="detail-card" aria-label="Accepted AMC contract draft">
+                <h4>{quotationPurpose === "CONTRACT_RENEWAL" ? "Renewal contract draft" : "Paid AMC contract draft"}</h4>
                 <p>
-                  Customer acceptance is recorded. Activate this successor only
-                  through the authorized provider workflow.
+                  Customer acceptance is recorded. Activate this customer
+                  contract through the authorized provider workflow.
                 </p>
                 <Button
                   onClick={() => void activateConvertedContract()}
                   disabled={busy}
                 >
-                  Activate paid AMC renewal
+                  {quotationPurpose === "CONTRACT_RENEWAL" ? "Activate paid AMC renewal" : "Activate paid AMC contract"}
                 </Button>
               </div>
             )}
           {String(selected.attributes.purpose || "").toUpperCase() ===
             "CONTRACT_RENEWAL" && (
             <section className="detail-card" aria-label="AMC renewal history">
-              <h4>AMC renewal history</h4>
+              <div className="trise-info-heading-row"><h4>AMC renewal history</h4><InfoNotice>The predecessor coverage remains historical; the successor is a separate accepted provider contract.</InfoNotice></div>
               <dl>
                 <dt>Predecessor</dt>
                 <dd>
@@ -5660,10 +5933,6 @@ export function QuotationsWorkspace({
                     : "Not activated"}
                 </dd>
               </dl>
-              <p className="notice">
-                The predecessor coverage remains historical; the successor is a
-                separate accepted provider contract.
-              </p>
             </section>
           )}
           <QuotationConversationPanel
@@ -5671,26 +5940,70 @@ export function QuotationsWorkspace({
             quotationId={selected.id}
             revision={Number(selected.attributes.revision || 1)}
             quotationStatus={String(selected.attributes.status || "")}
+            quotationNumber={String(selected.attributes.quotation_number || "Quotation")}
+            customerName={customerNameFor(selected)}
           />
         </>
       )}
     </aside>
   ) : null;
 
-function QuotationConversationPanel({ providerId, quotationId, revision, quotationStatus }: { providerId: string; quotationId: string; revision: number; quotationStatus: string }) {
+function ProviderQuotationReviewPanel({ status, revision, review, canApprove, busy, onApprove, onReject }: { status: string; revision: number; review: { decision?: string; quotation_revision?: number; decided_at?: string; reason?: string | null; reviewer?: { name?: string; email?: string } | null } | null | undefined; canApprove: boolean; busy: boolean; onApprove: () => void; onReject: () => void }) {
+  if (!["issued", "viewed", "under_review"].includes(status.toLowerCase())) return null;
+  const decisionLabel = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+  return <section className="quotation-provider-review quotation-provider-review--header" aria-label="Provider quotation review">
+    <header className="quotation-provider-review-header"><div><span className="eyebrow">Internal approval · Revision R{revision}</span><h4>Provider review</h4></div><Status>{review?.decision ? decisionLabel(review.decision).toUpperCase() : "PENDING"}</Status></header>
+    {review?.decision ? <div className="quotation-provider-review-record"><div className="quotation-provider-review-decision"><strong>{decisionLabel(review.decision)} for revision R{String(review.quotation_revision || revision)}</strong><small>Customer acceptance remains a separate action.</small></div>{review.reviewer && <div className="quotation-provider-review-reviewer"><small>Reviewed by</small><strong>{review.reviewer.name || "Provider reviewer"}</strong>{review.reviewer.email && <span>{review.reviewer.email}</span>}</div>}{review.reason && <p className="quotation-provider-review-reason">{review.reason}</p>}</div> : <div className="quotation-provider-review-pending"><p>Approval is required before this quotation can move to the customer.</p>{canApprove && <div className="quotation-detail-actions"><Button disabled={busy} onClick={onApprove}>Approve revision</Button><Button variant="secondary" disabled={busy} onClick={onReject}>Reject revision</Button></div>}</div>}
+  </section>;
+}
+
+function QuotationConversationPanel({ providerId, quotationId, revision, quotationStatus, quotationNumber, customerName }: { providerId: string; quotationId: string; revision: number; quotationStatus: string; quotationNumber: string; customerName: string }) {
   const [thread, setThread] = useState<Collection<GenericAttributes> | null>(null);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   useEffect(() => { let active = true; setThread(null); operationsData.quotationCommunications(providerId, quotationId).then((value) => { if (active) setThread(value); }).catch(() => { if (active) setThread({ data: [] }); }); return () => { active = false; }; }, [providerId, quotationId]);
   const canReply = ["issued", "viewed", "under_review", "revision_requested"].includes(quotationStatus.toLowerCase());
+  const timeLabel = (value: unknown) => {
+    const date = new Date(String(value || ""));
+    return Number.isNaN(date.getTime()) ? "Time not recorded" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  };
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!body.trim()) return; setBusy(true); setNotice("");
     try { await operationsData.createQuotationCommunication(providerId, quotationId, { expected_revision: revision, message_type: "REPLY", body: body.trim() }, crypto.randomUUID()); setThread(await operationsData.quotationCommunications(providerId, quotationId)); setBody(""); setNotice("Reply sent. The customer will see it in their secure quotation review."); }
     catch (cause) { setNotice((cause as Error)?.message || "Reply could not be sent."); }
     finally { setBusy(false); }
   }
-  return <section className="detail-card quotation-communication-panel" aria-label="Customer quotation conversation"><h4>Customer conversation</h4><p>Replies are visible to the linked customer after sign-in and are recorded against this quotation version.</p><div className="quotation-communication-thread" aria-live="polite">{thread === null ? <p role="status">Loading conversation…</p> : thread.data.length ? thread.data.map((item) => <article key={item.id}><header><strong>{String(item.attributes.author_name || "Quotation participant")}</strong><span>{String(item.attributes.message_type || "message").replaceAll("_", " ")} · R{String(item.attributes.quotation_revision || "—")}</span></header><p>{String(item.attributes.body || "")}</p></article>) : <p>No customer messages yet.</p>}</div>{canReply ? <form onSubmit={(event) => void submit(event)}><label>Reply to customer<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={4} required /></label><Button type="submit" disabled={busy || !body.trim()}>{busy ? "Sending…" : "Send reply"}</Button>{notice && <p role="status">{notice}</p>}</form> : <p>This quotation is closed for new messages. Existing conversation remains available.</p>}</section>;
+  return (
+    <section className="detail-card quotation-communication-panel" aria-label="Customer quotation conversation">
+      <header className="quotation-conversation-heading">
+        <div><span className="eyebrow">Secure quotation thread</span><h4>Conversation with {customerName}</h4><p>Messages stay attached to the quotation revision they discuss.</p></div>
+        <div className="quotation-conversation-context"><span>{quotationNumber}</span><strong>Revision R{revision}</strong></div>
+      </header>
+      <div className="quotation-communication-thread" aria-live="polite">
+        {thread === null ? <p className="quotation-conversation-empty" role="status">Loading conversation…</p> : thread.data.length ? thread.data.map((item) => {
+          const side = String(item.attributes.author_side || "customer").toLowerCase();
+          const ownMessage = side === "provider";
+          const messageType = String(item.attributes.message_type || "message").replaceAll("_", " ");
+          const author = String(item.attributes.author_name || (ownMessage ? "Provider team" : "Customer"));
+          return <article key={item.id} className={`quotation-chat-message${ownMessage ? " is-provider" : " is-customer"}`}>
+            <div className="quotation-chat-avatar" aria-hidden="true">{author.trim().slice(0, 1).toUpperCase()}</div>
+            <div className="quotation-chat-bubble">
+              <header><strong>{author}</strong><span>{ownMessage ? "Provider" : "Customer"}</span><span className="quotation-chat-type">{messageType}</span></header>
+              <p>{String(item.attributes.body || "")}</p>
+              <footer><time dateTime={String(item.attributes.created_at || "")}>{timeLabel(item.attributes.created_at)}</time><span>Revision R{String(item.attributes.quotation_revision || "—")}</span></footer>
+            </div>
+          </article>;
+        }) : <div className="quotation-conversation-empty"><span aria-hidden="true">✉</span><strong>No messages yet</strong><p>Questions and replies about this quotation will appear here with their author and revision details.</p></div>}
+      </div>
+      {canReply ? <form className="quotation-chat-composer" onSubmit={(event) => void submit(event)}>
+        <label htmlFor="quotation-chat-reply">Reply to {customerName}</label>
+        <textarea id="quotation-chat-reply" value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} rows={3} placeholder="Write a message about this quotation…" required />
+        <div className="quotation-chat-composer-footer"><small>Visible to the linked customer · {body.length}/4000</small><Button type="submit" disabled={busy || !body.trim()}>{busy ? "Sending…" : "Send reply"}</Button></div>
+        {notice && <p className="quotation-chat-notice" role="status">{notice}</p>}
+      </form> : <div className="quotation-chat-closed" role="status">This quotation is closed for new messages. The saved conversation remains available.</div>}
+    </section>
+  );
 }
 
   if (initialCreate && !hasPermission("QUOTATION_CREATE")) {
@@ -5713,6 +6026,38 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
     );
   }
 
+  if (renewalFlow) {
+    return <>
+      <ProviderAmcRenewalQuotationPage
+        contracts={contracts?.data || []}
+        contractsLoading={contractsLoading}
+        assets={renewalFormAssets}
+        assetsLoading={renewalContractAssetsLoading || Boolean(renewalFormPredecessorId && (renewalContractAssetIds === null || !amcAssets))}
+        customerName={renewalCustomerName}
+        asset={renewalFormAsset}
+        plans={amcPlans?.data || []}
+        materials={materialScopeTemplates}
+        termsTemplates={quotationTermsTemplates}
+        taxRules={quotationTaxRules}
+        predecessorId={renewalFormPredecessorId}
+        assetId={renewalFormAssetId}
+        assetUnitCode={renewalAssetUnitCode}
+        onPredecessorChange={(value) => { setRenewalFormPredecessorId(value); setRenewalFormAssetId(""); }}
+        onAssetChange={setRenewalFormAssetId}
+        onSubmit={(event) => { void createRenewalQuotation(event); }}
+        onCancel={() => {
+          setRenewalOpen(false);
+          setRenewalFormPredecessorId("");
+          setRenewalFormAssetId("");
+          window.location.hash = "quotations/new";
+        }}
+        onCreateTemplate={saveMaterialScopeTemplate}
+        busy={busy}
+      />
+      <QuotationActionNotifications message={message} error={error} onDismissMessage={() => setMessage("")} onDismissError={() => setError("")} />
+    </>;
+  }
+
   if (initialCreate && !initialPurpose && !initialTemplateId) {
     const projectTypes = [
       ["INSTALLATION", "New installation", "New elevator supply, installation and handover scope.", "building", "01"],
@@ -5720,15 +6065,23 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
       ["TAKEOVER", "Takeover", "Take over ongoing maintenance for an existing installation.", "clipboard", "03"],
     ] as const;
     const serviceTypes = [
-      ["SERVICE", "Service / repair", "Quote a repair, callout or other elevator service work.", "activity", "04"],
-      ["MAINTENANCE_CONTRACT", "AMC quotation", "Select a published AMC plan and quote it against the customer’s lifts.", "calendar", "05"],
+      ["SERVICE", "Service quotation", "Quote a callout or other elevator service work.", "activity", "04"],
+      ["MAINTENANCE_CONTRACT", "New AMC quotation", "Prepare an AMC offer for lifts that do not already have an AMC contract.", "calendar", "05"],
+      ["CONTRACT_RENEWAL", "Renew existing AMC", "Select the current AMC contract, set its renewal term, and add any planned replacements or upgrades.", "calendar", "06"],
     ] as const;
-    const renderType = ([purpose, title, description, icon, number]: typeof projectTypes[number] | typeof serviceTypes[number]) => <button type="button" className="quotation-type-card" key={purpose} onClick={() => { window.location.hash = `quotations/new/${purpose}`; }}><span className="quotation-type-card-icon"><SvgIcon name={icon} size={21} /></span><span className="quotation-type-card-copy"><small className="quotation-type-number">TYPE {number}</small><strong>{title}</strong><span>{description}</span></span><span className="quotation-type-arrow" aria-hidden="true">→</span></button>;
-    return <section className="content feature-page quotation-type-picker"><PageHeader eyebrow="Sales & Marketing · Quotations" title="Choose quotation type" description="Start with the work you’re quoting. We’ll open a form tailored to that quotation type." action={<Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>← Back to quotations</Button>} /><div className="quotation-type-intro"><div className="quotation-type-intro-mark"><SvgIcon name="clipboard" size={23} /></div><div><strong>What are you quoting today?</strong><span>Choose a category below. You can review customer, scope and commercial details on the next page.</span></div></div><section className="quotation-type-section"><header><div><span>PROJECT &amp; DELIVERY</span><h2>Installation and project work</h2></div><small>3 quotation types</small></header><div className="quotation-type-grid">{projectTypes.map(renderType)}</div></section><section className="quotation-type-section"><header><div><span>SERVICE &amp; MAINTENANCE</span><h2>Ongoing service</h2></div><small>2 quotation types</small></header><div className="quotation-type-grid">{serviceTypes.map(renderType)}</div></section></section>;
+    const otherTypes = [
+      ["REPAIR", "Repair quotation", "Quote repair labour, replacement parts or corrective work for existing equipment.", "settings", "07"],
+      ["PARTS", "Parts supply", "Quote parts and components as a customer-readable material scope.", "grid", "08"],
+      ["PROCUREMENT", "Procurement", "Prepare a controlled quotation for equipment or service procurement.", "clipboard", "09"],
+      ["NEW_ASSET", "New asset", "Quote a new equipment asset outside a full installation project.", "building", "10"],
+      ["OTHER_CONTROLLED", "Other controlled work", "Prepare a scoped quotation for another approved work type.", "activity", "11"],
+    ] as const;
+    const renderType = ([purpose, title, description, icon, number]: typeof projectTypes[number] | typeof serviceTypes[number] | typeof otherTypes[number]) => <button type="button" className="quotation-type-card" key={purpose} onClick={() => { window.location.hash = `quotations/new/${purpose}`; }}><span className="quotation-type-card-icon"><SvgIcon name={icon} size={21} /></span><span className="quotation-type-card-copy"><small className="quotation-type-number">TYPE {number}</small><strong>{title}</strong><span>{description}</span></span><span className="quotation-type-arrow" aria-hidden="true">→</span></button>;
+    return <section className="content feature-page quotation-type-picker"><PageHeader eyebrow="Sales & Marketing · Quotations" title="Choose quotation type" description="Start with the work you’re quoting. We’ll open a form tailored to that quotation type." action={<Button variant="secondary" onClick={() => { window.location.hash = "quotations"; }}>← Back to quotations</Button>} /><div className="quotation-type-intro"><div className="quotation-type-intro-mark"><SvgIcon name="clipboard" size={23} /></div><div><strong>What are you quoting today?</strong><span>Choose a category below. You can review customer, scope and commercial details on the next page.</span></div></div><section className="quotation-type-section"><header><div><span>PROJECT &amp; DELIVERY</span><h2>Installation and project work</h2></div><small>{projectTypes.length} quotation types</small></header><div className="quotation-type-grid">{projectTypes.map(renderType)}</div></section><section className="quotation-type-section"><header><div><span>SERVICE &amp; MAINTENANCE</span><h2>Ongoing service</h2></div><small>{serviceTypes.length} quotation types</small></header><div className="quotation-type-grid">{serviceTypes.map(renderType)}</div></section><section className="quotation-type-section"><header><div><span>OTHER QUOTATION TYPES</span><h2>Parts and other work</h2></div><small>{otherTypes.length} quotation types</small></header><div className="quotation-type-grid">{otherTypes.map(renderType)}</div></section></section>;
   }
 
   if (initialCreate && initialPurpose === "MAINTENANCE_CONTRACT") {
-    return <ProviderAmcQuotationCreatePage providerId={providerId} relationshipOptions={selectableRelationships} initialRelationshipId={initialRelationshipId} returnTo={returnTo} />;
+    return <ProviderAmcQuotationCreatePage providerId={providerId} relationshipOptions={selectableRelationships} termsTemplates={quotationTermsTemplates} taxRules={quotationTaxRules} initialRelationshipId={initialRelationshipId} initialRelationshipLabel={initialRelationshipLabel} returnTo={returnTo} />;
   }
 
   if (initialCreate) {
@@ -5744,7 +6097,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
           relationshipsLoading={relationshipsLoading || loadingMoreRelationships}
           relationshipsHaveMore={Boolean(relationships?.page?.next)}
           onLoadMoreRelationships={() => void loadMoreCustomerRelationships()}
-          initialDescription="Elevator installation"
+          initialDescription={quotationDefaultDescriptions[initialPurpose || "INSTALLATION"] || "Elevator work"}
           initialLiftUnitCodes="Lift 1"
           initialPurpose={initialPurpose || "INSTALLATION"}
           initialTemplateId={initialTemplateId}
@@ -5780,11 +6133,17 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
               ? String(selectedLines[0]?.description || "Elevator installation")
               : "Revised elevator installation"
           }
-          initialLiftUnitCodes={editableQuotationUnitCodes.join(", ") || "Lift 1"}
+          initialLiftUnitCodes={(selectedAmcUnitCodes.length ? selectedAmcUnitCodes : editableQuotationUnitCodes).join(", ") || "Lift 1"}
           initialRequirementUnitCodes={selectedRequirementUnitCodes}
           initialPurpose={String(selected.attributes.purpose || "INSTALLATION")}
-          initialAmount={String(selectedLines[0]?.amount || "")}
+          initialAmount={String(
+            String(selected.attributes.purpose || "").toUpperCase() === "MAINTENANCE_CONTRACT"
+              ? selectedLines.reduce((total, line) => total + (Number(line.amount) || 0), 0)
+              : selectedLines[0]?.amount || "",
+          )}
           initialMaterials={selectedQuotationMaterials}
+          initialAmcLines={editMode === "edit" && String(selected.attributes.purpose || "").toUpperCase() === "MAINTENANCE_CONTRACT" ? selectedLines as Array<Record<string, unknown>> : []}
+          amcPlans={amcPlans?.data || []}
           initialTerms={selected.attributes.terms as Record<string, unknown> | undefined}
           templates={materialScopeTemplates}
           termsTemplates={quotationTermsTemplates}
@@ -5821,7 +6180,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                     window.location.hash = "quotations/new";
                   }}
                 >
-                  + New quotations
+                  + New quotation
                 </Button>
               )}
             </div>
@@ -5853,13 +6212,11 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
       {initialAmcOpen && (
         <OperationsDialog
           title="Create initial AMC quotation"
+          titleInfo={<InfoNotice>Create an asset-scoped paid AMC quotation for an existing customer. The accepted quotation becomes the contract source; acceptance and activation remain separate steps.</InfoNotice>}
           busy={busy}
           onClose={() => setInitialAmcOpen(false)}
         >
           <div className="quotation-renewal-dialog-content">
-            <p className="notice">
-              Create an asset-scoped paid AMC quotation for an existing customer. The accepted quotation becomes the contract source; acceptance and activation remain separate steps.
-            </p>
             <form className="quotation-modal-form" onSubmit={(event) => void createInitialAmcQuotation(event)}>
               <label>
                 Elevator asset
@@ -5932,18 +6289,15 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
       {renewalOpen && (
         <OperationsDialog
           title="Create paid AMC renewal quotation"
+          titleInfo={<InfoNotice>This creates a provider-scoped renewal quotation against an active predecessor. The customer must accept the exact quotation revision before a separate successor contract can be activated.</InfoNotice>}
           busy={busy}
           onClose={() => {
             setRenewalOpen(false);
             setRenewalFormPredecessorId("");
+            setRenewalFormAssetId("");
           }}
         >
           <div className="quotation-renewal-dialog-content">
-            <p className="notice">
-              This creates a provider-scoped renewal quotation against an active
-              predecessor. The customer must accept the exact quotation revision
-              before a separate successor contract can be activated.
-            </p>
             <form
               className="quotation-modal-form"
               onSubmit={(event) => {
@@ -5955,7 +6309,10 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                 <SortedSelect
                   name="predecessor_contract_id"
                   value={renewalFormPredecessorId}
-                  onChange={(event) => setRenewalFormPredecessorId(event.target.value)}
+                  onChange={(event) => {
+                    setRenewalFormPredecessorId(event.target.value);
+                    setRenewalFormAssetId("");
+                  }}
                   required
                   disabled={!contracts}
                 >
@@ -5978,6 +6335,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                     ))}
                 </SortedSelect>
               </label>
+              {contractsError && <p className="notice" role="alert">Active maintenance contracts could not be loaded. Retry by reopening this quotation form.</p>}
               {contracts && !contracts.data.some((item) =>
                 ["active", "approved"].includes(String(item.attributes.status || "").toLowerCase()),
               ) && <p className="notice">No active maintenance contracts are available for renewal.</p>}
@@ -6004,7 +6362,13 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                 </label>
                 <label>
                   Covered elevator asset
-                  <SortedSelect name="asset_id" required disabled={!amcAssets}>
+                  <SortedSelect
+                    name="asset_id"
+                    value={renewalFormAssetId}
+                    onChange={(event) => setRenewalFormAssetId(event.target.value)}
+                    required
+                    disabled={!amcAssets}
+                  >
                     <option value="">
                       {amcAssets
                         ? renewalFormPredecessorId
@@ -6036,6 +6400,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                 <label>Stops<input name="number_of_stops" type="number" min="1" step="1" /></label>
                 <label>Travel height (m)<input name="travel_height_m" type="number" min="0.1" step="0.1" /></label>
               </div>
+              <fieldset className="quotation-amc-tax-settings"><legend>Renewal tax</legend><div className="form-grid-two"><label>Published tax rule<SortedSelect name="renewal_tax_rule_id" defaultValue=""><option value="">Use selected quotation terms default, if set</option>{quotationTaxRules.filter((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED").map((rule) => <option key={rule.id} value={rule.id}>{rule.attributes.rule_code} · {taxTreatmentLabel(rule.attributes.tax_treatment)} · {rule.attributes.total_rate_percent}%</option>)}</SortedSelect><small>{quotationTaxRules.some((rule) => String(rule.attributes.status).toUpperCase() === "PUBLISHED") ? "Only published tax rules can be applied. A selected quotation terms template can provide a default." : "No published tax rules are available for this provider. Publish a tax rule to apply tax here."}</small></label><label>Price treatment<SortedSelect name="renewal_tax_pricing_mode" defaultValue="TEMPLATE"><option value="TEMPLATE">Use quotation template default</option><option value="EXCLUSIVE">Tax extra</option><option value="INCLUSIVE">Tax included in plan price</option></SortedSelect><small>Template default falls back to tax extra.</small></label></div></fieldset>
               <p className="notice">No manual price is accepted here. The selected published plan version calculates the renewal amount on the server and stores the exact pricing context in the quotation snapshot.</p>
               <div className="quotation-renewal-date-grid">
                 <label>
@@ -6047,6 +6412,13 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                   <input name="effective_to" type="date" required />
                 </label>
               </div>
+              {renewalAssetUnitCode && <MaterialScopeEditor
+                initialMaterials={[]}
+                unitCodes={[renewalAssetUnitCode]}
+                templates={materialScopeTemplates}
+                taxRules={quotationTaxRules}
+                onCreateTemplate={saveMaterialScopeTemplate}
+              />}
               <QuotationTermsEditor
                 initialTerms={{ validity_days: 30, included_free_amc: { months: 0 } }}
                 templates={quotationTermsTemplates}
@@ -6058,7 +6430,11 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                   type="button"
                   variant="quiet"
                   disabled={busy}
-                  onClick={() => setRenewalOpen(false)}
+                  onClick={() => {
+                    setRenewalOpen(false);
+                    setRenewalFormPredecessorId("");
+                    setRenewalFormAssetId("");
+                  }}
                 >
                   Cancel
                 </Button>
@@ -6126,6 +6502,19 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
             ))}
           </SortedSelect>
         </label>
+        <label>
+          Quotation type
+          <SortedSelect
+            aria-label="Filter quotations by type"
+            value={purposeFilter}
+            onChange={(event) => setPurposeFilter(event.target.value)}
+          >
+            <option value="">All quotation types</option>
+            {Object.entries(quotationPurposeLabels).map(([purpose, label]) => (
+              <option key={purpose} value={purpose}>{label}</option>
+            ))}
+          </SortedSelect>
+        </label>
         {queryText.trim() && quotationSearchMode === "quotation_id" && queryText.trim().length < 3 && (
           <small>Enter a quotation UUID or number to search.</small>
         )}
@@ -6163,6 +6552,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                 <thead>
                   <tr>
                     <th scope="col">Quote no. / customer</th>
+                    <th scope="col">Quotation type</th>
                     <th scope="col">Scope / revision</th>
                     <th scope="col">Status</th>
                     <th scope="col">Value (₹)</th>
@@ -6194,6 +6584,11 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                             {quoteNumber}
                           </button>
                           <small>{customerNameFor(quotation)}</small>
+                        </td>
+                        <td data-label="Quotation type">
+                          <span className="quotation-purpose-chip">
+                            {quotationPurposeLabels[String(quotation.attributes.purpose || "").toUpperCase()] || displayLabel(quotation.attributes.purpose, "Other")}
+                          </span>
                         </td>
                         <td data-label="Scope / revision">
                           {String(
@@ -6241,7 +6636,8 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                             actions={[
                               {
                                 id: "view",
-                                label: "View quotation",
+                                label: "View",
+                                icon: <SvgIcon name="eye" size={14} />,
                                 onSelect: () =>
                                   openQuotationDetail(quotation.id),
                               },
@@ -6377,8 +6773,8 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                         selected.attributes.quotation_number || "Quotation",
                       )}
                     </h2>
-                    <span className="quotation-detail-proposal-label">
-                      Commercial proposal
+                    <span className={`quotation-detail-proposal-label${String(selected.attributes.purpose).toUpperCase() === "MAINTENANCE_CONTRACT" ? " quotation-detail-proposal-label--amc" : ""}`}>
+                      {String(selected.attributes.purpose).toUpperCase() === "MAINTENANCE_CONTRACT" ? "AMC quotation" : "Commercial proposal"}
                     </span>
                   </div>
                   <p>
@@ -6401,6 +6797,15 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                       ? "Continue in the linked downstream workflow; this quotation remains read-only."
                       : "Use the focused tabs below to review scope, approvals, and handoff."}
                   </small>
+                  <ProviderQuotationReviewPanel
+                    status={String(selected.attributes.status || "")}
+                    revision={Number(selected.attributes.revision || 1)}
+                    review={selectedProviderReview}
+                    canApprove={hasPermission("QUOTATION_APPROVE")}
+                    busy={busy}
+                    onApprove={() => setReviewDialog("approve")}
+                    onReject={() => setReviewDialog("reject")}
+                  />
                 </div>
                 <div className="quotation-detail-record-actions">
                   {!workflowConcluded && (
@@ -6489,13 +6894,11 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
       {detailDialog === "customer-change" && (
         <OperationsDialog
           title="Change quotation customer"
+          titleInfo={<InfoNotice>This creates a new draft revision for the selected customer. The current revision stays in quotation history; if it was issued, its delivery and review history stay attached to it and the replacement must be reviewed and issued again.</InfoNotice>}
           busy={busy}
           onClose={() => setDetailDialog(null)}
           className="quotation-customer-change-dialog"
         >
-          <p className="notice">
-            This creates a new draft revision for the selected customer. The current revision stays in quotation history; if it was issued, its delivery and review history stay attached to it and the replacement must be reviewed and issued again.
-          </p>
           <p className="notice">
             The linked Lead, request or job, site and assets must belong to the selected customer. The API checks this before making any change. Accepted quotations cannot be reassigned.
           </p>
@@ -6593,7 +6996,12 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                     )}
                   />
                 </label>
-                <label>
+                {String(selected.attributes.purpose || "").toUpperCase() === "MAINTENANCE_CONTRACT" && <AmcDraftLiftScopeEditor
+                  lines={selectedLines as Array<Record<string, unknown>>}
+                  plans={amcPlans?.data || []}
+                  taxRules={quotationTaxRules}
+                />}
+                {String(selected.attributes.purpose || "").toUpperCase() !== "MAINTENANCE_CONTRACT" && <label>
                   Manual total (INR)
                   <input
                     name="amount"
@@ -6608,7 +7016,7 @@ function QuotationConversationPanel({ providerId, quotationId, revision, quotati
                       )?.[0]?.amount || "",
                     )}
                   />
-                </label>
+                </label>}
                 <MaterialScopeEditor
                   initialMaterials={quotationMaterialsFromTerms(selected.attributes.terms)}
                   unitCodes={editableQuotationUnitCodes}

@@ -23,6 +23,7 @@ type JourneyTimelineProps = {
   loading: boolean;
   error: string;
   emptyLabel?: string;
+  showHeading?: boolean;
 };
 
 const JOURNEY_MILESTONE_DISPLAY_ORDER: JourneyMilestoneId[] = [
@@ -453,6 +454,7 @@ export function JourneyTimelineAccordion({
   loading,
   error,
   emptyLabel = "No journey events are available.",
+  showHeading = true,
 }: JourneyTimelineProps) {
   const groups = milestones(journey?.attributes.events || []);
   const workflowMilestones = journey?.attributes.workflow_milestones || [];
@@ -468,10 +470,10 @@ export function JourneyTimelineAccordion({
   if (!journey)
     return (
       <div className="provider-work-intake-activity-dialog lead-detail-activity-dialog">
-        <div className="lead-timeline-popup-heading">
+        {showHeading && <div className="lead-timeline-popup-heading">
           <span className="eyebrow">Journey history</span>
           <p>Review the connected workflow history in one place.</p>
-        </div>
+        </div>}
         {loading && <p role="status">Loading journey history…</p>}
         {error && (
           <p className="error" role="alert">
@@ -504,37 +506,25 @@ export function JourneyTimelineAccordion({
 
   return (
     <div className="provider-work-intake-activity-dialog lead-detail-activity-dialog">
-      <div className="lead-timeline-popup-heading">
+      {showHeading && <div className="lead-timeline-popup-heading">
         <span className="eyebrow">Journey history</span>
         <p>Latest activity first. Select a stage to expand its history.</p>
-      </div>
+      </div>}
 
-      <section className="provider-work-intake-journey-summary journey-overview">
-        <div className="journey-overview-header">
-          <div>
+      <details className="provider-work-intake-journey-summary journey-overview">
+        <summary className="journey-overview-summary">
+          <span className="journey-overview-summary-copy">
             <span className="provider-work-intake-eyebrow">Workflow status</span>
-            <h3>Journey overview</h3>
-            <p>
-              {journey.attributes.abandonment_reason ||
-                "Linked records and operational activity."}
-            </p>
-          </div>
-          <div className="journey-overview-metrics" aria-label="Journey summary">
-            <div>
-              <strong>{eventsCount}</strong>
-              <span>Recorded events</span>
-            </div>
-            <div>
-              <strong>{activeStages}</strong>
-              <span>Active stages</span>
-            </div>
-            <div>
-              <strong>R{journey.attributes.revision}</strong>
-              <span>Journey revision</span>
-            </div>
-          </div>
+            <strong>Journey overview</strong>
+            <small>
+              {eventsCount} events · {activeStages} active {activeStages === 1 ? "stage" : "stages"} · R{journey.attributes.revision}
+              {journey.attributes.abandonment_reason ? ` · ${journey.attributes.abandonment_reason}` : ""}
+            </small>
+          </span>
           <Status>{journeyStatus}</Status>
-        </div>
+          <span className="journey-overview-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div className="journey-overview-content">
 
         {lifecycleStages.length > 0 && (
           <div className="journey-lifecycle-strip" aria-label="Workflow lifecycle">
@@ -600,7 +590,8 @@ export function JourneyTimelineAccordion({
             <strong>{`${context.evidence?.photos || 0} photos · ${context.evidence?.documents || 0} documents`}</strong>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
 
       {groups.length ? (
         <section className="journey-activity-section" aria-label="Journey activity">

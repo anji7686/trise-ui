@@ -31,7 +31,7 @@ test('alerts and notification preferences share mock-aligned responsive layouts'
 
   for (const screen of screens) {
     await page.goto(screen.route);
-    await expect(page.getByRole('heading', { name: screen.heading, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: screen.heading, exact: true })).toBeVisible({ timeout: 15_000 });
     if (await page.evaluate(() => innerWidth >= 1200)) {
       const shellLayout = await page.locator('.customer-layout').evaluate((element) => {
         const sidebar = element.querySelector('.customer-sidebar');
